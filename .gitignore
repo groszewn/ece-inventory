@@ -1,7 +1,7 @@
 # Created by https://www.gitignore.io/api/django
 
 .DS_Store
-
+.metadata
 ### Django ###
 *.log
 *.pot

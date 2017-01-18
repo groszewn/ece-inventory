@@ -76,8 +76,8 @@ WSGI_APPLICATION = 'MeeseeksInc.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'inventory',
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'NAME': 'inventory',
 	'USER': 'meeseeks_admin',
 	'PASSWORD':'meeseeks-admin', 
 	'HOST':'localhost', 
