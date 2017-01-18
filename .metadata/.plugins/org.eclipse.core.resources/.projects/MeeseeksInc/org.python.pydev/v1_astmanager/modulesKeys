@@ -1,0 +1,14 @@
+MODULES_MANAGER_V2
+MeeseeksInc.__init__|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/MeeseeksInc/__init__.py
+MeeseeksInc.settings|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/MeeseeksInc/settings.py
+MeeseeksInc.urls|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/MeeseeksInc/urls.py
+MeeseeksInc.wsgi|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/MeeseeksInc/wsgi.py
+inventory.__init__|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/__init__.py
+inventory.admin|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/admin.py
+inventory.apps|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/apps.py
+inventory.migrations.__init__|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/migrations/__init__.py
+inventory.models|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/models.py
+inventory.tests|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/tests.py
+inventory.urls|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/urls.py
+inventory.views|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/inventory/views.py
+manage|/Users/keiyoshikoshi/Documents/ECE458/Meeseeks-Inc./MeeseeksInc/manage.py
