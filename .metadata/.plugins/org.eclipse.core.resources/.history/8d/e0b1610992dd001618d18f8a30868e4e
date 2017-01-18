@@ -1,9 +1,0 @@
-from django.conf.urls import url
-
-from . import views
-
-urlpatterns = [
-    # this is what it goes to if typed /inventory/
-    url(r'^$', views.index, name='index'),
-    
-]
