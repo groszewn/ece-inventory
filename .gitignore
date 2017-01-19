@@ -1,7 +1,6 @@
 # Created by https://www.gitignore.io/api/django
 
 .DS_Store
-
 .metadata
 tmp/
 *.tmp
@@ -34,3 +33,5 @@ local_settings.py
 media
 
 # End of https://www.gitignore.io/api/django
+
+venv
