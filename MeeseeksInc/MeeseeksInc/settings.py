@@ -25,7 +25,7 @@ SECRET_KEY = 'x6s74m_9(u*#)ntmwf0g&1xpwh^7#x4m$07-*xzq4=l^qg!rhw'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['meeseeks-prod.colab.duke.edu', 'colab-sbx-255.oit.duke.edu', '152.3.52.5']
+ALLOWED_HOSTS = ['127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
 
 
 # Application definition
@@ -71,10 +71,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'MeeseeksInc.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/1.10/ref/settings/#databases
-
 DATABASES = {
+
     'default': {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     'NAME': 'meeseeksadmin',
@@ -83,6 +81,7 @@ DATABASES = {
 	'HOST':'localhost', 
 	'PORT':'5432',
     }
+
 }
 
 
