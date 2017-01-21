@@ -71,18 +71,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'MeeseeksInc.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/1.10/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-    'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    'NAME': 'inventory',
-	'USER': 'meeseeks_admin',
-	'PASSWORD':'meeseeks-admin', 
-	'HOST':'localhost', 
-	'PORT':'',
-    }
+
+'default': {
+
+'ENGINE': 'django.db.backends.postgresql_psycopg2',
+
+'NAME': 'meeseeksadmin',
+
+'USER': 'admin',
+
+'PASSWORD':'admin', 
+
+'HOST':'localhost', 
+
+'PORT':'5432',
+}
+
 }
 
 
