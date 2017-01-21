@@ -25,7 +25,7 @@ SECRET_KEY = 'x6s74m_9(u*#)ntmwf0g&1xpwh^7#x4m$07-*xzq4=l^qg!rhw'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
+ALLOWED_HOSTS = ['meeseeks-prod.colab.duke.edu', 'colab-sbx-255.oit.duke.edu', '152.3.52.5']
 
 
 # Application definition
@@ -110,7 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC' # change this since we are in EST
+TIME_ZONE = 'EST' # change this since we are in EST
 
 USE_I18N = True
 
