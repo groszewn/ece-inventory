@@ -1,12 +1,28 @@
-<h1>{{ question.question_text }}</h1>
+{% extends 'inventory/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block content %}
+
+<h1>{{ instance.item.item_name }} {{ instance.instance_id }}</h1>
+<h2>Location: {{ instance.location }} </h2>
+<h2>Status: {{ instance.status }} </h2>
+<h2>Availability: {{ instance.available }} </h2>
+<h2>Model Number: {{ instance.model_number }} </h2>
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<form action="{% url 'inventory:vote' question.id %}" method="post">
-{% csrf_token %}
-{% for choice in question.choice_set.all %}
-    <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}" />
-    <label for="choice{{ forloop.counter }}">{{ choice.choice_text }}</label><br />
-{% endfor %}
-<input type="submit" value="Vote" />
-</form>
+
+
+{#<form action="{% url 'inventory:vote' instance.instance_id %}" method="post">#}
+{#{% csrf_token %}#}
+{#{% for choice in question.choice_set.all %}#}
+{#    <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}" />#}
+{#    <label for="choice{{ forloop.counter }}">{{ choice.choice_text }}</label><br />#}
+{#{% endfor %}#}
+{#<input type="submit" value="Vote" />#}
+{#</form>#}
+	
+{% endblock %}
+
+
+

@@ -1,43 +1,65 @@
+import random
+
 from django.db.models import F
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404 
-from django.shortcuts import render_to_response, redirect
-from django.template import context
-from django.template.context import RequestContext
+from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views import generic
 
-from .models import Question, Choice
+from .forms import RequestForm
+from .models import Question, Choice, Instance, Request, Item
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(generic.ListView):  ## ListView to display a list of objects
     template_name = 'inventory/index.html'
-    context_object_name = 'latest_question_list'
-
+    context_object_name = 'instance_list'
+    
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        context['request_list'] = Request.objects.all()
+        context['item_list'] = Item.objects.all()
+        # And so on for more models
+        return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Question.objects.order_by('-pub_date')[:5]
+        return Instance.objects.order_by('item')[:5]
     
 class DetailView(generic.DetailView): ## DetailView to display detail for the object
-    model = Question
+    model = Instance
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
 
-
+## FROM THE DJANGO TUTORIAL ##
 class ResultsView(generic.DetailView):
     model = Question
     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
 #####################################################################
 
-# def add_question(request):
-#     # A HTTP POST?
-#     if request.method == 'POST':
-#         question = Question()
-#         return render_to_response('inventory/results.html', RequestContext(request, {'question': question}))
-#     # Bad form (or form details), no form supplied...
-#     # Render the form with error messages (if any).
-#     return render(request, 'inventory/detail.html', {})
-#     
+# create table request_table (
+# request_id serial PRIMARY KEY, 
+# user_id varchar NOT NULL, 
+# item_name varchar NOT NULL, 
+# request_quantity smallint NOT NULL, 
+# status varchar NOT NULL, 
+# comment varchar, 
+# time_requested timestamp );
+def post_new_request(request):
+    if request.method == "POST":
+        form = RequestForm(request.POST) # create request-form with the data from the request 
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.status = "Pending"
+            post.time_requested = timezone.localtime(timezone.now())
+            post.save()
+            return redirect('/')
+#             return redirect('detail', pk=post.pk)
+    else:
+        form = RequestForm() # blank request form with no data yet
+    return render(request, 'inventory/request_edit.html', {'form': form})
+
+
+## FROM THE DJANGO TUTORIAL ##
 def vote(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     try:
