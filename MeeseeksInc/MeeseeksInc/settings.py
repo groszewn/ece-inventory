@@ -70,7 +70,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'MeeseeksInc.wsgi.application'
 
-
 DATABASES = {
 
     'default': {
@@ -83,7 +82,6 @@ DATABASES = {
     }
 
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators

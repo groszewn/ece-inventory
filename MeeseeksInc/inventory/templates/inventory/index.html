@@ -5,6 +5,10 @@
         <li><a href="{% url 'inventory:detail' question.id %}">{{ question.question_text }}</a></li>
     {% endfor %}
     </ul>
+    <form action="" method="post">
+	  New Question <input type="text" name="question"><br>
+	  <input type="submit" value="Add Question">
+	</form>
 {% else %}
     <p>No polls are available.</p>
 {% endif %}
