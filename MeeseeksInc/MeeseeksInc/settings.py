@@ -70,7 +70,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'MeeseeksInc.wsgi.application'
 
-
 DATABASES = {
 
     'default': {
@@ -83,7 +82,6 @@ DATABASES = {
     }
 
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
@@ -109,7 +107,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+<<<<<<< HEAD
 TIME_ZONE = 'EST' # change this since we are in EST
+=======
+TIME_ZONE = 'US/Eastern' # change this since we are in EST
+>>>>>>> 205b6575a22ee3dc7b1ec0caca635208888b950c
 
 USE_I18N = True
 
