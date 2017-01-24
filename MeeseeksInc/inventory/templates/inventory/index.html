@@ -3,13 +3,14 @@
 
 {% block content %}
 
-{% if instance_list %}
-	<h2>Instances</h2>
+{% if item_list %}
+	<h2>Items</h2>
 	<ul>
-		{% for instance in instance_list %}
-			<li><a href="{% url 'inventory:detail' instance.instance_id %}">{{ instance.item.item_name }} {{ instance.instance_id }}</a></li>
+		{% for item in item_list %}
+			<li><a href="{% url 'inventory:detail' item.item_name %}">{{ item.item_name }}</a></li>
 		{% endfor %}
 	</ul>
+		<a href="/admin_panel/inventory/request"> hi </a>
 	
 	<h2>Requests</h2>
 	<ul>

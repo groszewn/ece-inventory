@@ -27,7 +27,7 @@ class IndexView(generic.ListView):  ## ListView to display a list of objects
         return Instance.objects.order_by('item')[:5]
     
 class DetailView(generic.DetailView): ## DetailView to display detail for the object
-    model = Instance
+    model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
 
 ## FROM THE DJANGO TUTORIAL ##
