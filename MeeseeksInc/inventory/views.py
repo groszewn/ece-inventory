@@ -14,7 +14,7 @@ from .models import Question, Choice, Instance, Request, Item
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(generic.ListView):  ## ListView to display a list of objects
     template_name = 'inventory/index.html'
-    context_object_name = 'instance_list'
+    context_object_name = 'item_list'
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
@@ -27,7 +27,7 @@ class IndexView(generic.ListView):  ## ListView to display a list of objects
         return Instance.objects.order_by('item')[:5]
     
 class DetailView(generic.DetailView): ## DetailView to display detail for the object
-    model = Instance
+    model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
 
 ## FROM THE DJANGO TUTORIAL ##
@@ -49,16 +49,19 @@ def post_new_request(request):
         form = RequestForm(request.POST) # create request-form with the data from the request 
         if form.is_valid():
             post = form.save(commit=False)
+            post.item_name = form['item_field'].value()
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
             return redirect('/')
-#             return redirect('detail', pk=post.pk)
     else:
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_edit.html', {'form': form})
 
-
+class request_detail(generic.DetailView):
+    model = Request
+    template_name = 'inventory/request_detail.html'
+    
 ## FROM THE DJANGO TUTORIAL ##
 def vote(request, question_id):
     question = get_object_or_404(Question, pk=question_id)

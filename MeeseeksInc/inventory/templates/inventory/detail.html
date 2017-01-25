@@ -3,11 +3,9 @@
 
 {% block content %}
 
-<h1>{{ instance.item.item_name }} {{ instance.instance_id }}</h1>
-<h2>Location: {{ instance.location }} </h2>
-<h2>Status: {{ instance.status }} </h2>
-<h2>Availability: {{ instance.available }} </h2>
-<h2>Model Number: {{ instance.model_number }} </h2>
+<h1>{{ item.item_name }}</h1>
+<h2>Quantity: {{ item.quantity }} </h2>
+<h2>Tags: {{ item.tag }} </h2>
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
