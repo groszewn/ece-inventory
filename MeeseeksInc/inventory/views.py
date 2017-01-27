@@ -62,6 +62,14 @@ class request_detail(generic.DetailView):
     model = Request
     template_name = 'inventory/request_detail.html'
     
+class request_cancel_view(generic.DetailView):
+    model = Request
+    template_name = 'inventory/request_cancel.html'
+    
+def cancel_request(self, pk):
+    Request.objects.get(request_id=pk).delete()
+    return redirect('/')
+    
 ## FROM THE DJANGO TUTORIAL ##
 def vote(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
