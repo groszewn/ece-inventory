@@ -6,13 +6,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import RequestForm
 from .models import Question, Choice, Instance, Request, Item
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(generic.ListView):  ## ListView to display a list of objects
+class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
     
@@ -26,12 +29,14 @@ class IndexView(generic.ListView):  ## ListView to display a list of objects
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
     
-class DetailView(generic.DetailView): ## DetailView to display detail for the object
+class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
+    login_url = "/login/"
     model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
 
 ## FROM THE DJANGO TUTORIAL ##
-class ResultsView(generic.DetailView):
+class ResultsView(LoginRequiredMixin, generic.DetailView):
+    login_url = "/login/"
     model = Question
     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
 #####################################################################
@@ -44,6 +49,7 @@ class ResultsView(generic.DetailView):
 # status varchar NOT NULL, 
 # comment varchar, 
 # time_requested timestamp );
+@login_required(login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
         form = RequestForm(request.POST) # create request-form with the data from the request 
@@ -71,6 +77,7 @@ def cancel_request(self, pk):
     return redirect('/')
     
 ## FROM THE DJANGO TUTORIAL ##
+@login_required(login_url='/login/')
 def vote(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     try:
