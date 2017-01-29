@@ -3,10 +3,8 @@
 
 {% block content %}
 <h1>{{ item.item_name }}</h1>
-<h2>Quantity: {{ item.quantity}} </h2>
-<h2>Price: ${{ item.price }} </h2>
-<h2>Tag: {{ item.tag }} </h2>
-
+<h2>Quantity: {{ item.quantity }} </h2>
+<h2>Tags: {{ item.tag }} </h2>
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 

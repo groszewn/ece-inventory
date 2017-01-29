@@ -1,5 +1,6 @@
 from django import forms
 from .models import Request
+from .models import Item
 
 #  request_id = models.CharField(primary_key=True, max_length=200)
 #     user_id = models.CharField(max_length=200, null=False)
@@ -9,6 +10,7 @@ from .models import Request
 #     comment = models.CharField(max_length=200, null=False)
 #     time_requested = models.TimeField()
 class RequestForm(forms.ModelForm):
+    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     class Meta:
         model = Request
-        fields = ('request_id', 'item_name', 'request_quantity', 'comment') #temporarily add request_id until we figure out what to do
+        fields = ('item_field', 'request_quantity', 'reason')
