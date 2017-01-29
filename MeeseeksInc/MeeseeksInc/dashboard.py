@@ -16,13 +16,15 @@ from django.core.urlresolvers import reverse
 from admin_tools.dashboard import modules, Dashboard, AppIndexDashboard
 from admin_tools.utils import get_admin_site_name
 
+import inventory
+
 
 class CustomIndexDashboard(Dashboard):
     """
     Custom index dashboard for MeeseeksInc.
     """
      # we want a 3 columns layout
-    columns = 3
+    columns = 2
     
     def init_with_context(self, context):
         site_name = get_admin_site_name(context)
@@ -55,7 +57,7 @@ class CustomIndexDashboard(Dashboard):
         ))
         
         # append my own module
-        self.children.append(RequestsDashboardModule())
+        self.children.append(HistoryDashboardModule())
         # append a recent actions module
         self.children.append(modules.RecentActions(_('Recent Actions'), 5))
 
@@ -116,28 +118,59 @@ class CustomAppIndexDashboard(AppIndexDashboard):
         """
         return super(CustomAppIndexDashboard, self).init_with_context(context)
 
+class CiuvoAnalytics(modules.DashboardModule):
+     """ Dashboard Module which shows a Ciuvo Analytics Graph.
+     """
+     def __init__(self, **kwargs):
+         super(CiuvoAnalytics, self).__init__(**kwargs)
+         self.title = kwargs.get('title', _('Ciuvo Analytics'))
+         self.show_title = kwargs.get('show_title', True)
+#          self.template = kwargs.get('template', 
+# 'admin_tools/analytics_module.html')
+         self.layout = kwargs.get('layout', 'stacked')
 
-class RequestsDashboardModule(modules.LinkList):
-    title = 'Pending Item Requests'
-    enabled=True
-    draggable=True
-    deletable=False
-    collapsible=False
+
+
+class HistoryDashboardModule(modules.LinkList):
+    title = 'Pending Requests'
     
-    content="hi"
     def init_with_context(self, context):
         request = context['request']
-#         
-# #         print(request)
-#         # we use sessions to store the visited pages stack
-#         history = request.session.get('history', [])
-#         for item in history:
-#             self.children.append(item)
-#         # add the current page to the history
-#         history.insert(0, {
-#             'title': context['title'],
-#             'url': request.META['PATH_INFO']
-#         })
-#         if len(history) > 10:
-#             history = history[:10]
-#         request.session['history'] = history
+        # we use sessions to store the visited pages stack
+        history = request.session.get('history', [])
+        request_list = inventory.models.Request.objects.all()
+        print(request_list)
+        for item in request_list:
+            print(item)
+            self.children.append({
+                    'title': item,
+                    'url': 'http://docs.djangoproject.com/',
+                    'external': True,
+                },)
+            # add the current page to the history
+            
+
+# class RequestsDashboardModule(modules.LinkList):
+#     title = 'Pending Item Requests'
+#     enabled=True
+#     draggable=True
+#     deletable=False
+#     collapsible=False
+#     
+#     content="hi"
+#     def init_with_context(self, context):
+#         request = context['request']
+# #         
+# # #         print(request)
+# #         # we use sessions to store the visited pages stack
+# #         history = request.session.get('history', [])
+# #         for item in history:
+# #             self.children.append(item)
+# #         # add the current page to the history
+# #         history.insert(0, {
+# #             'title': context['title'],
+# #             'url': request.META['PATH_INFO']
+# #         })
+# #         if len(history) > 10:
+# #             history = history[:10]
+# #         request.session['history'] = history

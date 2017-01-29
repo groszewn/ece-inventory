@@ -11,7 +11,7 @@ urlpatterns = [
     # this allows us to change the url of a page without changing it in the HTML files
     
     # this is what it goes to if typed /
-#     url(r'^$', views.IndexView.as_view(), name='index'),
+    url(r'^$', views.AdminIndexView.as_view(), name='index'),
 #     # /5/
 #     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
 #     # /5/results/
@@ -19,6 +19,6 @@ urlpatterns = [
 #     # /5/vote/
 #     url(r'^(?P<question_id>[0-9]+)/vote/$', views.vote, name='vote'),
 #     # to post a new request
-#     url(r'^post/request/$', views.post_new_request, name='post_new_request'),
+    url(r'^approve/request/all$', views.approve_all_requests, name='approve_all_requests'),
 
 ]

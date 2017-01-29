@@ -31,10 +31,11 @@ ALLOWED_HOSTS = ['127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks
 # Application definition
 
 INSTALLED_APPS = [
-    'admin_tools',
-    'admin_tools.theming',
-    'admin_tools.menu',
-    'admin_tools.dashboard',
+#     'admin_tools',
+#     'admin_tools.theming',
+#     'admin_tools.menu',
+#     'admin_tools.dashboard',
+    'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
     'django.contrib.admin',
     'django.contrib.auth',
