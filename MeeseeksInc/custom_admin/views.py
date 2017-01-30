@@ -46,11 +46,14 @@ def approve_all_requests(self):
     pending_requests = Request.objects.filter(status="Pending")
     for request in pending_requests:
         request.status = "Approved"
+        request.save()
     return redirect('/')
 
 @login_required(login_url='/login/')
 def approve_request(self, pk):
-    Request.objects.get(request_id=pk).status = "Approved"
+    request = Request.objects.get(request_id=pk)
+    request.status = "Approved"
+    request.save()
     return redirect('/')
 
 
