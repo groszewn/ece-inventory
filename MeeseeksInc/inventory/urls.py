@@ -23,7 +23,7 @@ urlpatterns = [
     # to view request detail
     url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_detail'),
     url(r'^request_cancel/(?P<pk>[\w\-\ ]+)$', views.request_cancel_view.as_view(), name='request_cancel'),
-    url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_edit'),
+    url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.edit_request, name='request_edit'),
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel_yes'),
     url(r'^request_cancel_no/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_cancel_no'),
 ]
