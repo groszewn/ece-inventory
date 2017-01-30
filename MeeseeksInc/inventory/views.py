@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import RequestForm
+from .forms import RequestEditForm
 from .models import Question, Choice, Instance, Request, Item
 
 
@@ -17,7 +18,7 @@ from .models import Question, Choice, Instance, Request, Item
 class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
-    context_object_name = 'instance_list'
+    context_object_name = 'item_list'
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
@@ -28,43 +29,59 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-    
+
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
-    model = Instance
+    model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
 
-## FROM THE DJANGO TUTORIAL ##
+def edit_request(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.item_name = form['item_field'].value()
+            post.status = "Pending"
+            post.time_requested = timezone.localtime(timezone.now())
+            post.save()
+            return redirect('/')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
+
 class ResultsView(LoginRequiredMixin, generic.DetailView):
     login_url = "/login/"
     model = Question
     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
-#####################################################################
 
-# create table request_table (
-# request_id serial PRIMARY KEY, 
-# user_id varchar NOT NULL, 
-# item_name varchar NOT NULL, 
-# request_quantity smallint NOT NULL, 
-# status varchar NOT NULL, 
-# comment varchar, 
-# time_requested timestamp );
 @login_required(login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
         form = RequestForm(request.POST) # create request-form with the data from the request 
         if form.is_valid():
             post = form.save(commit=False)
+            post.item_name = form['item_field'].value()
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
             return redirect('/')
-#             return redirect('detail', pk=post.pk)
     else:
         form = RequestForm() # blank request form with no data yet
-    return render(request, 'inventory/request_edit.html', {'form': form})
+    return render(request, 'inventory/request_create.html', {'form': form})
 
-
+class request_detail(generic.DetailView):
+    model = Request
+    template_name = 'inventory/request_detail.html'
+    
+class request_cancel_view(generic.DetailView):
+    model = Request
+    template_name = 'inventory/request_cancel.html'
+    
+def cancel_request(self, pk):
+    Request.objects.get(request_id=pk).delete()
+    return redirect('/')
+    
 ## FROM THE DJANGO TUTORIAL ##
 @login_required(login_url='/login/')
 def vote(request, question_id):

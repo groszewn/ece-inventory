@@ -1,0 +1,20 @@
+{% extends 'inventory/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block content %}
+
+<h1>Request for {{ request.item_name }}</h1>
+<h2>Quantity: {{request.request_quantity}}</h2>
+<h2>Reason for Request: {{request.reason}}</h2>
+<h2>Status: {{request.status}}</h2>
+<h2>Admin Comment: {{request.comment}}</h2>
+<h2>Time Requested: {{request.time_requested}}</h2>
+<h2>Request Id: {{request.request_id}}</h2>
+
+<a href="{% url 'inventory:request_edit' request.request_id %}" class="top-menu"> Edit Request </a>
+<br>
+<a href="{% url 'inventory:request_cancel' request.request_id %}" class="top-menu"> Cancel Request </a>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	
+{% endblock %}

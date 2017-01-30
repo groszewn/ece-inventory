@@ -10,9 +10,9 @@ class QuestionAdmin(admin.ModelAdmin):
         (None,               {'fields': ['question_text']}),
         ('Date information', {'fields': ['pub_date']}),
     ]
-    
-admin.site.register(Question, QuestionAdmin)
-admin.site.register(Choice)
+
+# admin.site.register(Question, QuestionAdmin)
+# admin.site.register(Choice)
 admin.site.register(Item)
 admin.site.register(Instance)
 admin.site.register(Request)

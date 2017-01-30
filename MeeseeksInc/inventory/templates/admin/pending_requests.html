@@ -1,0 +1,6 @@
+<h1>Pending Requests</h1>
+{% for request in request_list %}
+	<li>Request for {{ request.item_name }} (Quantity: {{ request.request_quantity }}) @ {{ request.time_requested }}</li>
+{% endfor %}
+
+
