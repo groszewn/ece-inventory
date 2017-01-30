@@ -36,3 +36,4 @@ media
 
 venv
 MeeseeksInc/db.sqlite3
+MeeseeksInc/inventory/migrations
