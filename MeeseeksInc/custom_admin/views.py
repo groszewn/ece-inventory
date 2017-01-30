@@ -21,7 +21,7 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
-        context['item_request_list'] = Request.objects.all()
+        context['pending_requests'] = Request.objects.filter(status="Pending")
         context['item_list'] = Item.objects.all()
         # And so on for more models
         return context
@@ -42,21 +42,16 @@ class ResultsView(LoginRequiredMixin, generic.DetailView):
 #####################################################################
 
 @login_required(login_url='/login/')
-def approve_all_requests(request):
-    if request.method == "POST":
-        form = RequestForm(request.POST) # create request-form with the data from the request 
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.status = "Pending"
-            post.time_requested = timezone.localtime(timezone.now())
-            post.save()
-            return redirect('/')
-#             return redirect('detail', pk=post.pk)
-    else:
-        form = RequestForm() # blank request form with no data yet
-    return render(request, 'inventory/request_edit.html', {'form': form})
+def approve_all_requests(self):
+    pending_requests = Request.objects.filter(status="Pending")
+    for request in pending_requests:
+        request.status = "Approved"
+    return redirect('/')
 
-
+@login_required(login_url='/login/')
+def approve_request(self, pk):
+    Request.objects.get(request_id=pk).status = "Approved"
+    return redirect('/')
 
 
 @login_required(login_url='/login/')

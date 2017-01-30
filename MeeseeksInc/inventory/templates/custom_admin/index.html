@@ -3,15 +3,14 @@
 
 {% block content %}
 
-{% if item_request_list %}
+{% if pending_requests %}
 	<h2>Pending Item Requests</h2>
 	<ul>
-		{% for item_request in item_request_list %}
-			<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }}) @ {{ item_request.time_requested }}</li>
-			<a href="{% url 'custom_admin:approve_request' request.id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
+		{% for item_request in pending_requests %}
+				<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }}) @ {{ item_request.time_requested }}</li>
+				<a href="{% url 'custom_admin:approve_request' item_request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
 		{% endfor %}
 	</ul>
-	
 	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
 {% endif %}
 

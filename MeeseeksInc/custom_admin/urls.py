@@ -20,5 +20,6 @@ urlpatterns = [
 #     url(r'^(?P<question_id>[0-9]+)/vote/$', views.vote, name='vote'),
 #     # to post a new request
     url(r'^approve/request/all$', views.approve_all_requests, name='approve_all_requests'),
+    url(r'^approve/request/(?P<pk>[\w\-\ ]+)$', views.approve_request, name='approve_request'),
 
 ]
