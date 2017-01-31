@@ -4,13 +4,15 @@ from django.db import models
 class Item(models.Model):
     item_name = models.CharField(primary_key=True, max_length=200)
     quantity = models.SmallIntegerField(null=False)
-    tag = models.CharField(null=True, max_length=200)
     location = models.CharField(max_length=200, null=True)
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=400, null=True)
-    price = models.DecimalField(max_digits=8, decimal_places=2)
     def __str__(self):
         return self.item_name
+    
+class Tag(models.Model):
+    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
+    tag = models.CharField(null=True, max_length=200)
 
 class Instance(models.Model):
     item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
@@ -31,6 +33,9 @@ class Request(models.Model):
     time_requested = models.TimeField()
     def __str__(self):
         return self.item_name + " " + self.request_id
+    
+class UserQuery(models.Model):
+    tags = models.CharField(max_length=200, null=False)
 
 ############################## FROM THE DJANGO TUTORIAL #############################
 class Question(models.Model):

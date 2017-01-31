@@ -6,25 +6,28 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
+from django.views.generic.edit import FormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import RequestForm
 from .forms import RequestEditForm
+from .forms import SearchForm
 from .models import Question, Choice, Instance, Request, Item
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
-    
+    form_class = SearchForm
+
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.all()
         context['item_list'] = Item.objects.all()
-        # And so on for more models
+        #content['search_list'] = Item.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -34,6 +37,15 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     login_url = "/login/"
     model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
+
+def search_form(request):
+    if request.method == "POST":
+        form = SearchForm(request.POST)
+        if form.is_valid():
+            return redirect('/')
+    else:
+        form = SearchForm()
+    return render(request, 'inventory/search.html', {'form': form})
 
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)

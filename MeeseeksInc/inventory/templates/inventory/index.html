@@ -3,12 +3,22 @@
 
 {% block content %}
 
+<a href="{% url 'inventory:search_setup' %}" class="top-menu"> Search Parameters </a>
+ 
+{% if search_list %} 
+  <h2>Search Results</h2>
+	<ul>
+		{% for item in search_list %}
+			<li><a>{{item.item_name }}: # Avaiable= {{ item.quantity }}</a></li>
+		{% endfor %}
+	</ul>
+{% endif %}
+
 {% if item_list %}
 	<h2>All Inventory Items</h2>
 	<ul>
 		{% for item in item_list %}
 			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Avaiable= {{ item.quantity }}</a></li>
-		{#get all item instances not checked out and count to see those left or add column which updates to track available items#}
 		{% endfor %}
 	</ul>
 	
