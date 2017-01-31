@@ -1,0 +1,14 @@
+{% extends 'custom_admin/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block content %}
+
+ <h2>New Disburse</h2>
+ <h3>Fill in the following fields to disburse items directly to a user.</h3>
+ <form method="POST" class="post-form">{% csrf_token %}
+	{{ form.as_p }}
+	<button type="submit" class="save btn btn-default">Save</button>
+</form>
+ 	
+
+{% endblock %}

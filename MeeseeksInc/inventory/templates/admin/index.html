@@ -41,7 +41,6 @@
 
 {% if app_list %}
     {% for app in app_list %}
-    	{% if app.name == "Inventory" %}
         <div class="app-{{ app.app_label }} module">
         <table>
         <caption>
@@ -70,7 +69,6 @@
         {% endfor %}
         </table>
         </div>
-        {% endif %}
     {% endfor %}
 {% else %}
     <p>{% trans "You don't have permission to edit anything." %}</p>
