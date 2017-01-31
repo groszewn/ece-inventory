@@ -61,7 +61,7 @@ def post_new_disburse(request):
 def approve_all_requests(request):
     pending_requests = Request.objects.filter(status="Pending")
     for indiv_request in pending_requests:
-        item = Item.objects.get(item_name=indiv_request.item_name)
+        item = get_object_or_404(Item,item_name=indiv_request.item_name)
         if item.quantity >= indiv_request.request_quantity:
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
@@ -115,16 +115,18 @@ def approve_request(request, pk):
 #     return redirect('/')
 
 @login_required(login_url='/login/')
-def deny_request(self, pk):
+def deny_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     indiv_request.status = "Denied"
     indiv_request.save()
-    return redirect('/')
+    messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
-def deny_all_request(self):
+def deny_all_request(request):
     pending_requests = Request.objects.filter(status="Pending")
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
         indiv_request.save()
-    return redirect('/')
+    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    return redirect(reverse('custom_admin:index'))

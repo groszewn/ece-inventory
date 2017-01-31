@@ -13,10 +13,10 @@ urlpatterns = [
     # this is what it goes to if typed /
 #     url(r'^$', views.AdminIndexView.as_view(), name='index'),
     url(r'^$', views.AdminIndexView.as_view(), name='index'),
-    url(r'^deny/request/(?P<pk>[\w\-\ ]+)$', views.deny_request, name='deny_request'),
-    url(r'^approve/request/all$', views.deny_all_request, name='deny_all_requests'),
-    url(r'^approve/request/(?P<pk>[\w\-\ ]+)$', views.approve_request, name='approve_request'),
+    url(r'^deny/request/all$', views.deny_all_request, name='deny_all_requests'),
     url(r'^approve/request/all$', views.approve_all_requests, name='approve_all_requests'),
+    url(r'^deny/request/(?P<pk>[\w\-\ ]+)$', views.deny_request, name='deny_request'),
+    url(r'^approve/request/(?P<pk>[\w\-\ ]+)$', views.approve_request, name='approve_request'),
     url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),
 
 ]
