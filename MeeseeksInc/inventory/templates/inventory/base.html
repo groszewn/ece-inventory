@@ -7,6 +7,11 @@
 		<link href='//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
 		<link rel="stylesheet" type="text/css" href="{% static 'css/index.css' %}" />
     </head>
+    {% if user.is_authenticated %}
+    	<p>Welcome, {{ user.username }} </p>
+	{% else %}
+    	<p>Welcome, Guest {{user.username }}</p>
+	{% endif %}
     <body>
     	<div class="page-header">
         	<h1> ECE458 Inventory </h1>
