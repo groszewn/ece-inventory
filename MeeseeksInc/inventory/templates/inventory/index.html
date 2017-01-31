@@ -12,6 +12,7 @@
 			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Avaiable= {{ item.quantity }}</a></li>
 		{% endfor %}
 	</ul>
+{#		<a href="/admin_panel/inventory/request"> hi </a>#}
 	
 	<h2>Requests</h2>
 	<ul>
@@ -24,6 +25,12 @@
 	
 	<a href="{% url 'inventory:post_new_request' %}" class="top-menu"> Click Here to Request an Item <span class="glyphicon glyphicon-plus"></span></a>	
 	
+	{% if disbursed_list %}
+		<h2>Disbursed to you</h2>
+		{% for disbursed in disbursed_list %}
+			<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
+		{% endfor %}
+	{% endif %}
 {% else %}
 	<p>No polls are available.</p>
 {% endif %}

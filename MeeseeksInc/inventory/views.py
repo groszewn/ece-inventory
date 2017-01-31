@@ -13,7 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
-from .models import Question, Choice, Instance, Request, Item, Tag
+from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -25,9 +25,9 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
 
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        context['request_list'] = Request.objects.all()
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
-        #content['search_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -40,17 +40,25 @@ class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## Lis
 
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        context['request_list'] = Request.objects.all()
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
         return context
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-    
+
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
+    
+def check_login(request):
+    if request.user.is_staff:
+        return HttpResponseRedirect(reverse('custom_admin:index'))
+    else:
+        return HttpResponseRedirect(reverse('inventory:index'))
+    
 
 def search_form(request):
     if request.method == "POST":
@@ -97,6 +105,7 @@ def post_new_request(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.item_name = form['item_field'].value()
+            post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()

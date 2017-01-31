@@ -16,10 +16,13 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from inventory import views as inventory_views
 
 urlpatterns = [
     url(r'^', include('inventory.urls')),
     url(r'^admin/', admin.site.urls),
+    url(r'^customadmin/', include('custom_admin.urls')),
     url(r'^login/$', auth_views.login, {'template_name': 'inventory/login.html'}, name='login'), 
+    url(r'^login/check_login/$', inventory_views.check_login, name='check_login'),
     url(r'^logout/$', auth_views.logout, {'template_name': 'inventory/logged_out.html'}, name='logout'),
 ]

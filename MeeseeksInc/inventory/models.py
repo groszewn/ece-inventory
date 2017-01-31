@@ -23,19 +23,30 @@ class Instance(models.Model):
         return self.item.item_name + " #" + self.instance_id
 
 class Request(models.Model):
-    request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=str(uuid.uuid4()))
+    request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     user_id = models.CharField(max_length=200, null=False)
     item_name = models.CharField(max_length=200, null=False)
     request_quantity = models.SmallIntegerField(null=False)
     status = models.CharField(max_length=200, null=False)
-    comment = models.CharField(max_length=200, null=False)
-    reason = models.CharField(max_length=200, null=True)
+    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null, used for denial 
+    reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.TimeField()
     def __str__(self):
         return self.item_name + " " + self.request_id
     
 class UserQuery(models.Model):
     tags = models.CharField(max_length=200, null=False)
+
+class Disbursement(models.Model):
+    disburse_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
+    admin_name = models.CharField(max_length=200, null=False)
+    user_name = models.CharField(max_length=200, null=False)
+    item_name = models.CharField(max_length=200, null=False)
+    total_quantity = models.SmallIntegerField(null=False)
+    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
+    time_disbursed = models.TimeField()
+    def __str__(self):
+        return self.item_name + " from " + self.admin_name + " to " + self.user_name
 
 ############################## FROM THE DJANGO TUTORIAL #############################
 class Question(models.Model):

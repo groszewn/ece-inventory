@@ -31,6 +31,11 @@ ALLOWED_HOSTS = ['127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks
 # Application definition
 
 INSTALLED_APPS = [
+#     'admin_tools',
+#     'admin_tools.theming',
+#     'admin_tools.menu',
+#     'admin_tools.dashboard',
+    'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
 ]
 
 MIDDLEWARE = [
@@ -56,7 +62,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-        'APP_DIRS': True,
+#         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -64,7 +70,14 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+                ]),
+            ]
         },
+        
     },
 ]
 
@@ -120,3 +133,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
+
+ADMIN_TOOLS_MENU = 'MeeseeksInc.menu.CustomMenu'
+ADMIN_TOOLS_INDEX_DASHBOARD = 'MeeseeksInc.dashboard.CustomIndexDashboard'
+ADMIN_TOOLS_APP_INDEX_DASHBOARD = 'MeeseeksInc.dashboard.CustomAppIndexDashboard'
