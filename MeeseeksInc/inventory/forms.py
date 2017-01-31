@@ -17,5 +17,9 @@ class RequestEditForm(forms.ModelForm):
         fields = ('item_field', 'request_quantity', 'reason')
 
 class SearchForm(forms.Form):
-    tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.values_list('tag', flat=True).distinct(), required=False, widget=forms.CheckboxSelectMultiple, label='Filter by tags...')
+    choices = []
+    for myTag in Tag.objects.all():
+        if [myTag.tag,myTag.tag] not in choices:
+            choices.append([myTag.tag,myTag.tag])
+    tags = forms.MultipleChoiceField(choices, widget=forms.CheckboxSelectMultiple, label='Filter by tags...')
     fields = ('tags',)

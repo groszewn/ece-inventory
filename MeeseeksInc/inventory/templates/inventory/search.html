@@ -5,7 +5,7 @@
 
  <h2>Searching...</h2>
  <form method="POST" class="post-form">{% csrf_token %}
-	{{ form }}
+	{{ form.as_p }}
 	<button type="submit" class="subbtn">Search</button>
  </form>
 

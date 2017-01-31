@@ -13,7 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
-from .models import Question, Choice, Instance, Request, Item
+from .models import Question, Choice, Instance, Request, Item, Tag
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -33,6 +33,20 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
     
+class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'inventory/search_result.html'
+    context_object_name = 'item_list'
+
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        context['request_list'] = Request.objects.all()
+        context['item_list'] = Item.objects.all()
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
+    
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
@@ -42,7 +56,16 @@ def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
         if form.is_valid():
-            return redirect('/')
+            picked = form.cleaned_data.get('tags')
+            tag_list = []
+            search_list = []
+            for pickedTag in picked:
+                tagQS = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQS:
+                    search_list.append(Item.objects.get(pk = oneTag.item_name))
+            item_list = Item.objects.all()
+            request_list = Request.objects.all()
+            return render(request,'inventory/search_result.html', {'picked': picked,'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
         form = SearchForm()
     return render(request, 'inventory/search.html', {'form': form})
