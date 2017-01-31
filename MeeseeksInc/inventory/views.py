@@ -35,6 +35,13 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     login_url = "/login/"
     model = Item
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
+    
+def check_login(request):
+    if request.user.is_staff:
+        return HttpResponseRedirect(reverse('custom_admin:index'))
+    else:
+        return HttpResponseRedirect(reverse('inventory:index'))
+    
 
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
