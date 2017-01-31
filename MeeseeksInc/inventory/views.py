@@ -11,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import RequestForm
 from .forms import RequestEditForm
-from .models import Question, Choice, Instance, Request, Item
+from .models import Question, Choice, Instance, Request, Item, Disbursement
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -22,8 +22,9 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        context['request_list'] = Request.objects.all()
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
         # And so on for more models
         return context
     def get_queryset(self):
@@ -69,6 +70,7 @@ def post_new_request(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.item_name = form['item_field'].value()
+            post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
