@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import Item, Instance, Request, Tag, UserQuery, Disbursement
+# from .models import Item, Instance, Request, UserQuery, Disbursement
 from .models import Choice, Question #don't forget to import from the models so you can access them
 
 

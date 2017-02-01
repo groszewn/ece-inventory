@@ -14,7 +14,7 @@ from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
 from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
-
+# from .models import Question, Choice, Instance, Request, Item, Disbursement
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -37,7 +37,7 @@ class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## Lis
     login_url = "/login/"
     template_name = 'inventory/search_result.html'
     context_object_name = 'item_list'
-
+ 
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
