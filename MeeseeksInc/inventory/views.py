@@ -6,26 +6,43 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
+from django.views.generic.edit import FormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import RequestForm
 from .forms import RequestEditForm
-from .models import Question, Choice, Instance, Request, Item, Disbursement
+from .forms import SearchForm
+from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
 
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
-    
+    form_class = SearchForm
+
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
-        # And so on for more models
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
+    
+class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'inventory/search_result.html'
+    context_object_name = 'item_list'
+
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
+        context['item_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -42,6 +59,24 @@ def check_login(request):
     else:
         return HttpResponseRedirect(reverse('inventory:index'))
     
+
+def search_form(request):
+    if request.method == "POST":
+        form = SearchForm(request.POST)
+        if form.is_valid():
+            picked = form.cleaned_data.get('tags')
+            tag_list = []
+            search_list = []
+            for pickedTag in picked:
+                tagQS = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQS:
+                    search_list.append(Item.objects.get(pk = oneTag.item_name))
+            item_list = Item.objects.all()
+            request_list = Request.objects.all()
+            return render(request,'inventory/search_result.html', {'picked': picked,'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+    else:
+        form = SearchForm()
+    return render(request, 'inventory/search.html', {'form': form})
 
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)

@@ -2,3 +2,8 @@ h1 {
     color: #FCA205;
     font-family: 'Lobster';
 }
+
+ul
+{
+    list-style-type: none;
+}
