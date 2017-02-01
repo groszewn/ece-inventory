@@ -59,21 +59,26 @@ def check_login(request):
     else:
         return HttpResponseRedirect(reverse('inventory:index'))
     
-
 def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
         if form.is_valid():
             picked = form.cleaned_data.get('tags')
+            keyword = form.cleaned_data.get('keyword')
             tag_list = []
-            search_list = []
+            keyword_list = []
+            for item in Item.objects.all():
+                if (keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)): 
+                    keyword_list.append(item)
             for pickedTag in picked:
                 tagQS = Tag.objects.filter(tag = pickedTag)
                 for oneTag in tagQS:
-                    search_list.append(Item.objects.get(pk = oneTag.item_name))
+                    tag_list.append(Item.objects.get(pk = oneTag.item_name))
+            search_list = tag_list + keyword_list
             item_list = Item.objects.all()
             request_list = Request.objects.all()
-            return render(request,'inventory/search_result.html', {'picked': picked,'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+            return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
         form = SearchForm()
     return render(request, 'inventory/search.html', {'form': form})
