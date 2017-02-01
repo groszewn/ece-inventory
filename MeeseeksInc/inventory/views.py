@@ -16,7 +16,6 @@ from .forms import RequestEditForm
 from .forms import SearchForm
 from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
 
-
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -33,28 +32,24 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-    
-class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
-    login_url = "/login/"
-    template_name = 'inventory/search_result.html'
-    context_object_name = 'item_list'
-
-    def get_context_data(self, **kwargs):
-        context = super(IndexView, self).get_context_data(**kwargs)
-        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
-        context['item_list'] = Item.objects.all()
-        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
-        return context
-    def get_queryset(self):
-        """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
 
 
     
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
+    context_object_name = 'tag_list'
+    context_object_name = 'item'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
+    
+    def get_context_data(self, **kwargs):
+        context = super(DetailView, self).get_context_data(**kwargs)
+        context['item'] = self.get_object()
+        tags = Tag.objects.filter(item_name=self.get_object().item_name)
+        context['last_tag'] = tags.reverse()[0]
+        tags = tags.reverse()[1:]
+        context['tag_list'] = tags
+        return context
     
 def check_login(request):
     if request.user.is_staff:
@@ -62,21 +57,26 @@ def check_login(request):
     else:
         return HttpResponseRedirect(reverse('inventory:index'))
     
-
 def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
         if form.is_valid():
             picked = form.cleaned_data.get('tags')
+            keyword = form.cleaned_data.get('keyword')
             tag_list = []
-            search_list = []
+            keyword_list = []
+            for item in Item.objects.all():
+                if (keyword is not "") and (keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)): 
+                    keyword_list.append(item)
             for pickedTag in picked:
                 tagQS = Tag.objects.filter(tag = pickedTag)
                 for oneTag in tagQS:
-                    search_list.append(Item.objects.get(pk = oneTag.item_name))
+                    tag_list.append(Item.objects.get(pk = oneTag.item_name))
+            search_list = tag_list + keyword_list
             item_list = Item.objects.all()
             request_list = Request.objects.all()
-            return render(request,'inventory/search_result.html', {'picked': picked,'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+            return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
         form = SearchForm()
     return render(request, 'inventory/search.html', {'form': form})
@@ -128,25 +128,3 @@ class request_cancel_view(generic.DetailView):
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()
     return redirect('/')
-    
-## FROM THE DJANGO TUTORIAL ##
-@login_required(login_url='/login/')
-def vote(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    try:
-        selected_choice = question.choice_set.get(pk=request.POST['choice'])
-    except (KeyError, Choice.DoesNotExist):
-        # Redisplay the question voting form.
-        return render(request, 'inventory/detail.html', {
-            'question': question,
-            'error_message': "You didn't select a choice.",
-        })
-    else:
-#         selected_choice.update(votes=F('votes') + 1)
-
-        selected_choice.votes = F('votes') + 1
-        selected_choice.save()
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return HttpResponseRedirect(reverse('inventory:results', args=(question.id,)))
