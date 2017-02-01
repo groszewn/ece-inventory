@@ -1,5 +1,6 @@
 from django.db.models import F
 from django.http import HttpResponseRedirect
+from django.db import connection, transaction
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -20,6 +21,17 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
+        cursor = connection.cursor()
+        cursor.execute('select item_name, array_agg(request_id order by status desc) from inventory_request group by item_name')
+        raw_request_list = cursor.fetchall()
+        for raw_request in raw_request_list:
+            raw_request_ids = raw_request[1] # all the ids in this item
+            counter = 0
+            for request_ID in raw_request_ids:
+                raw_request[1][counter] = Request.objects.get(request_id=request_ID)
+                counter += 1
+        
+        context['request_list'] = raw_request_list
         context['pending_requests'] = Request.objects.filter(status="Pending")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)

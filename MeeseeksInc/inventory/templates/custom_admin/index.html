@@ -11,17 +11,36 @@
 </ul>
 {% endif %}
 
+{#want to look at pending, declined, and approved requests#}
+
+
 {% if pending_requests %}
-	<h2>Pending Item Requests</h2>
-	<ul>
-		{% for item_request in pending_requests %}
-				<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }}) @ {{ item_request.time_requested }} FROM {{ item_request.user_id }}</li>
-				<a href="{% url 'custom_admin:approve_request' item_request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
-				<a href="{% url 'custom_admin:deny_request' item_request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			
+		{% for request_tuple in request_list %}
+				<h3>Item Name: {{ request_tuple.0 }}</h3>
+				<ul>
+				{% for request in request_tuple.1 %}
+					<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+					{% if request.status == "Pending" %}
+						<a href="{% url 'custom_admin:approve_request' request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
+						<a href="{% url 'custom_admin:deny_request' request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			
+					{% endif %}
+				{% endfor %}
+				</ul>
+		
 		{% endfor %}
-	</ul>
 	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
 	<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	
+	
+{#	<h2>Pending Item Requests</h2>#}
+{#	<ul>#}
+{#		{% for item_request in pending_requests %}#}
+{#				<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }}) @ {{ item_request.time_requested }} FROM {{ item_request.user_id }}</li>#}
+{#				<a href="{% url 'custom_admin:approve_request' item_request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#				<a href="{% url 'custom_admin:deny_request' item_request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			#}
+{#		{% endfor %}#}
+{#	</ul>#}
+{#	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#	<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	#}
 {% endif %}
    
 {% if disbursed_list %}
