@@ -1,6 +1,7 @@
 import random
 
 from django.db.models import F
+from django.db import connection, transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -31,6 +32,8 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
 
+
+    
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
