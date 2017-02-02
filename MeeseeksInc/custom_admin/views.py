@@ -48,7 +48,9 @@ def post_new_disburse(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.admin_name = request.user.username
-            post.item_name = form['item_field'].value()
+            name_requested = form['item_field'].value()
+            item_requested = Item.objects.get(item_name = name_requested)
+            post.item_name = item_requested
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
             post.save()
@@ -105,7 +107,7 @@ def approve_request(request, pk):
         disbursement.save()
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
-        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))
 
     return redirect(reverse('custom_admin:index'))
@@ -119,7 +121,7 @@ def deny_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     indiv_request.status = "Denied"
     indiv_request.save()
-    messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -128,5 +130,5 @@ def deny_all_request(request):
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
         indiv_request.save()
-    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
