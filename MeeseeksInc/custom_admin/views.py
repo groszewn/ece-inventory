@@ -115,7 +115,7 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
-        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))

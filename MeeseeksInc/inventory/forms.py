@@ -2,7 +2,6 @@ from django import forms
 from .models import Request
 from .models import Item
 from .models import Tag
-from .models import UserQuery
 
 class RequestForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
