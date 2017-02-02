@@ -1,5 +1,6 @@
 from django.db.models import F
 from django.http import HttpResponseRedirect
+from django.db import connection, transaction
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -7,7 +8,9 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-
+from django.contrib.messages.views import SuccessMessageMixin
+from django.urls import reverse_lazy 
+from django.views.generic.edit import FormView
 from .forms import DisburseForm
 from inventory.models import Instance, Request, Item, Disbursement
 from django.contrib import messages
@@ -20,6 +23,17 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
+        cursor = connection.cursor()
+        cursor.execute('select item_name, array_agg(request_id order by status desc) from inventory_request group by item_name')
+        raw_request_list = cursor.fetchall()
+        for raw_request in raw_request_list:
+            raw_request_ids = raw_request[1] # all the ids in this item
+            counter = 0
+            for request_ID in raw_request_ids:
+                raw_request[1][counter] = Request.objects.get(request_id=request_ID)
+                counter += 1
+        
+        context['request_list'] = raw_request_list
         context['pending_requests'] = Request.objects.filter(status="Pending")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
@@ -130,3 +144,37 @@ def deny_all_request(request):
         indiv_request.save()
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
+
+
+
+################### DJANGO CRIPSY FORM STUFF ###################
+class AjaxTemplateMixin(object):
+    def dispatch(self, request, *args, **kwargs):
+        if not hasattr(self, 'ajax_template_name'):
+            split = self.template_name.split('.html')
+            split[-1] = '_inner'
+            split.append('.html')
+            self.ajax_template_name = ''.join(split)
+        if request.is_ajax():
+            self.template_name = self.ajax_template_name
+        return super(AjaxTemplateMixin, self).dispatch(request, *args, **kwargs)
+
+class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
+    template_name = 'custom_admin/single_disburse.html'
+    form_class = DisburseForm # do new form
+    success_url = reverse_lazy('custom_admin:index')
+    success_message = "Way to go!"
+    
+    def form_valid(self, form):
+        # This method is called when valid form data has been POSTed.
+        # It should return an HttpResponse.
+#         form.send_email()
+        post = form.save(commit=False)
+        post.admin_name = self.request.user.username
+        post.item_name = form['item_field'].value()
+        post.user_name = User.objects.get(id=form['user_field'].value()).username
+        post.time_disbursed = timezone.localtime(timezone.now())
+        post.save()
+        return super(DisburseFormView, self).form_valid(form)
+    
+################################################################
