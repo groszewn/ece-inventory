@@ -32,8 +32,21 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-
-
+    
+class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'inventory/search_result.html'
+    context_object_name = 'item_list'
+ 
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
+        context['item_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
     
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
