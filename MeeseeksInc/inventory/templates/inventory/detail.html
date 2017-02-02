@@ -15,6 +15,12 @@
 	{{last_tag.tag}}
 {% endif %}
 </h2>
+<h2>Outstanding Requests for This Item:  </h2>
+{% if request_list%}
+	{% for request in request_list %}
+		<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+	{% endfor %}
+{% endif %} 
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
