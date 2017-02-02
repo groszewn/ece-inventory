@@ -18,5 +18,7 @@ urlpatterns = [
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)$', views.deny_request, name='deny_request'),
     url(r'^approve/request/(?P<pk>[\w\-\ ]+)$', views.approve_request, name='approve_request'),
     url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),
-
+    url(r'^edit/item/(?P<pk>[\w\-\ ]+)$', views.edit_item, name='edit_item'),
+    url(r'^create/item$', views.create_new_item, name='create_new_item'),
+    url(r'^register/$', views.register_page, name = 'register_page'),
 ]

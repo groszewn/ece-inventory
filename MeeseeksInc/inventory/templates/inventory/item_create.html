@@ -1,0 +1,12 @@
+{% extends 'inventory/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block content %}
+
+ <h2>New Request For Item</h2>
+ <form method="POST" class="post-form">{% csrf_token %}
+	{{ form.as_p }}
+	<button type="submit" class="save btn btn-default">Save</button>
+ </form>
+ 	
+{% endblock %}
