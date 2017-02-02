@@ -11,6 +11,7 @@
 </ul>
 {% endif %}
 
+<<<<<<< HEAD
 {% if pending_requests %}
 	<h2>Pending Item Requests</h2>
 	<ul>
@@ -18,11 +19,106 @@
 				<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }} Reason: {{ item_request.reason }}) @ {{ item_request.time_requested }} FROM {{ item_request.user_id }}</li>
 				<a href="{% url 'custom_admin:approve_request' item_request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
 				<a href="{% url 'custom_admin:deny_request' item_request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			
+=======
+{#{% block modal %}#}
+{#            <div class="jumbotron">#}
+{#                <button id="comment-button" class="btn btn-large">Or click here!</button>#}
+{#            </div>#}
+{#{% endblock modal %}#}
+            
+<a data-toggle="modal" href="{% url 'custom_admin:post_new_disburse' %}" data-target="#form-modal">Click me</a>
+
+		<div id="form-modal" class="modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title">Modal title</h4>
+                    </div>
+                    <div id="form-modal-body" class="modal-body">
+                        <p>One fine body&hellip;</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal --> 
+        {% block js %}
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script>
+            var formAjaxSubmit = function(form, modal) {
+                $(form).submit(function (e) {
+                    e.preventDefault();
+                    $.ajax({
+                        type: $(this).attr('method'),
+                        url: $(this).attr('action'),
+                        data: $(this).serialize(),
+                        success: function (xhr, ajaxOptions, thrownError) {
+                            if ( $(xhr).find('.has-error').length > 0 ) {
+                                $(modal).find('.modal-body').html(xhr);
+                                formAjaxSubmit(form, modal);
+                            } else {
+                                $(modal).modal('toggle');
+                            }
+                        },
+                        error: function (xhr, ajaxOptions, thrownError) {
+                        }
+                    });
+                });
+            }
+            console.log("hello!!!!!!");
+            $('#comment-button').click(function() {
+                $('#form-modal-body').load('/single-disburse/', function () {
+                    $('#form-modal').modal('toggle');
+                    formAjaxSubmit('#form-modal-body form', '#form-modal');
+                });
+            });
+        </script>
+        {% endblock js %}
+
+
+
+
+
+
+
+
+
+
+
+{#{% if pending_requests %}#}
+		{% for request_tuple in request_list %}
+				<h3>Item Name: {{ request_tuple.0 }}</h3>
+				<ul>
+				{% for request in request_tuple.1 %}
+					<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+					{% if request.status == "Pending" %}
+						Reason: {{ request.reason }}
+						<a href="{% url 'custom_admin:approve_request' request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
+						<a href="{% url 'custom_admin:deny_request' request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			
+					{% endif %}
+				{% endfor %}
+				</ul>
 		{% endfor %}
 	</ul>
 	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
 	<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	
 {% endif %}
+	
+{#	<h2>Pending Item Requests</h2>#}
+{#	<ul>#}
+{#		{% for item_request in pending_requests %}#}
+{#				<li>Request for {{ item_request.item_name }} (Quantity: {{ item_request.request_quantity }}) @ {{ item_request.time_requested }} FROM {{ item_request.user_id }}</li>#}
+{#				<a href="{% url 'custom_admin:approve_request' item_request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#				<a href="{% url 'custom_admin:deny_request' item_request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			#}
+{#		{% endfor %}#}
+{#	</ul>#}
+{#	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#	<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#{% endif %}#}
+>>>>>>> f4909c7cefd025546637af6d120ea24addea6273
    
 {% if disbursed_list %}
 	<h2>Disbursed by you</h2>
