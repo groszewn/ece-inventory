@@ -8,7 +8,7 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import DisburseForm, ItemEditForm, CreateItemForm
+from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
@@ -54,6 +54,20 @@ class DisburseView(LoginRequiredMixin, generic.ListView): ## DetailView to displ
     template_name = 'custom_admin/single_disburse.html' # w/o this line, default would've been inventory/<model_name>.html
 
 #####################################################################
+@login_required(login_url='/login/')
+def register_page(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            if form.cleaned_data['admin']:
+                user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+                user.save()
+            else:
+                user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+                user.save()
+            return HttpResponseRedirect('/customadmin')
+    form = RegistrationForm()
+    return render(request, 'custom_admin/register_user.html', {'form': form})
 
 @login_required(login_url='/login/')
 def post_new_disburse(request):
