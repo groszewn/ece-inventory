@@ -25,7 +25,7 @@ class Instance(models.Model):
 class Request(models.Model):
     request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     user_id = models.CharField(max_length=200, null=False)
-    item_name = models.CharField(max_length=200, null=False)
+    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
     request_quantity = models.SmallIntegerField(null=False)
     status = models.CharField(max_length=200, null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null, used for denial 
@@ -33,15 +33,12 @@ class Request(models.Model):
     time_requested = models.TimeField()
     def __str__(self):
         return self.item_name + " " + self.request_id
-    
-class UserQuery(models.Model):
-    tags = models.CharField(max_length=200, null=False)
 
 class Disbursement(models.Model):
     disburse_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     admin_name = models.CharField(max_length=200, null=False)
     user_name = models.CharField(max_length=200, null=False)
-    item_name = models.CharField(max_length=200, null=False)
+    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
     total_quantity = models.SmallIntegerField(null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
     time_disbursed = models.TimeField()
