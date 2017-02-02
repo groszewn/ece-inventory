@@ -15,3 +15,15 @@ class RequestEditForm(forms.ModelForm):
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
+        
+class ItemEditForm(forms.ModelForm):
+    #item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    class Meta:
+        model = Item
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        
+class CreateItemForm(forms.ModelForm):
+    class Meta:
+        model = Item
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+    

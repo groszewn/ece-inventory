@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 
-from .forms import DisburseForm
+from .forms import DisburseForm, ItemEditForm, CreateItemForm
 from inventory.models import Instance, Request, Item, Disbursement
 from django.contrib import messages
 
@@ -125,6 +125,26 @@ def approve_request(request, pk):
         
 
 #     return redirect('/')
+@login_required(login_url='/login/')
+def edit_item(request, pk):
+    item = Item.objects.get(item_name=pk)
+    if request.method == "POST":
+        form = ItemEditForm(request.POST or None, instance=item, initial = {'item_field': item.item_name})
+        if form.is_valid():
+            form.save()
+            return redirect('/customadmin')
+    else:
+        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
+    return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def create_new_item(request):
+    if request.method== 'POST':
+        form = CreateItemForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/customadmin')
+    return render(request, 'inventory/item_create.html', {'form':CreateItemForm(),})
 
 @login_required(login_url='/login/')
 def deny_request(request, pk):
