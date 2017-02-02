@@ -21,5 +21,6 @@ class SearchForm(forms.Form):
     for myTag in Tag.objects.all():
         if [myTag.tag,myTag.tag] not in choices:
             choices.append([myTag.tag,myTag.tag])
-    tags = forms.MultipleChoiceField(choices, widget=forms.CheckboxSelectMultiple, label='Filter by tags...')
-    fields = ('tags',)
+    tags = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Filter by tags...')
+    keyword = forms.CharField(required=False)
+    fields = ('tags','keyword')
