@@ -11,7 +11,6 @@
 </ul>
 {% endif %}
 
-{#want to look at pending, declined, and approved requests#}
 {#{% block modal %}#}
 {#            <div class="jumbotron">#}
 {#                <button id="comment-button" class="btn btn-large">Or click here!</button>#}
@@ -93,7 +92,6 @@
 					{% endif %}
 				{% endfor %}
 				</ul>
-		
 		{% endfor %}
 	<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
 	<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	

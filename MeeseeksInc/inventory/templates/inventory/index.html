@@ -9,18 +9,18 @@
 	<h2>All Inventory Items</h2>
 	<ul>
 		{% for item in item_list %}
-			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Avaiable= {{ item.quantity }}</a></li>
+			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
 		{% endfor %}
 	</ul>
 	
-	<h2>Requests</h2>
-	<ul>
+	{% if request_list %}
+		<h2>Requests</h2>
+		<ul>
 		{% for request in request_list %}
-			{#% if request.user_id == signed_in_id %#}
 				<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
-			{#% endif %#}
 		{% endfor %}
-	</ul>
+		</ul>
+	{% endif %}
 	
 	
 	<a href="{% url 'inventory:post_new_request' %}" class="top-menu"> Click Here to Request an Item <span class="glyphicon glyphicon-plus"></span></a>	
@@ -31,6 +31,7 @@
 			<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
 		{% endfor %}
 	{% endif %}
+	
 {% else %}
 	<p>No polls are available.</p>
 {% endif %}
