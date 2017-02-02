@@ -45,8 +45,12 @@ def register_page(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
-            user.save()
+            if form.cleaned_data['admin']:
+                user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+                user.save()
+            else:
+                user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+                user.save()
             return HttpResponseRedirect('/customadmin')
     form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})

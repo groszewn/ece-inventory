@@ -16,8 +16,9 @@
     	<div class="page-header">
         	<h1> ECE458 Inventory </h1>
         	<div align="right" style="border:2px">
+        		<a href="{% url 'custom_admin:register_page' %}?next=/"> Register New User</a>
     			<a href="{% url 'logout' %}?next=/"> Logout</a>
-    			<a href="{% url 'custom_admin:register_page' %}?next=/"> Register New User</a>
+    			
     		</div>
     	</div>
     	{% block content %}
