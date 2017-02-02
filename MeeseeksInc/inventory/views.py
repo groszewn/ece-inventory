@@ -37,6 +37,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     model = Item
     context_object_name = 'tag_list'
     context_object_name = 'item'
+    context_object_name = 'request_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     
     def get_context_data(self, **kwargs):
@@ -46,6 +47,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         context['last_tag'] = tags.reverse()[0]
         tags = tags.reverse()[1:]
         context['tag_list'] = tags
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
         return context
     
 def check_login(request):
