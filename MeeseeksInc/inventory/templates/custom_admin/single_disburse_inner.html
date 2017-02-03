@@ -1,11 +1,10 @@
  {% load crispy_forms_tags %}
- 
-{# <h2>New Disburse</h2>#}
-{# <h3>Fill in the following fields to disburse items directly to a user.</h3>#}
+
+<h3>Fill in the following fields to disburse items directly to a user.</h3>
 <div class="row">
-    <form class="form-horizontal" action="{% url 'custom_admin:post_new_request' %}" method="post">
+    <form id="formID" class="form-horizontal" action="{% url 'custom_admin:post_new_disburse' %}" method="post">
         {% crispy form %}
-        <input type="submit" class="btn btn-submit col-md-offset-2">
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div>
  	

@@ -12,65 +12,6 @@
 </ul>
 {% endif %}
 
-{############################# MODAL LOGIC ##############################}
-<div class="container">
-    {% block modal %}
-    <div class="jumbotron">
-        <h1>How's it going?</h1>
-        <p>This is a big, gray box! <a href="{% url 'custom_admin:post_new_disburse' %}">Leave a comment</a>!</p>
-        <button id="comment-button" class="btn btn-large">Or click here!</button>
-    </div>
-    {% endblock modal %}
-</div>
-<div id="form-modal" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Modal title</h4>
-            </div>
-            <div id="form-modal-body" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-<script>
-    var formAjaxSubmit = function(form, modal) {
-        $(form).submit(function (e) {
-            e.preventDefault();
-            $.ajax({
-                type: $(this).attr('method'),
-                url: $(this).attr('action'),
-                data: $(this).serialize(),
-                success: function (xhr, ajaxOptions, thrownError) {
-                    if ( $(xhr).find('.has-error').length > 0 ) {
-                        $(modal).find('.modal-body').html(xhr);
-                        formAjaxSubmit(form, modal);
-                    } else {
-                        $(modal).modal('toggle');
-                    }
-                },
-                error: function (xhr, ajaxOptions, thrownError) {
-                }
-            });
-        });
-    }
-    $('#comment-button').click(function() {
-        $('#form-modal-body').load('/test-form/', function () {
-            $('#form-modal').modal('toggle');
-            formAjaxSubmit('#form-modal-body form', '#form-modal');
-        });
-    });
-</script>
-{% endblock js %}
-
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 {% for request_tuple in request_list %}
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
@@ -95,7 +36,81 @@
 		<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
 	{% endfor %}
 {% endif %}
-<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	
+{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
+<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
 
+{############################# MODAL LOGIC ##############################}
+<div id="form-modal" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Direct Disbursement</h4>
+            </div>
+            <div id="form-modal-body" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js %}	
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script>
+    var formAjaxSubmit = function(form, button, modal) {
+        $(button).click(function (e) {
+        	$(form)[0].submit(function(f) {
+        		f.preventDefault();
+	            $.ajax({
+	                type: $(this).attr('method'),
+	                url: $(this).attr('action'),
+	                data: $(this).serialize(),
+	                success: function (xhr, ajaxOptions, thrownError) {
+	                	console.log(xhr);
+	                    if ( $(xhr).find('.has-error').length > 0 ) {
+	                    	alert(xhr);
+	                        $(modal).find('.modal-body').html(xhr);
+	                        formAjaxSubmit(form, button, modal);
+	                    } else {
+	                        $(modal).modal('toggle');
+	                    }
+	                },
+	                error: function (xhr, ajaxOptions, thrownError) {
+	                }
+	            });
+        	});
+        });
+    }
+    $('#comment-button').click(function() {
+        $('#form-modal-body').load('disburse/item', function () {
+            $('#form-modal').modal('toggle');
+            formAjaxSubmit('#formID', '#formSubmit', '#form-modal');
+        });
+    });
+</script>
+{% endblock js %}
+
+
+
+
+
+
+
+
+
+
+<h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>
+
+<h2>All available items</h2>
+<div style="height:300px;width:500px;border:1px solid #ccc;overflow:auto;direction:rtl;text-align: left;">
+	{% if item_list %}
+		{% for item in item_list %}
+			<div style="margin:15px">{{ item.item_name }}: {{ item.quantity }} available <a href="{% url 'custom_admin:edit_item' item.item_name %}">Edit this item</a> </div>
+		{% endfor %}
+	{% endif %}
+</div>
 
 {% endblock %}
