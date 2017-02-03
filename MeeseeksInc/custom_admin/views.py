@@ -81,7 +81,14 @@ def post_new_disburse(request):
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
             post.save()
+            messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
             return redirect('/customadmin')
+        else:
+            data= {}
+            data['status'] = "error";
+            return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
     else:
         form = DisburseForm() # blank request form with no data yet
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
@@ -195,6 +202,7 @@ class AjaxTemplateMixin(object):
         return super(AjaxTemplateMixin, self).dispatch(request, *args, **kwargs)
  
 class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
+    model = Disbursement
     template_name = 'custom_admin/single_disburse.html'
     form_class = DisburseForm # do new form
     success_url = reverse_lazy('custom_admin:index')
@@ -210,7 +218,8 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         post.user_name = User.objects.get(id=form['user_field'].value()).username
         post.time_disbursed = timezone.localtime(timezone.now())
         post.save()
-#         return super(DisburseFormView, self).form_valid(form)
-        return redirect(reverse('custom_admin:index'))
-     
+        messages.success(self.request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        return super(DisburseFormView, self).form_valid(form)
+    
 ################################################################

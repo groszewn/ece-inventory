@@ -13,7 +13,7 @@ urlpatterns = [
     # this is what it goes to if typed /
 #     url(r'^$', views.AdminIndexView.as_view(), name='index'),
     url(r'^$', views.AdminIndexView.as_view(), name='index'),
-    url(r'^disburse/item$', views.DisburseFormView.as_view(), name='post_new_disburse'),
+    url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),
     url(r'^deny/request/all$', views.deny_all_request, name='deny_all_requests'),
     url(r'^approve/request/all$', views.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)$', views.deny_request, name='deny_request'),

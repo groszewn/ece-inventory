@@ -3,7 +3,9 @@
 <h3>Fill in the following fields to disburse items directly to a user.</h3>
 <div class="row">
     <form id="formID" class="form-horizontal" action="{% url 'custom_admin:post_new_disburse' %}" method="post">
-        {% crispy form %}
+{#        {% crispy form %}#}
+		{% csrf_token %}
+       	{{form.as_p}}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div>

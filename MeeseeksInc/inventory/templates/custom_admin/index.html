@@ -2,7 +2,6 @@
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
-
 {########################## MESSAGES (SUCCESS / ERRORS) #####################}
 {% if messages %}
 <ul class="messages">
@@ -11,7 +10,6 @@
     {% endfor %}
 </ul>
 {% endif %}
-
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 {% for request_tuple in request_list %}
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
@@ -37,8 +35,9 @@
 	{% endfor %}
 {% endif %}
 {#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
+{% block modal %}
 <button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
-
+{% endblock modal %}
 {############################# MODAL LOGIC ##############################}
 <div id="form-modal" class="modal fade">
     <div class="modal-dialog">
@@ -56,38 +55,14 @@
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
-{% block js %}	
+{% block js %}
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
-    var formAjaxSubmit = function(form, button, modal) {
-        $(button).click(function (e) {
-        	$(form)[0].submit(function(f) {
-        		f.preventDefault();
-	            $.ajax({
-	                type: $(this).attr('method'),
-	                url: $(this).attr('action'),
-	                data: $(this).serialize(),
-	                success: function (xhr, ajaxOptions, thrownError) {
-	                	console.log(xhr);
-	                    if ( $(xhr).find('.has-error').length > 0 ) {
-	                    	alert(xhr);
-	                        $(modal).find('.modal-body').html(xhr);
-	                        formAjaxSubmit(form, button, modal);
-	                    } else {
-	                        $(modal).modal('toggle');
-	                    }
-	                },
-	                error: function (xhr, ajaxOptions, thrownError) {
-	                }
-	            });
-        	});
-        });
-    }
     $('#comment-button').click(function() {
         $('#form-modal-body').load('disburse/item', function () {
             $('#form-modal').modal('toggle');
-            formAjaxSubmit('#formID', '#formSubmit', '#form-modal');
+            
         });
     });
 </script>
