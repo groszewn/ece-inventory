@@ -92,25 +92,4 @@
     });
 </script>
 {% endblock js %}
-
-
-
-
-
-
-
-
-
-
-<h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>
-
-<h2>All available items</h2>
-<div style="height:300px;width:500px;border:1px solid #ccc;overflow:auto;direction:rtl;text-align: left;">
-	{% if item_list %}
-		{% for item in item_list %}
-			<div style="margin:15px">{{ item.item_name }}: {{ item.quantity }} available <a href="{% url 'custom_admin:edit_item' item.item_name %}">Edit this item</a> </div>
-		{% endfor %}
-	{% endif %}
-</div>
-
 {% endblock %}
