@@ -10,6 +10,20 @@
     {% endfor %}
 </ul>
 {% endif %}
+
+{########################## ALL ITEMS ##########################}
+<h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>
+
+<h2>All available items</h2>
+<div style="height:300px;width:500px;border:1px solid #ccc;overflow:auto;direction:rtl;text-align: left;">
+	{% if item_list %}
+		{% for item in item_list %}
+			<div style="margin:15px"><a href="{% url 'inventory:detail' item.item_name %}">{{ item.item_name }}: {{ item.quantity }} available</a>  </div>
+		{% endfor %}
+	{% endif %}
+</div>
+
+
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 {% for request_tuple in request_list %}
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
@@ -68,3 +82,5 @@
 </script>
 {% endblock js %}
 {% endblock %}
+
+
