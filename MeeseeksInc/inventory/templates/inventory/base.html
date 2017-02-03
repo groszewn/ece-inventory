@@ -14,7 +14,11 @@
 	{% endif %}
     <body>
     	<div class="page-header">
-        	<h1> ECE458 Inventory </h1>
+    		{% if user.is_staff %}
+        		<h1><a href="{% url 'custom_admin:index' %}">ECE458 Inventory</a></h1>
+        	{% else %}
+        		<h1><a href="{% url 'inventory:index' %}">ECE458 Inventory</a></h1>
+        	{% endif %}
         	<div align="right" style="border:2px">
     			<a href="{% url 'logout' %}?next=/"> Logout</a>
     		</div>
