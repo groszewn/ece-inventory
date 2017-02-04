@@ -60,20 +60,52 @@ def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
         if form.is_valid():
-            picked = form.cleaned_data.get('tags')
+            picked = form.cleaned_data.get('tags1')
+            excluded = form.cleaned_data.get('tags2')
             keyword = form.cleaned_data.get('keyword')
-            tag_list = []
+            modelnum = form.cleaned_data.get('model_number')
+            itemname = form.cleaned_data.get('item_name')
+            
             keyword_list = []
             for item in Item.objects.all():
-                if (keyword is not "") and (keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)): 
+                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
+                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
+                    and ((itemname is "") or (itemname in item.item_name)) \
+                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
                     keyword_list.append(item)
+            
+            excluded_list = []
+            for excludedTag in excluded:
+                tagQSEx = Tag.objects.filter(tag = excludedTag)
+                for oneTag in tagQSEx:
+                    excluded_list.append(Item.objects.get(pk = oneTag.item_name))
+             # have list of all excluded items
+            included_list = []
             for pickedTag in picked:
-                tagQS = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQS:
-                    tag_list.append(Item.objects.get(pk = oneTag.item_name))
-            search_list = tag_list + keyword_list
+                tagQSIn = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQSIn:
+                    included_list.append(Item.objects.get(pk = oneTag.item_name))
+            # have list of all included items
+            
+            final_list = []
             item_list = Item.objects.all()
+            if not picked:
+                if excluded:
+                    final_list = [x for x in item_list if x not in excluded_list]
+            else:
+                final_list = [x for x in included_list if x not in excluded_list]
+            
+            # for a more constrained search
+            if not final_list:
+                search_list = keyword_list
+            elif not keyword_list:
+                search_list = final_list
+            else:
+                search_list = [x for x in final_list if x in keyword_list]
+            # for a less constrained search
+            # search_list = final_list + keyword_list
+            
             request_list = Request.objects.all()
             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
