@@ -2,22 +2,27 @@
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
+
 <h1>{{ item.item_name }}</h1>
 <h2>Quantity: {{ item.quantity }} </h2>
-<h2>Tags: {{ item.tag }} </h2>
+<h2>Tags: 
+{% if tag_list%}
+	{% for oneTag in tag_list %}
+		{{oneTag.tag}},
+	{% endfor %}
+{% endif %} 
+{% if last_tag%}
+	{{last_tag.tag}}
+{% endif %}
+</h2>
+<h2>Outstanding Requests for This Item:  </h2>
+{% if request_list%}
+	{% for request in request_list %}
+		<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+	{% endfor %}
+{% endif %} 
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-
-
-
-{#<form action="{% url 'inventory:vote' instance.instance_id %}" method="post">#}
-{#{% csrf_token %}#}
-{#{% for choice in question.choice_set.all %}#}
-{#    <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}" />#}
-{#    <label for="choice{{ forloop.counter }}">{{ choice.choice_text }}</label><br />#}
-{#{% endfor %}#}
-{#<input type="submit" value="Vote" />#}
-{#</form>#}
 	
 {% endblock %}
 

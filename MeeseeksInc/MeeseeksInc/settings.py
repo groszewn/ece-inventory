@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
+    'crispy_forms',
     'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
     'django.contrib.admin',
@@ -133,6 +134,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "static"),
+)
 STATIC_URL = '/static/'
 
 ADMIN_TOOLS_MENU = 'MeeseeksInc.menu.CustomMenu'
