@@ -4,20 +4,34 @@ from inventory.models import Item, Disbursement
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-
+ 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
+ 
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
-
+         
+class ItemEditForm(forms.ModelForm):
+    #item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    class Meta:
+        model = Item
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+         
+class CreateItemForm(forms.ModelForm):
+    class Meta:
+        model = Item
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+     
+ 
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
     email = forms.EmailField(label='Email')
@@ -34,7 +48,7 @@ class RegistrationForm(forms.Form):
                 if password1 == password2:
                     return password2
             raise forms.ValidationError('Passwords do not match.')
-    
+     
     def clean_username(self):
             username = self.cleaned_data['username']
             if not re.search(r'^\w+$', username):
@@ -44,4 +58,4 @@ class RegistrationForm(forms.Form):
             except ObjectDoesNotExist:
                 return username
             raise forms.ValidationError('Username is already taken.')
-    
+     
