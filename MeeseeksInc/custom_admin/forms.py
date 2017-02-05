@@ -8,11 +8,13 @@ from django.core.exceptions import ObjectDoesNotExist
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
-
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
- 
+
+class AddCommentRequestForm(forms.Form):
+    comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+    
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
