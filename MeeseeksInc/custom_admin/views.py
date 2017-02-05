@@ -205,7 +205,7 @@ def approve_request(request, pk):
 #     return redirect('/')
 @login_required(login_url='/login/')
 def edit_item(request, pk):
-    item = Item.objects.get(item_name=pk)
+    item = Item.objects.get(item_id=pk)
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item, initial = {'item_field': item.item_name})
         if form.is_valid():
@@ -214,6 +214,12 @@ def edit_item(request, pk):
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def delete_item(request, pk):
+    item = Item.objects.get(item_id=pk)
+    item.delete()
+    return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
 def create_new_item(request):

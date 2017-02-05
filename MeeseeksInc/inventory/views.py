@@ -61,7 +61,8 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
         tags = Tag.objects.filter(item_name=self.get_object().item_name)
-        context['last_tag'] = tags.reverse()[0]
+        if len(tags)>0:
+            context['last_tag'] = tags.reverse()[0]
         tags = tags.reverse()[1:]
         context['tag_list'] = tags
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
