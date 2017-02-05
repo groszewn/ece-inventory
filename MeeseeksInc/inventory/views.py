@@ -14,6 +14,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
+# from .models import Question, Choice, Instance, Request, Item, Disbursement
 from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
 #   
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -55,7 +56,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     context_object_name = 'item'
     context_object_name = 'request_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-      
+       
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()

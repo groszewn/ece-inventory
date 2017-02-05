@@ -1,9 +1,32 @@
-h1 {
-    color: #FCA205;
-    font-family: 'Lobster';
+h1 a {
+	font-family: Garamond, Baskerville, 'Baskerville Old Face', 'Hoefler Text', 'Times New Roman', serif;
+	font-size: 32px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 500;
+	line-height: 26px;
+    color: #0736A4;
 }
 
-ul
-{
-    list-style-type: none;
+p {
+	font-family: Garamond, Baskerville, 'Baskerville Old Face', 'Hoefler Text', 'Times New Roman', serif;
+	font-size: 18px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 500;
+	line-height: 26px;
+    color: #262626;
+	
+}
+
+ul {
+    list-style-type: square;
+    padding: 10px;
+}
+
+body {
+	padding-top: 10px;
+	padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right:15px;
 }

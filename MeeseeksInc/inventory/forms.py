@@ -14,7 +14,7 @@ class RequestEditForm(forms.ModelForm):
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
- 
+  
 class SearchForm(forms.Form):
     choices = []
     for myTag in Tag.objects.all():

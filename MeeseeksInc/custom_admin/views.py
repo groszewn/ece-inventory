@@ -8,12 +8,13 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm
+from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
 from inventory.models import Instance, Request, Item, Disbursement
 from django.contrib import messages
+from django.template.defaulttags import comment
  
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -70,6 +71,54 @@ def register_page(request):
     return render(request, 'custom_admin/register_user.html', {'form': form})
  
 @login_required(login_url='/login/')
+def add_comment_to_request_accept(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            
+            
+            indiv_request = Request.objects.get(request_id=pk)
+            item = Item.objects.get(item_name=indiv_request.item_name)
+            if item.quantity >= indiv_request.request_quantity:
+                # decrement quantity in item
+                item.quantity = F('quantity')-indiv_request.request_quantity
+                item.save()
+                 
+                # change status of request to approved
+                indiv_request.status = "Approved"
+                indiv_request.comment = comment
+                indiv_request.save()
+                 
+                # add new disbursement item to table
+                disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                disbursement.save()
+                messages.success(request, ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            else:
+                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+def add_comment_to_request_deny(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            indiv_request = Request.objects.get(request_id=pk)
+            indiv_request.status = "Denied"
+            indiv_request.comment = comment
+            indiv_request.save()
+            messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
 def post_new_disburse(request):
     if request.method == "POST":
         form = DisburseForm(request.POST) # create request-form with the data from the request
@@ -94,10 +143,6 @@ def post_new_disburse(request):
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         
             return redirect('/customadmin')
-#         else:
-#             data= {}
-#             data['status'] = "error";
-#             return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
     else:
         form = DisburseForm() # blank request form with no data yet
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})

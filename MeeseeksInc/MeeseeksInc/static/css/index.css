@@ -1,8 +1,12 @@
 .page-header {
-	background-color: #FCA205;
+	background-color: #001A57	;
 }
 
-h1 {
+h1 a {
     color: #FFFFFF;
     font-family: 'Lobster';
+}
+
+body {
+    padding-left: 15px;
 }

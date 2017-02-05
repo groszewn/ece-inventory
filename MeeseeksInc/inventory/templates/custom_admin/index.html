@@ -11,7 +11,10 @@
 </ul>
 {% endif %}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0b562cf72616dfbf4cc71ddea05f21e0bed86980
 {########################## CREATE ITEMS ##########################}
 <h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>
 
@@ -38,7 +41,10 @@
 </table>
 {% endif %}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0b562cf72616dfbf4cc71ddea05f21e0bed86980
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 {% for request_tuple in request_list %}
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
@@ -47,8 +53,12 @@
 			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 			{% if request.status == "Pending" %}
 				Reason: {{ request.reason }}
-				<a href="{% url 'custom_admin:approve_request' request.request_id %}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>	
-				<a href="{% url 'custom_admin:deny_request' request.request_id %}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>			
+				{% block comment_accept %}
+				<a id = "accept" request-id="{{ request.request_id }}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>
+				{% endblock comment_accept %}
+				{% block comment_deny %}
+				<a id = "deny" request-id="{{ request.request_id }}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	
+				{% endblock comment_deny %}
 			{% endif %}
 		{% endfor %}
 	</ul>
@@ -67,7 +77,70 @@
 {% block modal %}
 <button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
 {% endblock modal %}
-{############################# MODAL LOGIC ##############################}
+
+{############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Deny</h4>
+            </div>
+            <div id="form-modal-body-deny" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-deny %}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script>
+    $('#deny').click(function() {
+    	request_id = $('#deny').attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny').load(('request/deny/addcomment/'+request_id), function () {
+        	$('#formID-comment-deny').attr("request-comment", request_id);
+            $('#form-modal-deny').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny %}
+
+{############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-approve %}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script>
+    $('#accept').click(function() {
+    	request_id = $('#accept').attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
+        	$('#formID-comment-accept').attr("request-comment", request_id);
+            $('#form-modal-accept').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve %}
+
+{############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
 <div id="form-modal" class="modal fade">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -91,7 +164,6 @@
     $('#comment-button').click(function() {
         $('#form-modal-body').load('disburse/item', function () {
             $('#form-modal').modal('toggle');
-            
         });
     });
 </script>
