@@ -25,4 +25,5 @@ urlpatterns = [
     url(r'^register/$', views.register_page, name = 'register_page'),
     url(r'^delete/(?P<pk>[\w\-\ ]+)$', views.delete_item, name='delete_item'),
     url(r'^$', views.AdminIndexView.as_view(), name='index'),
+    url(r'^log_item$', views.log_item, name='log_item'),
 ]

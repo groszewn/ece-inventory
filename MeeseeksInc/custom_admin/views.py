@@ -8,11 +8,11 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm
+from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
-from inventory.models import Instance, Request, Item, Disbursement
+from inventory.models import Instance, Request, Item, Disbursement, Tag
 from django.contrib import messages
 from django.template.defaulttags import comment
  
@@ -214,6 +214,69 @@ def edit_item(request, pk):
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def log_item(request):
+    form = LogForm(request.POST or None)
+    if request.method=="POST":
+        form = LogForm(request.POST)
+        if form.is_valid():
+            item = Item.objects.get(item_name=form['item_name'].value())
+            change_type = form['item_change_status'].value()
+            amount = int(form['item_amount'].value())
+            if change_type is 'acquired':
+                item.quantity = F('quantity')+amount
+                item.save()
+            else:
+                item.quantity = F('quantity')-amount
+                item.save()
+            form.save()
+            return redirect('/customadmin')
+    return render(request, 'inventory/log_item.html', {'form': form})
+
+
+
+
+
+
+
+@login_required(login_url='/login/')
+def post_new_disburse(request):
+    if request.method == "POST":
+        form = DisburseForm(request.POST) # create request-form with the data from the request
+        
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.admin_name = request.user.username
+            id_requested = form['item_field'].value()
+            item = Item.objects.get(item_id=id_requested)
+            post.item_name = item
+            post.user_name = User.objects.get(id=form['user_field'].value()).username
+            post.time_disbursed = timezone.localtime(timezone.now())
+            if item.quantity >= int(form['total_quantity'].value()):
+                # decrement quantity in item
+                item.quantity = F('quantity')-int(form['total_quantity'].value())
+                item.save()
+            else:
+                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                return redirect(reverse('custom_admin:index'))
+            post.save()
+            messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+            return redirect('/customadmin')
+    else:
+        form = DisburseForm() # blank request form with no data yet
+    return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
+
+
+
+
+
+
+
+
+
 
 @login_required(login_url='/login/')
 def delete_item(request, pk):

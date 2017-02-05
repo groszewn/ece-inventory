@@ -34,6 +34,8 @@ function clickEvent(){
     <input type="button" value="Delete" onclick="clickEvent();"/>
 {% endif %}
 
+ <a href="{% url 'custom_admin:log_item' %}">Log acquisition/loss of this item</a>
+
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
 {% endblock %}

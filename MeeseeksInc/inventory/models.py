@@ -51,6 +51,11 @@ class Disbursement(models.Model):
     time_disbursed = models.TimeField()
     def __str__(self):
         return self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
+    
+class Item_Log(models.Model):
+    item_name = models.ForeignKey(Item, null=True)
+    item_change_status = models.CharField(max_length=400, null=True)
+    item_amount = models.SmallIntegerField(null=False)
  
 ############################## FROM THE DJANGO TUTORIAL #############################
 class Question(models.Model):

@@ -60,7 +60,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name=self.get_object().item_name)
+        tags = Tag.objects.filter(item_name_id=self.get_object().item_id)
         if tags:
             context['last_tag'] = tags.reverse()[0]
             tags = tags.reverse()[1:]
