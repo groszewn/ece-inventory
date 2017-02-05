@@ -44,7 +44,7 @@ class Disbursement(models.Model):
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
     time_disbursed = models.TimeField()
     def __str__(self):
-        return self.item_name + " from " + self.admin_name + " to " + self.user_name
+        return self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
  
 ############################## FROM THE DJANGO TUTORIAL #############################
 class Question(models.Model):
