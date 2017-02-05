@@ -72,23 +72,32 @@ def register_page(request):
 @login_required(login_url='/login/')
 def post_new_disburse(request):
     if request.method == "POST":
-        form = DisburseForm(request.POST) # create request-form with the data from the request 
+        form = DisburseForm(request.POST) # create request-form with the data from the request
+        
         if form.is_valid():
             post = form.save(commit=False)
             post.admin_name = request.user.username
             name_requested = form['item_field'].value()
+            item = Item.objects.get(item_name=name_requested)
             post.item_name = Item.objects.get(item_name = name_requested)
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
+            if item.quantity >= int(form['total_quantity'].value()):
+                # decrement quantity in item
+                item.quantity = F('quantity')-int(form['total_quantity'].value())
+                item.save()
+            else:
+                messages.error(request, ('Not enough stock available for ' + name_requested + ' (' + form['user_field'].value() +')'))
+                return redirect(reverse('custom_admin:index'))
             post.save()
             messages.success(request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         
             return redirect('/customadmin')
-        else:
-            data= {}
-            data['status'] = "error";
-            return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
+#         else:
+#             data= {}
+#             data['status'] = "error";
+#             return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
     else:
         form = DisburseForm() # blank request form with no data yet
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
