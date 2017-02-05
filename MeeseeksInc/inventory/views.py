@@ -13,7 +13,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
-from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
+from .models import Question, Choice, Instance, Request, Item, Disbursement
+from .models import Tag
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
