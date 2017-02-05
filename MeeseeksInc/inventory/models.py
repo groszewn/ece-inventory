@@ -2,7 +2,8 @@ import uuid
 from django.db import models
  
 class Item(models.Model):
-    item_name = models.CharField(primary_key=True, max_length=200)
+    item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
+    item_name = models.CharField(unique=True, max_length=200)
     quantity = models.SmallIntegerField(null=False)
     location = models.CharField(max_length=200, null=True)
     model_number = models.CharField(max_length=200, null=True)

@@ -9,7 +9,7 @@
 	<h2>All Inventory Items</h2>
 	<ul>
 		{% for item in item_list %}
-			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
+			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
 		{% endfor %}
 	</ul>
 	

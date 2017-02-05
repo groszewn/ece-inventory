@@ -27,7 +27,7 @@
 				<table cellspacing='0' cellpadding='1' border='1'>
 					{% for item in item_list %}
 						<tr>
-							<td style="padding-right: 10px;"><a href="{% url 'inventory:detail' item.item_name %}">{{ item.item_name }}</a></td>
+							<td style="padding-right: 10px;"><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
 							<td style="padding-right: 10px;">{{ item.quantity }}</td>
 						</tr>
 					{% endfor %}
