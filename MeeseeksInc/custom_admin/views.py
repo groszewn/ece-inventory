@@ -136,7 +136,7 @@ def post_new_disburse(request):
                 item.quantity = F('quantity')-int(form['total_quantity'].value())
                 item.save()
             else:
-                messages.error(request, ('Not enough stock available for ' + name_requested + ' (' + form['user_field'].value() +')'))
+                messages.error(request, ('Not enough stock available for ' + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
             post.save()
             messages.success(request, 
