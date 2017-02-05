@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 #     'admin_tools.theming',
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
+#     'bootstrap3',
     'crispy_forms',
     'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
