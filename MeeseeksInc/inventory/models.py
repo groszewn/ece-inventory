@@ -29,7 +29,12 @@ class Request(models.Model):
 #     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
     item_name = models.CharField(max_length=200, null=False)
     request_quantity = models.SmallIntegerField(null=False)
-    status = models.CharField(max_length=200, null=False)
+    CHOICES = (
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Denied', 'Denied'),
+    )
+    status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Pending')
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null, used for denial 
     reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.TimeField()
