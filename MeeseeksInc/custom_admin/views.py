@@ -126,9 +126,9 @@ def post_new_disburse(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.admin_name = request.user.username
-            name_requested = form['item_field'].value()
-            item = Item.objects.get(item_name=name_requested)
-            post.item_name = Item.objects.get(item_name = name_requested)
+            id_requested = form['item_field'].value()
+            item = Item.objects.get(item_id=id_requested)
+            post.item_name = item
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
             if item.quantity >= int(form['total_quantity'].value()):
@@ -136,11 +136,11 @@ def post_new_disburse(request):
                 item.quantity = F('quantity')-int(form['total_quantity'].value())
                 item.save()
             else:
-                messages.error(request, ('Not enough stock available for ' + name_requested + ' (' + form['user_field'].value() +')'))
+                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
             post.save()
             messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         
             return redirect('/customadmin')
     else:
