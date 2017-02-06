@@ -47,7 +47,7 @@
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
 	<ul>
 		{% for request in request_tuple.1 %}
-			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 			{% if request.status == "Pending" %}
 				Reason: {{ request.reason }}
 				{% block comment_accept %}

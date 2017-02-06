@@ -1,9 +1,9 @@
-{% extends 'custom_admin/base.html' %} 
+{% extends 'inventory/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
 
- <h2>Edit Item</h2>
+ <h2>Edit Tag</h2>
  <form method="POST" class="post-form">{% csrf_token %}
 	{{ form.as_p }}
 	<button type="submit" onclick="return confirm('Confirm changes?')" class="save btn btn-default">Save</button>
