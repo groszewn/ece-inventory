@@ -242,12 +242,20 @@ def log_item(request):
             if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
                 item.save()
+                messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
             else:
-                item.quantity = F('quantity')-amount
-                item.save()
+                if item.quantity > amount:
+                    item_quantity = F('quantity')-amount
+                    item.save()
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                else:
+                    messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
+                    return redirect(reverse('custom_admin:index'))
             form.save()
             return redirect('/customadmin')
     return render(request, 'inventory/log_item.html', {'form': form})
+
+
 def edit_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     if request.method == "POST":
