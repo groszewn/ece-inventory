@@ -5,16 +5,34 @@
 
 <h1>{{ item.item_name }}</h1>
 <h2>Quantity: {{ item.quantity }} </h2>
-<h2>Tags: 
+<h2>Tags: </h2>
 {% if tag_list%}
 	{% for oneTag in tag_list %}
-		{{oneTag.tag}},
+		{{oneTag.tag}} 
+		<script>
+		function tagEvent(){
+    		if (confirm("Delete this tag?")) {
+    			window.location='{% url 'custom_admin:delete_tag' oneTag.id %}';
+    		}
+		}
+		</script>
+		 <a href="{% url 'custom_admin:edit_tag' oneTag.id %}">Edit this tag</a>,
+		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>
 	{% endfor %}
 {% endif %} 
 {% if last_tag%}
 	{{last_tag.tag}}
+	<script>
+		function tagEvent2(){
+    		if (confirm("Delete this tag?")) {
+    			window.location='{% url 'custom_admin:delete_tag' last_tag.id %}';
+    		}
+		}
+		</script>
+	 <a href="{% url 'custom_admin:edit_tag' last_tag.id %}">Edit this tag</a>
+	 <input type="button" value="Delete this tag" onclick="tagEvent2();"/>
 {% endif %}
-</h2>
+
 <h2>Outstanding Requests for This Item:  </h2>
 {% if request_list%}
 	{% for request in request_list %}

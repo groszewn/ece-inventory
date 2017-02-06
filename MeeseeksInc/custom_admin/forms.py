@@ -4,6 +4,7 @@ from inventory.models import Item, Disbursement, Tag
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.test.utils import tag
  
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -23,16 +24,20 @@ class RequestEditForm(forms.ModelForm):
         fields = ('item_field', 'request_quantity', 'reason')
          
 class ItemEditForm(forms.ModelForm):
-    #item_name = forms.ModelChoiceField(queryset=Item.objects.all())
     choices = []
     for myTag in Tag.objects.all():
         if [myTag.tag,myTag.tag] not in choices:
             choices.append([myTag.tag,myTag.tag])
-    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
+    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
+    create_new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field')
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','create_new_tags')
         
+class EditTagForm(forms.ModelForm):  
+    class Meta:
+        model = Tag 
+        fields = ('tag',)
          
 class CreateItemForm(forms.ModelForm):
     choices = []
@@ -43,7 +48,7 @@ class CreateItemForm(forms.ModelForm):
     new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field')
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','new_tags')
      
  
 class RegistrationForm(forms.Form):
