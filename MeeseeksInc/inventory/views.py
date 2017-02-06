@@ -23,7 +23,7 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
     form_class = SearchForm
-  
+    
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
@@ -140,8 +140,7 @@ def edit_request(request, pk):
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-#             post.item_name = Item.objects.get(item_id = post.item_id).item_name
-            post.item_name = Item.objects.get(item_id = post.item_id)
+            post.item_name = Item.objects.get(item_id = post.item_id).item_name
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
@@ -162,8 +161,7 @@ def post_new_request(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-#             post.item_name = Item.objects.get(item_id = post.item_id).item_name
-            post.item_name = Item.objects.get(item_id = post.item_id)
+            post.item_name = Item.objects.get(item_id = post.item_id).item_name
             post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
