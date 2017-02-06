@@ -99,13 +99,13 @@ def search_form(request):
             for excludedTag in excluded:
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
                 for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(pk = oneTag.item_name))
+                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
              # have list of all excluded items
             included_list = []
             for pickedTag in picked:
                 tagQSIn = Tag.objects.filter(tag = pickedTag)
                 for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(pk = oneTag.item_name))
+                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
             # have list of all included items
             
             final_list = []
