@@ -1,30 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/static/img/Pratt_Logo.ico">
 
-{% load static %}
-<html>
-    <head>
-        <title>Meeseeks Inventory</title>
-        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
-		<link rel="stylesheet" type="text/css" href="{% static 'css/index.css' %}" />
-    </head>
-	
-    <body>
-        <div>
-    		{% if user.is_staff %}
-    			<p>Welcome, {{ user.username }} </p>
+    <title>Meeseeks Inventory</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="/static/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="/static/css/jumbotron.css" rel="stylesheet">
+   	<!-- Owen's styles for this template -->
+    <link href="/static/css/custom.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="/static/js/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Duke University ECE Department Inventory</a>
+        </div>
+ 
+
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
+        <li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
+      </ul>
+        </div><!--/.navbar-collapse -->
+      </div>
+    </nav>
+
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+    <div class="jumbotron">
+      <div class="container">
+      		{% if user.is_staff %}
+    			<h1>Welcome, {{ user.username }}</h1>
 			{% else %}
-    			<p>Welcome, Guest {{user.username }}</p>
+    			<h1>Welcome, Guest {{user.username }}</h1>
 			{% endif %}
-		</div>
-		
-    	<div class="page-header">
-        	<h1> <a href="{% url 'custom_admin:index' %}?next=/"> Duke University ECE Department Inventory </a> </h1>
-        	<div align="right" style="border:2px">
-    			<a href="{% url 'custom_admin:register_page' %}?next=/"> Register New User</a>
-    			<a href="{% url 'logout' %}?next=/"> Logout</a>
+        <p>
+        This is the inventory system of Duke University ECE Department. Please sign up using your Duke email and an admin will approve your request. 
+        For more information about Duke ECE, please press Learn more.
+        </p>
+        <p><a class="btn btn-primary btn-lg" href="http://www.ece.duke.edu" role="button">Learn more &raquo;</a></p>
+      </div>
+    </div>
+
+    <div class="container">
+    {% if messages %}
+    	<div class='row'>
+    		<div class='col-sm-6 col-sm-offset-3'>
+    			{% for message in messages %}
+   					 <p{% if message.tags == "success" %} class = "alert alert-success" role="alert" {% endif %}>{{ message }}</p>
+   				{% endfor %}
     		</div>
     	</div>
-    	{% block content %}
-        {% endblock %}
-    </body>
+    {% endif %}	
+    	
+      <!-- Example row of columns -->
+      <div class="row">
+      	<div class="col-sm-6">
+         	{% block content %}
+        	{% endblock %}
+        </div>
+        <div class="col-sm-6">
+          <h2>Our team</h2>
+          <p>Owen Chung , Bruna Liborio, Kei Yoshikoshi, and Nick Groszewski </p>
+          <p><a class="btn btn-default" href="https://github.com/keikumata/Meeseeks-Inc." role="button">Git Repo &raquo;</a></p>
+        
+        </div>
+      </div>
+
+      <hr>
+
+      <footer>
+        <p>&copy; 2017 Meeseeks, Inc.</p>
+      </footer>
+    </div> <!-- /container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src=static/js/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="static/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
 </html>

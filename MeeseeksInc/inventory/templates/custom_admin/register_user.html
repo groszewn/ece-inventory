@@ -7,9 +7,11 @@
 {% block content %}
 
 <form method="post" action=".">
-{{ form.as_p }}
-<input type="submit" value="Register User" />
 {% csrf_token %}
+{{ form.as_p }}
+<input type="hidden" value="Register User" />
+<button type="submit" class="btn btn-success">Register User</button>
+
 </form>
 
 {% endblock %}
