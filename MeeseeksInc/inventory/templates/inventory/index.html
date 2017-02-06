@@ -9,7 +9,7 @@
 	<h2>All Inventory Items</h2>
 	<ul>
 		{% for item in item_list %}
-			<li><a href="{% url 'inventory:detail' item.item_name %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
+			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
 		{% endfor %}
 	</ul>
 	
@@ -17,7 +17,7 @@
 		<h2>Requests</h2>
 		<ul>
 		{% for request in request_list %}
-				<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+				<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}, Reason: {{ request.reason}}, ADMIN COMMENT: {{ request.comment }}</li>
 		{% endfor %}
 		</ul>
 	{% endif %}
@@ -28,7 +28,7 @@
 	{% if disbursed_list %}
 		<h2>Disbursed to you</h2>
 		{% for disbursed in disbursed_list %}
-			<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
+			<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }}, ADMIN COMMENT : {{ disbursed.comment }}  </li>
 		{% endfor %}
 	{% endif %}
 	

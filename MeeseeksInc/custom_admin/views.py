@@ -8,12 +8,13 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm
+from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
-from inventory.models import Instance, Request, Item, Disbursement
+from inventory.models import Instance, Request, Item, Disbursement, Tag
 from django.contrib import messages
+from django.template.defaulttags import comment
  
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -70,25 +71,78 @@ def register_page(request):
     return render(request, 'custom_admin/register_user.html', {'form': form})
  
 @login_required(login_url='/login/')
+def add_comment_to_request_accept(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            
+            
+            indiv_request = Request.objects.get(request_id=pk)
+            item = Item.objects.get(item_name=indiv_request.item_name)
+            if item.quantity >= indiv_request.request_quantity:
+                # decrement quantity in item
+                item.quantity = F('quantity')-indiv_request.request_quantity
+                item.save()
+                 
+                # change status of request to approved
+                indiv_request.status = "Approved"
+                indiv_request.comment = comment
+                indiv_request.save()
+                 
+                # add new disbursement item to table
+                disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                disbursement.save()
+                messages.success(request, ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            else:
+                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+def add_comment_to_request_deny(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            indiv_request = Request.objects.get(request_id=pk)
+            indiv_request.status = "Denied"
+            indiv_request.comment = comment
+            indiv_request.save()
+            messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
 def post_new_disburse(request):
     if request.method == "POST":
-        form = DisburseForm(request.POST) # create request-form with the data from the request 
+        form = DisburseForm(request.POST) # create request-form with the data from the request
+        
         if form.is_valid():
             post = form.save(commit=False)
             post.admin_name = request.user.username
-            name_requested = form['item_field'].value()
-            post.item_name = Item.objects.get(item_name = name_requested)
+            id_requested = form['item_field'].value()
+            item = Item.objects.get(item_id=id_requested)
+            post.item_name = item
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
+            if item.quantity >= int(form['total_quantity'].value()):
+                # decrement quantity in item
+                item.quantity = F('quantity')-int(form['total_quantity'].value())
+                item.save()
+            else:
+                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                return redirect(reverse('custom_admin:index'))
             post.save()
             messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         
             return redirect('/customadmin')
-        else:
-            data= {}
-            data['status'] = "error";
-            return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
     else:
         form = DisburseForm() # blank request form with no data yet
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
@@ -151,7 +205,7 @@ def approve_request(request, pk):
 #     return redirect('/')
 @login_required(login_url='/login/')
 def edit_item(request, pk):
-    item = Item.objects.get(item_name=pk)
+    item = Item.objects.get(item_id=pk)
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item, initial = {'item_field': item.item_name})
         if form.is_valid():
@@ -160,6 +214,32 @@ def edit_item(request, pk):
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def log_item(request):
+    form = LogForm(request.POST or None)
+    if request.method=="POST":
+        form = LogForm(request.POST)
+        if form.is_valid():
+            item = Item.objects.get(item_id=form['item_name'].value())
+            change_type = form['item_change_status'].value()
+            print(change_type)
+            amount = int(form['item_amount'].value())
+            if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
+                item.quantity = F('quantity')+amount
+                item.save()
+            else:
+                item.quantity = F('quantity')-amount
+                item.save()
+            form.save()
+            return redirect('/customadmin')
+    return render(request, 'inventory/log_item.html', {'form': form})
+
+@login_required(login_url='/login/')
+def delete_item(request, pk):
+    item = Item.objects.get(item_id=pk)
+    item.delete()
+    return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
 def create_new_item(request):

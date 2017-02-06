@@ -1,6 +1,6 @@
 from django import forms
 from inventory.models import Request
-from inventory.models import Item, Disbursement
+from inventory.models import Item, Disbursement, Item_Log, Tag
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -8,11 +8,24 @@ from django.core.exceptions import ObjectDoesNotExist
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
-
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
- 
+
+class AddCommentRequestForm(forms.Form):
+    comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+    
+class LogForm(forms.ModelForm):
+    item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    item_change_options = [
+        (1, 'lost'),
+        (2, 'acquired'), 
+        (3, 'broken')
+        ]
+    item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
+    class Meta:
+        model = Item_Log
+        fields = ('item_name', 'item_change_status', 'item_amount')
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
@@ -20,16 +33,21 @@ class RequestEditForm(forms.ModelForm):
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
          
-class ItemEditForm(forms.ModelForm):
-    #item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+class ItemEditForm(forms.ModelForm):     
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
-         
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')        
+        
 class CreateItemForm(forms.ModelForm):
+    tags = []
+    for myTag in Tag.objects.all():
+        if [myTag.tag,myTag.tag] not in tags:
+            tags.append([myTag.tag,myTag.tag])
+    tags1 = forms.MultipleChoiceField(tags, required=False, widget=forms.SelectMultiple, label="Choose tags to include")
+    
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'tags1')
      
  
 class RegistrationForm(forms.Form):
