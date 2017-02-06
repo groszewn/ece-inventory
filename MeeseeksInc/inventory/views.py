@@ -140,7 +140,8 @@ def edit_request(request, pk):
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+#             post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
@@ -161,7 +162,8 @@ def post_new_request(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+#             post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = Item.objects.get(item_id = post.item_id)
             post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
