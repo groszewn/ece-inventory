@@ -4,7 +4,6 @@ from inventory.models import Item, Disbursement, Tag, Item_Log
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.test.utils import tag
  
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users

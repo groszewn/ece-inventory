@@ -10,7 +10,7 @@ from django.views import generic
 from django.views.generic.edit import FormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-  
+from django.contrib import messages
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
@@ -137,6 +137,7 @@ def edit_request(request, pk):
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
         if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
             post.item_name = Item.objects.get(item_id = post.item_id).item_name
