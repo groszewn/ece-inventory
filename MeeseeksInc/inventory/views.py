@@ -14,9 +14,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
-# from .models import Question, Choice, Instance, Request, Item, Disbursement
-from .models import Question, Choice, Instance, Request, Item, Tag, Disbursement
-#   
+from .models import Question, Choice, Instance, Request, Item, Disbursement
+from .models import Tag
+
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -60,7 +60,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name_id=self.get_object().item_id)
+        tags = Tag.objects.filter(item_name=self.get_object())
         if tags:
             context['last_tag'] = tags.reverse()[0]
             tags = tags.reverse()[1:]

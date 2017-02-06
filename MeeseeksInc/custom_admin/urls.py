@@ -27,4 +27,6 @@ urlpatterns = [
     url(r'^delete/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.delete_item), name='delete_item'),
     url(r'^$', permission_required('is_staff', login_url='/login/check_login/')(views.AdminIndexView.as_view()), name='index'),
     url(r'^log_item$', permission_required('is_staff', login_url='/login/check_login/')(views.log_item), name='log_item'),
+    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)$', views.edit_tag, name='edit_tag'),
+    url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
 ]

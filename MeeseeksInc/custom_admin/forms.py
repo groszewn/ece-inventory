@@ -1,10 +1,10 @@
 from django import forms
 from inventory.models import Request
-from inventory.models import Item, Disbursement, Item_Log, Tag
+from inventory.models import Item, Disbursement, Tag, Item_Log
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from boto.s3.website import tag
+from django.test.utils import tag
  
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -34,22 +34,32 @@ class RequestEditForm(forms.ModelForm):
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
          
-class ItemEditForm(forms.ModelForm):     
-    class Meta:
-        model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')        
-        
-class CreateItemForm(forms.ModelForm):
-    tags = []
+class ItemEditForm(forms.ModelForm):
+    choices = []
     for myTag in Tag.objects.all():
-        if [myTag.tag,myTag.tag] not in tags:
-            tags.append([myTag.tag,myTag.tag])
-    tags1 = forms.MultipleChoiceField(tags, required=False, widget=forms.SelectMultiple, label="Choose tags to include")
-    
+        if [myTag.tag,myTag.tag] not in choices:
+            choices.append([myTag.tag,myTag.tag])
+    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
+    create_new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'tags1')
-     
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','create_new_tags')
+        
+class EditTagForm(forms.ModelForm):  
+    class Meta:
+        model = Tag 
+        fields = ('tag',)
+         
+class CreateItemForm(forms.ModelForm):
+    choices = []
+    for myTag in Tag.objects.all():
+        if [myTag.tag,myTag.tag] not in choices:
+            choices.append([myTag.tag,myTag.tag])
+    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
+    new_tags = forms.CharField(required=False)
+    class Meta:
+        model = Item
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','new_tags')     
  
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
