@@ -1,6 +1,7 @@
 import random
-
+  
 from django.db.models import F
+from django.db import connection, transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -9,7 +10,7 @@ from django.views import generic
 from django.views.generic.edit import FormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-
+  
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
@@ -22,7 +23,7 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
     form_class = SearchForm
-
+  
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
@@ -32,7 +33,22 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-
+        
+class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'inventory/search_result.html'
+    context_object_name = 'item_list'
+   
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
+        context['item_list'] = Item.objects.all()
+        context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
+      
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
@@ -40,11 +56,11 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     context_object_name = 'item'
     context_object_name = 'request_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-    
+       
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name=self.get_object().item_name)
+        tags = Tag.objects.filter(item_name=self.get_object())
         if tags:
             context['last_tag'] = tags.reverse()[0]
             tags = tags.reverse()[1:]
@@ -53,13 +69,13 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         context['tag_list'] = tags
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
         return context
-    
+      
 def check_login(request):
     if request.user.is_staff:
         return HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return HttpResponseRedirect(reverse('inventory:index'))
-    
+      
 def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
@@ -115,16 +131,17 @@ def search_form(request):
     else:
         form = SearchForm()
     return render(request, 'inventory/search.html', {'form': form})
-
+  
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
         if form.is_valid():
             post = form.save(commit=False)
-            name_requested = form['item_field'].value()
-            item_requested = Item.objects.get(item_name = name_requested)
-            post.item_name = item_requested
+            post.item_name = form['item_field'].value()
+#             name_requested = form['item_field'].value()
+#             item_requested = Item.objects.get(item_name = name_requested)
+#             post.item_name = item_requested
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
@@ -132,21 +149,22 @@ def edit_request(request, pk):
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
-
+  
 class ResultsView(LoginRequiredMixin, generic.DetailView):
     login_url = "/login/"
     model = Question
     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
-
+  
 @login_required(login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
         form = RequestForm(request.POST) # create request-form with the data from the request 
         if form.is_valid():
             post = form.save(commit=False)
-            name_requested = form['item_field'].value()
-            item_requested = Item.objects.get(item_name = name_requested)
-            post.item_name = item_requested
+            post.item_name = form['item_field'].value()
+#             name_requested = form['item_field'].value()
+#             item_requested = Item.objects.get(item_name = name_requested)
+#             post.item_name = item_requested
             post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
@@ -155,15 +173,15 @@ def post_new_request(request):
     else:
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
-
+  
 class request_detail(generic.DetailView):
     model = Request
     template_name = 'inventory/request_detail.html'
-    
+      
 class request_cancel_view(generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
-    
+      
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()
     return redirect('/')
