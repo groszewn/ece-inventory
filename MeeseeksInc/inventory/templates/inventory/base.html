@@ -44,9 +44,13 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Duke University ECE Department Inventory</a>
+          	{% if user.is_staff %}#}
+          		<a class="navbar-brand" href="{% url 'custom_admin:index' %}">Duke University ECE Department Inventory</a>
+        	{% else %}
+        		<a class="navbar-brand" href="{% url 'inventory:index' %}">Duke University ECE Department Inventory</a>
+        	{% endif %}
+          
         </div>
- 
 
       <ul class="nav navbar-nav navbar-right">
         <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
@@ -64,18 +68,6 @@
 			{% else %}
     			<h1>Welcome, Guest {{user.username }}</h1>
 			{% endif %}
-
-{#		</div>#}
-		
-{#    	<div class="page-header">#}
-{#    		{% if user.is_staff %}#}
-{#        		<h1><a href="{% url 'custom_admin:index' %}">ECE458 Inventory</a></h1>#}
-{#        	{% else %}#}
-{#        		<h1><a href="{% url 'inventory:index' %}">ECE458 Inventory</a></h1>#}
-{#        	{% endif %}#}
-{#        	<div align="right" style="border:2px">#}
-{#    			<a href="{% url 'logout' %}?next=/"> Logout</a>#}
-
         <p>
         This is the inventory system of Duke University ECE Department. Please sign up using your Duke email and an admin will approve your request. 
         For more information about Duke ECE, please press Learn more.
@@ -89,7 +81,7 @@
     	<div class='row'>
     		<div class='col-sm-6 col-sm-offset-3'>
     			{% for message in messages %}
-   					 <p{% if message.tags == "success" %} class = "alert alert-success" role="alert" {% endif %}>{{ message }}</p>
+   					 <p{% if message.tags == "success" %} class = "alert alert-success" role="alert" {% elif message.tags == "error" %} class = "alert alert-danger" role="alert" {% endif %}>{{ message }}</p>
    				{% endfor %}
     		</div>
     	</div>
