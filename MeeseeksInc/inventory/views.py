@@ -67,7 +67,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         else:
             context['last_tag'] = []
         context['tag_list'] = tags
-        context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
+        context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         return context
       
 def check_login(request):

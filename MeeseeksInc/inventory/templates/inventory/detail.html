@@ -16,8 +16,8 @@
     		}
 		}
 		</script>
-		 <a href="{% url 'custom_admin:edit_tag' oneTag.id %}">Edit this tag</a>,
-		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>
+		 <a href="{% url 'custom_admin:edit_tag' oneTag.id %}">Edit this tag</a>
+		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>,
 	{% endfor %}
 {% endif %} 
 {% if last_tag%}
