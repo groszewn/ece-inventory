@@ -1,0 +1,28 @@
+{% load static %}
+<html>
+    <head>
+        <title>Meeseeks Inventory</title>
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+		<link rel="stylesheet" type="text/css" href="{% static 'css/index.css' %}" />
+    </head>
+	
+    <body>
+        <div>
+    		{% if user.is_staff %}
+    			<p>Welcome, {{ user.username }} </p>
+			{% else %}
+    			<p>Welcome, Guest {{user.username }}</p>
+			{% endif %}
+		</div>
+		
+    	<div class="page-header">
+        	<h1> <a href="{% url 'inventory:index' %}?next=/"> Duke University ECE Department Inventory </a> </h1>
+        	<div align="right" style="border:2px">
+    			<a href="{% url 'logout' %}?next=/"> Logout</a>
+    		</div>
+    	</div>
+    	{% block content %}
+        {% endblock %}
+    </body>
+</html>
