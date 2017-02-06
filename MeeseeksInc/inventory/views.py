@@ -22,7 +22,7 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
-    form_class = SearchForm
+#     form_class = SearchForm
   
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
@@ -60,12 +60,9 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name_id=self.get_object().item_id)
-        if tags:
-            context['last_tag'] = tags.reverse()[0]
-            tags = tags.reverse()[1:]
-        else:
-            context['last_tag'] = []
+        tags = Tag.objects.filter(item_name=self.get_object().item_name)
+        context['last_tag'] = tags.reverse()[0]
+        tags = tags.reverse()[1:]
         context['tag_list'] = tags
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
         return context
@@ -80,52 +77,20 @@ def search_form(request):
     if request.method == "POST":
         form = SearchForm(request.POST)
         if form.is_valid():
-            picked = form.cleaned_data.get('tags1')
-            excluded = form.cleaned_data.get('tags2')
+            picked = form.cleaned_data.get('tags')
             keyword = form.cleaned_data.get('keyword')
-            modelnum = form.cleaned_data.get('model_number')
-            itemname = form.cleaned_data.get('item_name')
-            
+            tag_list = []
             keyword_list = []
             for item in Item.objects.all():
-                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
-                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
-                    and ((itemname is "") or (itemname in item.item_name)) \
-                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
+                if (keyword is not "") and (keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)): 
                     keyword_list.append(item)
-            
-            excluded_list = []
-            for excludedTag in excluded:
-                tagQSEx = Tag.objects.filter(tag = excludedTag)
-                for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(pk = oneTag.item_name))
-             # have list of all excluded items
-            included_list = []
             for pickedTag in picked:
-                tagQSIn = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(pk = oneTag.item_name))
-            # have list of all included items
-            
-            final_list = []
+                tagQS = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQS:
+                    tag_list.append(Item.objects.get(pk = oneTag.item_name))
+            search_list = tag_list + keyword_list
             item_list = Item.objects.all()
-            if not picked:
-                if excluded:
-                    final_list = [x for x in item_list if x not in excluded_list]
-            else:
-                final_list = [x for x in included_list if x not in excluded_list]
-            
-            # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
-            # for a less constrained search
-            # search_list = final_list + keyword_list
-            
             request_list = Request.objects.all()
             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
@@ -139,8 +104,10 @@ def edit_request(request, pk):
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
-            post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = form['item_field'].value()
+#             name_requested = form['item_field'].value()
+#             item_requested = Item.objects.get(item_name = name_requested)
+#             post.item_name = item_requested
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
@@ -160,8 +127,10 @@ def post_new_request(request):
         form = RequestForm(request.POST) # create request-form with the data from the request 
         if form.is_valid():
             post = form.save(commit=False)
-            post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = form['item_field'].value()
+#             name_requested = form['item_field'].value()
+#             item_requested = Item.objects.get(item_name = name_requested)
+#             post.item_name = item_requested
             post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
