@@ -8,7 +8,7 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
@@ -126,9 +126,9 @@ def post_new_disburse(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.admin_name = request.user.username
-            name_requested = form['item_field'].value()
-            item = Item.objects.get(item_name=name_requested)
-            post.item_name = Item.objects.get(item_name = name_requested)
+            id_requested = form['item_field'].value()
+            item = Item.objects.get(item_id=id_requested)
+            post.item_name = item
             post.user_name = User.objects.get(id=form['user_field'].value()).username
             post.time_disbursed = timezone.localtime(timezone.now())
             if item.quantity >= int(form['total_quantity'].value()):
@@ -136,11 +136,11 @@ def post_new_disburse(request):
                 item.quantity = F('quantity')-int(form['total_quantity'].value())
                 item.save()
             else:
-                messages.error(request, ('Not enough stock available for ' + name_requested + ' (' + form['user_field'].value() +')'))
+                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
             post.save()
             messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         
             return redirect('/customadmin')
     else:
@@ -230,6 +230,24 @@ def edit_item(request, pk):
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
+def log_item(request):
+    form = LogForm(request.POST or None)
+    if request.method=="POST":
+        form = LogForm(request.POST)
+        if form.is_valid():
+            item = Item.objects.get(item_id=form['item_name'].value())
+            change_type = form['item_change_status'].value()
+            print(change_type)
+            amount = int(form['item_amount'].value())
+            if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
+                item.quantity = F('quantity')+amount
+                item.save()
+            else:
+                item.quantity = F('quantity')-amount
+                item.save()
+            form.save()
+            return redirect('/customadmin')
+    return render(request, 'inventory/log_item.html', {'form': form})
 def edit_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     if request.method == "POST":

@@ -3,13 +3,17 @@
 
 {% block content %}
 {########################## MESSAGES (SUCCESS / ERRORS) #####################}
-{% if messages %}
-<ul class="messages">
-    {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+{#{% if messages %}#}
+{#<ul class="messages">#}
+{#    {% for message in messages %}#}
+{#    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>#}
+{#    {% endfor %}#}
+{#</ul>#}
+{#{% endif %}#}
+
+
+{########################## LOG ITEMS ##########################}
+ <h2><a href="{% url 'custom_admin:log_item' %}" class="top-menu">Log acquisition/loss of item<span class="glyphicon glyphicon-plus"></span></a>
 
 {########################## CREATE ITEMS ##########################}
 <h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>

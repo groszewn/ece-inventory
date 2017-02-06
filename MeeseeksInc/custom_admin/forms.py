@@ -1,10 +1,9 @@
 from django import forms
 from inventory.models import Request
-from inventory.models import Item, Disbursement, Tag
+from inventory.models import Item, Disbursement, Tag, Item_Log
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.test.utils import tag
  
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -16,6 +15,17 @@ class DisburseForm(forms.ModelForm):
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
     
+class LogForm(forms.ModelForm):
+    item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    item_change_options = [
+        (1, 'lost'),
+        (2, 'acquired'), 
+        (3, 'broken')
+        ]
+    item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
+    class Meta:
+        model = Item_Log
+        fields = ('item_name', 'item_change_status', 'item_amount')
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
@@ -48,8 +58,7 @@ class CreateItemForm(forms.ModelForm):
     new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','new_tags')
-     
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','new_tags')     
  
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
