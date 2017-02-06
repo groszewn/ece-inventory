@@ -16,8 +16,8 @@
     		}
 		}
 		</script>
-		 <a href="{% url 'custom_admin:edit_tag' oneTag.id %}">Edit this tag</a>,
-		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>
+		 <a href="{% url 'custom_admin:edit_tag' oneTag.id %}">Edit this tag</a>
+		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>,
 	{% endfor %}
 {% endif %} 
 {% if last_tag%}
@@ -36,7 +36,7 @@
 <h2>Outstanding Requests for This Item:  </h2>
 {% if request_list%}
 	{% for request in request_list %}
-		<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+		<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> <b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 	{% endfor %}
 {% endif %} 
 
@@ -48,7 +48,8 @@ function clickEvent(){
     }
 }
 </script>
-    <a href="{% url 'custom_admin:edit_item' item.item_id %}">Edit this item</a>
+    <a href="{% url 'custom_admin:edit_item' item.item_id %}">Edit This Item</a>
+    <a href="{% url 'custom_admin:add_tags' item.item_id %}">Add or Create Tags</a>
     <input type="button" value="Delete" onclick="clickEvent();"/>
 {% endif %}
 
