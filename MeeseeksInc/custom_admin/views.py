@@ -8,11 +8,12 @@ from django.views import generic
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy 
 from django.views.generic.edit import FormView
-from inventory.models import Instance, Request, Item, Disbursement, Tag
+from inventory.models import Instance, Request, Item, Disbursement
+from inventory.models import Tag
 from django.contrib import messages
 from django.template.defaulttags import comment
  
@@ -209,25 +210,34 @@ def edit_item(request, pk):
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
-            post = form.save(commit=False)
-            pickedTags = form.cleaned_data.get('tag_field')
-            createdTags = form['create_new_tags'].value()
-            post.save()
-            item = Item.objects.get(item_name = form['item_name'].value())
-            for oneTag in pickedTags:
-                t = Tag(item_name=item, tag=oneTag)
-                t.save(force_insert=True)
-            if createdTags is not "":
-                tag_list = [x.strip() for x in createdTags.split(',')]
-                for oneTag in tag_list:
-                    t = Tag(item_name=item, tag=oneTag)
-                    t.save(force_insert=True)
-            return redirect('/customadmin')
             form.save()
             return redirect('/customadmin')
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def add_tags(request, pk):
+    if request.method == "POST":
+        form = AddTagForm(request.POST or None)
+        if form.is_valid():
+            pickedTags = form.cleaned_data.get('tag_field')
+            createdTags = form['create_new_tags'].value()
+            item = Item.objects.get(item_id=pk)
+            for oneTag in pickedTags:
+                if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                    t = Tag(item_name=item, tag=oneTag) 
+                    t.save(force_insert=True)
+            if createdTags is not "":
+                tag_list = [x.strip() for x in createdTags.split(',')]
+                for oneTag in tag_list:
+                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                        t = Tag(item_name=item, tag=oneTag)
+                        t.save(force_insert=True)
+            return redirect('/customadmin')
+    else:
+        form = AddTagForm()
+    return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
 def log_item(request):
