@@ -288,6 +288,7 @@ def create_new_item(request):
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['new_tags'].value()
             post.save()
+            messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
             for oneTag in pickedTags:
                 t = Tag(item_name=item, tag=oneTag)
@@ -297,6 +298,9 @@ def create_new_item(request):
                 for oneTag in tag_list:
                     t = Tag(item_name=item, tag=oneTag)
                     t.save(force_insert=True)
+            return redirect('/customadmin')
+        else:
+            messages.error(request, (form['item_name'].value() + " has already been created."))
             return redirect('/customadmin')
     return render(request, 'inventory/item_create.html', {'form':CreateItemForm(),})
  
