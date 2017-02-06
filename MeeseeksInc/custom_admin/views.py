@@ -24,8 +24,7 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
         cursor = connection.cursor()
-#         cursor.execute('select item_name, array_agg(request_id order by status desc) from inventory_request inner join item_name on inventory_request.item_name = inventory_item.item_name group by item_name')
-        cursor.execute('select item_name, array_agg(request_id order by status desc) from inventory_request group by item_name')
+        cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
         raw_request_list = cursor.fetchall()
         for raw_request in raw_request_list:
             raw_request_ids = raw_request[1] # all the ids in this item
@@ -94,9 +93,9 @@ def add_comment_to_request_accept(request, pk):
                 disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                 disbursement.save()
-                messages.success(request, ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+                messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
-                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
@@ -112,7 +111,7 @@ def add_comment_to_request_deny(request, pk):
             indiv_request.status = "Denied"
             indiv_request.comment = comment
             indiv_request.save()
-            messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+            messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
@@ -151,7 +150,7 @@ def post_new_disburse(request):
 def approve_all_requests(request):
     pending_requests = Request.objects.filter(status="Pending")
     for indiv_request in pending_requests:
-        item = get_object_or_404(Item,item_name=indiv_request.item_name)
+        item = get_object_or_404(Item,item_name=indiv_request.item_name.item_name)
         if item.quantity >= indiv_request.request_quantity:
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
@@ -163,22 +162,22 @@ def approve_all_requests(request):
              
             # add new disbursement item to table
             # TODO: add comments!!
-            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
              
             messages.add_message(request, messages.SUCCESS, 
-                                 ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+                                 ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         else:
             messages.add_message(request, messages.ERROR, 
-                                 ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+                                 ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
          
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
 def approve_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
-    item = Item.objects.get(item_name=indiv_request.item_name)
+    item = Item.objects.get(item_id=indiv_request.item_name_id)
     if item.quantity >= indiv_request.request_quantity:
         # decrement quantity in item
         item.quantity = F('quantity')-indiv_request.request_quantity
@@ -190,12 +189,12 @@ def approve_request(request, pk):
          
         # add new disbursement item to table
         # TODO: add comments!!
-        disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+        disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
-        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
-        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))
  
     return redirect(reverse('custom_admin:index'))
@@ -255,7 +254,7 @@ def deny_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     indiv_request.status = "Denied"
     indiv_request.save()
-    messages.success(request, ('Denied disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
@@ -264,7 +263,7 @@ def deny_all_request(request):
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
         indiv_request.save()
-    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name + ' (' + indiv_request.user_id +')'))
+    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
  
