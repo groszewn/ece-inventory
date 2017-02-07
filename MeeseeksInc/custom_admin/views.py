@@ -259,10 +259,10 @@ def log_item(request):
                 item.save()
                 messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
             else:
-                if item.quantity > amount:
-                    item_quantity = F('quantity')-amount
+                if item.quantity >= amount:
+                    item.quantity = F('quantity')-amount
                     item.save()
-                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (helpremoved ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
                     return redirect(reverse('custom_admin:index'))
