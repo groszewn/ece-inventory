@@ -22,28 +22,13 @@
 			window.location='{% url 'custom_admin:edit_tag' oneTag.id %}';
 		}
 		</script>
+		{% if user.is_staff %}
 		 <input type="button" value="Edit this tag" onclick="tagEvent3();"/>
 		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>
+		 {% endif %}
 	{% endfor %}
 </div>
 {% endif %} 
-{% if last_tag%}
-	{{last_tag.tag}}
-	<script> 
-		function tagEvent4() {
-			window.location='{% url 'custom_admin:edit_tag' last_tag.id %}';
-		}
-		</script>
-	<script>
-		function tagEvent2(){
-    		if (confirm("Delete this tag?")) {
-    			window.location='{% url 'custom_admin:delete_tag' last_tag.id %}';
-    		}
-		}
-		</script>
-	 <input type="button" value="Delete this tag" onclick="tagEvent4();"/>
-	 <input type="button" value="Delete this tag" onclick="tagEvent2();"/>
-{% endif %}
 <div>
 	{% if user.is_staff %}
 	<script>
