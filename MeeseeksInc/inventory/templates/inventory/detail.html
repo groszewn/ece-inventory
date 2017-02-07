@@ -5,6 +5,10 @@
 
 <h1>{{ item.item_name }}</h1>
 <h2>Quantity: {{ item.quantity }} </h2>
+<h2>Model Number: {{ item.model_number }} </h2>
+<h2>Description: {{ item.description }} </h2>
+<h2>Location: {{ item.location }} </h2>
+    
 <h2>Tags: </h2>
 {% if tag_list%}
 	{% for oneTag in tag_list %}

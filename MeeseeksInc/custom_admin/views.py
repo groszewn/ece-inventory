@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import connection, transaction
 from django.db.models import F
@@ -16,9 +18,9 @@ from django.views import generic
 from django.views.generic.edit import FormView
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag
-
+# from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -36,7 +38,8 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
             for request_ID in raw_request_ids:
                 raw_request[1][counter] = Request.objects.get(request_id=request_ID)
                 counter += 1
-         
+        tags = Tag.objects.all()
+        context['form'] = SearchForm(tags)
         context['request_list'] = raw_request_list
         context['pending_requests'] = Request.objects.filter(status="Pending")
         context['item_list'] = Item.objects.all()
@@ -211,7 +214,8 @@ def approve_request(request, pk):
 @login_required(login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
-    tags = Tag.objects.filter(item_name=item)
+    tags = []
+#     tags = Tag.objects.filter(item_name=item)
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
@@ -224,15 +228,17 @@ def edit_item(request, pk):
 @login_required(login_url='/login/')
 def add_tags(request, pk):
     if request.method == "POST":
-        form = AddTagForm(request.POST or None)
+        tags = Tag.objects.all()
+        form = AddTagForm(tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['create_new_tags'].value()
             item = Item.objects.get(item_id=pk)
-            for oneTag in pickedTags:
-                if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                    t = Tag(item_name=item, tag=oneTag) 
-                    t.save(force_insert=True)
+            if pickedTags:
+                for oneTag in pickedTags:
+                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                        t = Tag(item_name=item, tag=oneTag) 
+                        t.save(force_insert=True)
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
@@ -241,7 +247,8 @@ def add_tags(request, pk):
                         t.save(force_insert=True)
             return redirect('/customadmin')
     else:
-        form = AddTagForm()
+        tags = Tag.objects.all()
+        form = AddTagForm(tags)
     return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -313,7 +320,7 @@ def create_new_item(request):
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
                     t = Tag(item_name=item, tag=oneTag)
-                    t.save(force_insert=True)
+                    t.save()
             return redirect('/customadmin')
         else:
             messages.error(request, (form['item_name'].value() + " has already been created."))
@@ -374,5 +381,71 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         return super(DisburseFormView, self).form_valid(form)
-    
+
+def search_form(request):
+    if request.method == "POST":
+        tags = Tag.objects.all()
+        form = SearchForm(tags, request.POST)
+        if form.is_valid():
+            picked = form.cleaned_data.get('tags1')
+            excluded = form.cleaned_data.get('tags2')
+            keyword = form.cleaned_data.get('keyword')
+            modelnum = form.cleaned_data.get('model_number')
+            itemname = form.cleaned_data.get('item_name')
+            
+            keyword_list = []
+            for item in Item.objects.all():
+                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
+                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
+                    and ((itemname is "") or (itemname in item.item_name)) \
+                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
+                    keyword_list.append(item)
+            
+            excluded_list = []
+            if excluded:
+                for excludedTag in excluded:
+                    tagQSEx = Tag.objects.filter(tag = excludedTag)
+                    for oneTag in tagQSEx:
+                        excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+             # have list of all excluded items
+            included_list = []
+            if picked:
+                for pickedTag in picked:
+                    tagQSIn = Tag.objects.filter(tag = pickedTag)
+                    for oneTag in tagQSIn:
+                        included_list.append(Item.objects.get(item_name = oneTag.item_name))
+            # have list of all included items
+            
+            final_list = []
+            item_list = Item.objects.all()
+            if not picked:
+                if excluded:
+                    final_list = [x for x in item_list if x not in excluded_list]
+            else:
+                final_list = [x for x in included_list if x not in excluded_list]
+            
+            # for a more constrained search
+            if not final_list:
+                search_list = keyword_list
+            elif not keyword_list:
+                search_list = final_list
+            else:
+                search_list = [x for x in final_list if x in keyword_list]
+            # for a less constrained search
+            # search_list = final_list + keyword_list
+            cursor = connection.cursor()
+            cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
+            raw_request_list = cursor.fetchall()
+            for raw_request in raw_request_list:
+                raw_request_ids = raw_request[1] # all the ids in this item
+                counter = 0
+                for request_ID in raw_request_ids:
+                    raw_request[1][counter] = Request.objects.get(request_id=request_ID)
+                    counter += 1
+            return render(request,'custom_admin/search_result.html', {'item_list': item_list,'request_list': raw_request_list,'search_list': set(search_list)})
+    else:
+        tags = Tag.objects.all()
+        form = SearchForm(tags)
+    return render(request, 'inventory/search.html', {'form': form})    
 ################################################################

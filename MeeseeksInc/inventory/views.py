@@ -19,14 +19,15 @@ from .models import Tag
 from django.contrib.auth.models import User
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
-    form_class = SearchForm
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
+        tags = Tag.objects.all()
+        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
@@ -57,7 +58,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     context_object_name = 'item'
     context_object_name = 'request_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-       
+        
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
@@ -66,7 +67,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
-        if(user.is_staff=="True"):
+        if(not user.is_staff):
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         else:
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
@@ -80,14 +81,15 @@ def check_login(request):
       
 def search_form(request):
     if request.method == "POST":
-        form = SearchForm(request.POST)
+        tags = Tag.objects.all()
+        form = SearchForm(tags, request.POST)
         if form.is_valid():
             picked = form.cleaned_data.get('tags1')
             excluded = form.cleaned_data.get('tags2')
             keyword = form.cleaned_data.get('keyword')
             modelnum = form.cleaned_data.get('model_number')
             itemname = form.cleaned_data.get('item_name')
-            
+             
             keyword_list = []
             for item in Item.objects.all():
                 if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
@@ -96,20 +98,20 @@ def search_form(request):
                     and ((itemname is "") or (itemname in item.item_name)) \
                     and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
                     keyword_list.append(item)
-            
+             
             excluded_list = []
             for excludedTag in excluded:
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
                 for oneTag in tagQSEx:
                     excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-             # have list of all excluded items
+#              have list of all excluded items
             included_list = []
             for pickedTag in picked:
                 tagQSIn = Tag.objects.filter(tag = pickedTag)
                 for oneTag in tagQSIn:
                     included_list.append(Item.objects.get(item_name = oneTag.item_name))
             # have list of all included items
-            
+             
             final_list = []
             item_list = Item.objects.all()
             if not picked:
@@ -117,7 +119,7 @@ def search_form(request):
                     final_list = [x for x in item_list if x not in excluded_list]
             else:
                 final_list = [x for x in included_list if x not in excluded_list]
-            
+             
             # for a more constrained search
             if not final_list:
                 search_list = keyword_list
@@ -127,11 +129,11 @@ def search_form(request):
                 search_list = [x for x in final_list if x in keyword_list]
             # for a less constrained search
             # search_list = final_list + keyword_list
-            
             request_list = Request.objects.all()
             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
-        form = SearchForm()
+        tags = Tag.objects.all()
+        form = SearchForm(tags)
     return render(request, 'inventory/search.html', {'form': form})
   
 def edit_request(request, pk):
@@ -154,8 +156,8 @@ def edit_request(request, pk):
 # class ResultsView(LoginRequiredMixin, generic.DetailView):
 #     login_url = "/login/"
 #     model = Question
-#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
-  
+#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html  
+
 @login_required(login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":

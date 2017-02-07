@@ -1,5 +1,4 @@
 {% extends 'custom_admin/base.html' %} 
-{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
@@ -21,6 +20,17 @@
 
 <h2><a href="{% url 'custom_admin:search_setup' %}" class="top-menu"> Search Parameters </a> </h2>
 {########################## ALL ITEMS ##########################}
+ 
+ <h2>Search Results</h2>
+ {% if search_list %}
+	<ul>
+		{% for item in search_list %}
+			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
+		{% endfor %}
+</ul>
+{% else %}
+	<p>No items match search criteria.</p>
+{% endif %}
 
 <h2>All available items</h2>
 {% if item_list %}
@@ -76,7 +86,7 @@
 {% if disbursed_list %}
 	<h2>Disbursed by you</h2>
 	{% for disbursed in disbursed_list %}
-		<li> Disbursed <b>{{ disbursed.total_quantity }}</b> {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
+		<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
 	{% endfor %}
 {% endif %}
 {#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
@@ -102,12 +112,12 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('.deny').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
-        $('#form-modal-body-deny').load(('request/deny/addcomment/'+request_id), function () {
+        $('#form-modal-body-deny').load(('../request/deny/addcomment/'+request_id), function () {
         	$('#formID-comment-deny').attr("request-comment", request_id);
             $('#form-modal-deny').modal('toggle');
         });
@@ -133,12 +143,12 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
-        $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
+        $('#form-modal-body-accept').load(('../request/accept/addcomment/'+request_id), function () {
         	$('#formID-comment-accept').attr("request-comment", request_id);
             $('#form-modal-accept').modal('toggle');
         });
@@ -168,7 +178,7 @@
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('#comment-button').click(function() {
-        $('#form-modal-body').load('disburse/item', function () {
+        $('#form-modal-body').load('../disburse/item', function () {
             $('#form-modal').modal('toggle');
         });
     });
