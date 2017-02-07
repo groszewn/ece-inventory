@@ -305,9 +305,10 @@ def create_new_item(request):
             post.save()
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
-            for oneTag in pickedTags:
-                t = Tag(item_name=item, tag=oneTag)
-                t.save(force_insert=True)
+            if pickedTags:
+                for oneTag in pickedTags:
+                    t = Tag(item_name=item, tag=oneTag)
+                    t.save(force_insert=True)
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
