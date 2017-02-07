@@ -234,10 +234,11 @@ def add_tags(request, pk):
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['create_new_tags'].value()
             item = Item.objects.get(item_id=pk)
-            for oneTag in pickedTags:
-                if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                    t = Tag(item_name=item, tag=oneTag) 
-                    t.save(force_insert=True)
+            if pickedTags:
+                for oneTag in pickedTags:
+                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                        t = Tag(item_name=item, tag=oneTag) 
+                        t.save(force_insert=True)
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
@@ -312,9 +313,10 @@ def create_new_item(request):
             post.save()
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
-            for oneTag in pickedTags:
-                t = Tag(item_name=item, tag=oneTag)
-                t.save()
+            if pickedTags:
+                for oneTag in pickedTags:
+                    t = Tag(item_name=item, tag=oneTag)
+                    t.save(force_insert=True)
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
@@ -403,16 +405,18 @@ def search_form(request):
                     keyword_list.append(item)
             
             excluded_list = []
-            for excludedTag in excluded:
-                tagQSEx = Tag.objects.filter(tag = excludedTag)
-                for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+            if excluded:
+                for excludedTag in excluded:
+                    tagQSEx = Tag.objects.filter(tag = excludedTag)
+                    for oneTag in tagQSEx:
+                        excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
              # have list of all excluded items
             included_list = []
-            for pickedTag in picked:
-                tagQSIn = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
+            if picked:
+                for pickedTag in picked:
+                    tagQSIn = Tag.objects.filter(tag = pickedTag)
+                    for oneTag in tagQSIn:
+                        included_list.append(Item.objects.get(item_name = oneTag.item_name))
             # have list of all included items
             
             final_list = []
