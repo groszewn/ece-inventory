@@ -63,11 +63,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         context['item'] = self.get_object()
         tags = Tag.objects.filter(item_name=self.get_object())
         if tags:
-            context['last_tag'] = tags.reverse()[0]
-            tags = tags.reverse()[1:]
-        else:
-            context['last_tag'] = []
-        context['tag_list'] = tags
+            context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
         if(user.is_staff=="True"):
