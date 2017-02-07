@@ -57,7 +57,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     context_object_name = 'item'
     context_object_name = 'request_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-       
+        
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['item'] = self.get_object()
@@ -91,7 +91,7 @@ def search_form(request):
             keyword = form.cleaned_data.get('keyword')
             modelnum = form.cleaned_data.get('model_number')
             itemname = form.cleaned_data.get('item_name')
-            
+             
             keyword_list = []
             for item in Item.objects.all():
                 if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
@@ -100,7 +100,7 @@ def search_form(request):
                     and ((itemname is "") or (itemname in item.item_name)) \
                     and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
                     keyword_list.append(item)
-            
+             
             excluded_list = []
             for excludedTag in excluded:
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
@@ -113,7 +113,7 @@ def search_form(request):
                 for oneTag in tagQSIn:
                     included_list.append(Item.objects.get(item_name = oneTag.item_name))
             # have list of all included items
-            
+             
             final_list = []
             item_list = Item.objects.all()
             if not picked:
@@ -121,7 +121,7 @@ def search_form(request):
                     final_list = [x for x in item_list if x not in excluded_list]
             else:
                 final_list = [x for x in included_list if x not in excluded_list]
-            
+             
             # for a more constrained search
             if not final_list:
                 search_list = keyword_list
@@ -131,7 +131,7 @@ def search_form(request):
                 search_list = [x for x in final_list if x in keyword_list]
             # for a less constrained search
             # search_list = final_list + keyword_list
-            
+             
             request_list = Request.objects.all()
             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
@@ -158,8 +158,8 @@ def edit_request(request, pk):
 # class ResultsView(LoginRequiredMixin, generic.DetailView):
 #     login_url = "/login/"
 #     model = Question
-#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
-  
+#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html  
+
 @login_required(login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
