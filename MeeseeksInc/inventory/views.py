@@ -14,8 +14,9 @@ from django.contrib import messages
 from .forms import RequestForm
 from .forms import RequestEditForm
 from .forms import SearchForm
-from .models import Question, Choice, Instance, Request, Item, Disbursement
+from .models import Instance, Request, Item, Disbursement
 from .models import Tag
+from django.contrib.auth.models import User
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -23,7 +24,7 @@ class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView t
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
     form_class = SearchForm
-  
+    
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
@@ -67,7 +68,12 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         else:
             context['last_tag'] = []
         context['tag_list'] = tags
-        context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_name, status = "Pending")
+        user = User.objects.get(username=self.request.user.username)
+        # if admin / not admin
+        if(user.is_staff=="True"):
+            context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
+        else:
+            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
         return context
       
 def check_login(request):
@@ -99,13 +105,13 @@ def search_form(request):
             for excludedTag in excluded:
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
                 for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(pk = oneTag.item_name))
+                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
              # have list of all excluded items
             included_list = []
             for pickedTag in picked:
                 tagQSIn = Tag.objects.filter(tag = pickedTag)
                 for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(pk = oneTag.item_name))
+                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
             # have list of all included items
             
             final_list = []
@@ -140,7 +146,7 @@ def edit_request(request, pk):
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())
             post.save()
@@ -149,10 +155,10 @@ def edit_request(request, pk):
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
   
-class ResultsView(LoginRequiredMixin, generic.DetailView):
-    login_url = "/login/"
-    model = Question
-    template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
+# class ResultsView(LoginRequiredMixin, generic.DetailView):
+#     login_url = "/login/"
+#     model = Question
+#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html
   
 @login_required(login_url='/login/')
 def post_new_request(request):
@@ -161,7 +167,7 @@ def post_new_request(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id).item_name
+            post.item_name = Item.objects.get(item_id = post.item_id)
             post.user_id = request.user.username
             post.status = "Pending"
             post.time_requested = timezone.localtime(timezone.now())

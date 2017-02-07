@@ -3,7 +3,7 @@
 
 {% block content %}
 
- <h2>Edit Item</h2>
+ <h2>Add and Create Tags</h2>
  <form method="POST" class="post-form">{% csrf_token %}
 	{{ form.as_p }}
 	<button type="submit" onclick="return confirm('Confirm changes?')" class="save btn btn-default">Save</button>

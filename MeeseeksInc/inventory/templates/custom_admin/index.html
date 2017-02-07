@@ -1,4 +1,5 @@
 {% extends 'custom_admin/base.html' %} 
+{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
@@ -46,14 +47,14 @@
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
 	<ul>
 		{% for request in request_tuple.1 %}
-			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 			{% if request.status == "Pending" %}
 				Reason: {{ request.reason }}
 				{% block comment_accept %}
-				<a id = "accept" request-id="{{ request.request_id }}" class="top-menu">Approve this request<span class="glyphicon glyphicon-plus"></span></a>
+				<a id = "accept" request-id="{{ request.request_id }}" class="accept">Approve this request<span class="glyphicon glyphicon-plus"></span></a>
 				{% endblock comment_accept %}
 				{% block comment_deny %}
-				<a id = "deny" request-id="{{ request.request_id }}" class="top-menu">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	
+				<a id = "deny" request-id="{{ request.request_id }}" class="deny">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	
 				{% endblock comment_deny %}
 			{% endif %}
 		{% endfor %}
@@ -92,11 +93,11 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="{% static "js/bootstrap.min.js" %}"></script>
+<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
-    $('#deny').click(function() {
-    	request_id = $('#deny').attr("request-id"); // should give me request_id to pass into modal / form
+    $('.deny').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
         $('#form-modal-body-deny').load(('request/deny/addcomment/'+request_id), function () {
         	$('#formID-comment-deny').attr("request-comment", request_id);
             $('#form-modal-deny').modal('toggle');
@@ -123,11 +124,11 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="{% static "js/bootstrap.min.js" %}"></script>
+<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
-    $('#accept').click(function() {
-    	request_id = $('#accept').attr("request-id"); // should give me request_id to pass into modal / form
+    $('.accept').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
         $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
         	$('#formID-comment-accept').attr("request-comment", request_id);
             $('#form-modal-accept').modal('toggle');
