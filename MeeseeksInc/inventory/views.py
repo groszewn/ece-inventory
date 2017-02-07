@@ -19,14 +19,15 @@ from .models import Tag
 from django.contrib.auth.models import User
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
-    form_class = SearchForm
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
+        tags = Tag.objects.all()
+        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
@@ -80,7 +81,8 @@ def check_login(request):
       
 def search_form(request):
     if request.method == "POST":
-        form = SearchForm(request.POST)
+        tags = Tag.objects.all()
+        form = SearchForm(tags, request.POST)
         if form.is_valid():
             picked = form.cleaned_data.get('tags1')
             excluded = form.cleaned_data.get('tags2')
@@ -127,11 +129,11 @@ def search_form(request):
                 search_list = [x for x in final_list if x in keyword_list]
             # for a less constrained search
             # search_list = final_list + keyword_list
-             
             request_list = Request.objects.all()
             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
     else:
-        form = SearchForm()
+        tags = Tag.objects.all()
+        form = SearchForm(tags)
     return render(request, 'inventory/search.html', {'form': form})
   
 def edit_request(request, pk):

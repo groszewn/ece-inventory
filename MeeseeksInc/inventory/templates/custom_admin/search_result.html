@@ -1,5 +1,4 @@
 {% extends 'custom_admin/base.html' %} 
-{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
@@ -22,32 +21,46 @@
 <h2><a href="{% url 'custom_admin:search_setup' %}" class="top-menu"> Search Parameters </a> </h2>
 {########################## ALL ITEMS ##########################}
 
+ <h2>Enter Search Parameters</h2>
+ <form method="POST" class="post-form">{% csrf_token %}
+	{{ form.keyword.label }}:{{ form.keyword }}
+	{{ form.model_number.label }}:{{ form.model_number }}
+	{{ form.item_name.label }}:{{ form.item_name }}
+	 <h3>Filter by tags...</h3>
+	 {{ form.tags1.label }} {{ form.tags1 }}
+	 {{ form.tags2.label }} {{ form.tags2 }}
+	<button type="submit" class="subbtn">Search</button>
+ </form>
+ 
+ <h2>Search Results</h2>
+ {% if search_list %}
+	<ul>
+		{% for item in search_list %}
+			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
+		{% endfor %}
+</ul>
+{% else %}
+	<p>No items match search criteria.</p>
+{% endif %}
+
 <h2>All available items</h2>
 {% if item_list %}
 
-<table class = "table table-hover">
-	<thead>
-		<tr>
-			<th>Item Name</th>
-			<th># Item</th>
-			<th>Item Location</th>
-			<th>Item Model Number</th>
-			<th>Item Description</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			{% for item in item_list %}
-				<tr>
-					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
-					<td>{{ item.quantity }}</td>
-					<td>{{ item.location }}</td>
-					<td>{{ item.model_number }}</td>
-					<td>{{ item.description }}</td>
-				</tr>
-			{% endfor %}
-		</tr>
-	</tbody>
+<table cellspacing='0' cellpadding='1' border='1'>
+	<tr>
+		<td>
+			<div style="overflow:auto; height:160px">
+				<table cellspacing='0' cellpadding='1' border='1'>
+					{% for item in item_list %}
+						<tr>
+							<td style="padding-right: 10px;"><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
+							<td style="padding-right: 10px;">{{ item.quantity }}</td>
+						</tr>
+					{% endfor %}
+				</table>
+			</div>
+		</td>
+	</tr>
 </table>
 {% endif %}
 
@@ -56,7 +69,7 @@
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
 	<ul>
 		{% for request in request_tuple.1 %}
-			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 			{% if request.status == "Pending" %}
 				Reason: {{ request.reason }}
 				{% block comment_accept %}
@@ -76,7 +89,7 @@
 {% if disbursed_list %}
 	<h2>Disbursed by you</h2>
 	{% for disbursed in disbursed_list %}
-		<li> Disbursed <b>{{ disbursed.total_quantity }}</b> {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
+		<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
 	{% endfor %}
 {% endif %}
 {#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
@@ -102,8 +115,8 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('.deny').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -133,8 +146,8 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
