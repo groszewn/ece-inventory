@@ -67,7 +67,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
-        if(user.is_staff=="True"):
+        if(user.is_staff=="False"):
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         else:
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
