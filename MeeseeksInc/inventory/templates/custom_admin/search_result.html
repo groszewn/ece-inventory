@@ -21,6 +21,28 @@
 <h2><a href="{% url 'custom_admin:search_setup' %}" class="top-menu"> Search Parameters </a> </h2>
 {########################## ALL ITEMS ##########################}
 
+ <h2>Enter Search Parameters</h2>
+ <form method="POST" class="post-form">{% csrf_token %}
+	{{ form.keyword.label }}:{{ form.keyword }}
+	{{ form.model_number.label }}:{{ form.model_number }}
+	{{ form.item_name.label }}:{{ form.item_name }}
+	 <h3>Filter by tags...</h3>
+	 {{ form.tags1.label }} {{ form.tags1 }}
+	 {{ form.tags2.label }} {{ form.tags2 }}
+	<button type="submit" class="subbtn">Search</button>
+ </form>
+ 
+ <h2>Search Results</h2>
+ {% if search_list %}
+	<ul>
+		{% for item in search_list %}
+			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
+		{% endfor %}
+</ul>
+{% else %}
+	<p>No items match search criteria.</p>
+{% endif %}
+
 <h2>All available items</h2>
 {% if item_list %}
 

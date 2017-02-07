@@ -16,12 +16,15 @@ class RequestEditForm(forms.ModelForm):
         fields = ('item_field', 'request_quantity', 'reason')
   
 class SearchForm(forms.Form):
-    choices = []
-    for myTag in Tag.objects.all():
-        if [myTag.tag,myTag.tag] not in choices:
-            choices.append([myTag.tag,myTag.tag])
-    tags1 = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
-    tags2 = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to exclude...')
+    def __init__(self, tags, *args, **kwargs):
+        super(SearchForm, self).__init__(*args, **kwargs)
+        choices = []
+        for myTag in tags:
+            if [myTag.tag,myTag.tag] not in choices:
+                choices.append([myTag.tag,myTag.tag])
+        self.fields['tags1'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...') 
+        self.fields['tags2'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to exclude...') 
+        
     keyword = forms.CharField(required=False)
     model_number = forms.CharField(required=False)
     item_name = forms.CharField(required=False)
