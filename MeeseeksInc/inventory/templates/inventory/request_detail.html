@@ -13,7 +13,7 @@
 
 <a href="{% url 'inventory:request_edit' request.request_id %}" class="top-menu"> Edit Request </a>
 <br>
-<a href="{% url 'inventory:request_cancel' request.request_id %}" class="top-menu"> Cancel Request </a>
+<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="top-menu"> Cancel Request </a>
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	

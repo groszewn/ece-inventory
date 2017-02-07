@@ -8,7 +8,13 @@ class RequestForm(forms.ModelForm):
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
-         
+
+class RequestSpecificForm(forms.Form):  
+    quantity = forms.IntegerField()
+    reason = forms.CharField(max_length=200)
+    fields = ('quantity', 'reason')
+
+       
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     class Meta:
