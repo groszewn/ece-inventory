@@ -74,6 +74,7 @@
 					<th>Request</th>
 					<th># Item</th>
 					<th>Status</th>
+					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
 				</tr>
@@ -84,6 +85,7 @@
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 						</tr>
@@ -106,6 +108,7 @@
 					<th>Request</th>
 					<th># Item</th>
 					<th>Status</th>
+					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
 				</tr>
@@ -116,6 +119,7 @@
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 						</tr>
@@ -138,6 +142,7 @@
 					<th>Request</th>
 					<th># Item</th>
 					<th>Status</th>
+					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
 					<th>Actions</th>
@@ -149,6 +154,7 @@
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 							<td>
@@ -181,6 +187,7 @@
 					<th>Request</th>
 					<th># Item</th>
 					<th>Status</th>
+					<th>Request by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
 				</tr>
@@ -191,6 +198,7 @@
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 						</tr>
