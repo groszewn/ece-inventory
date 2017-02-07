@@ -16,9 +16,9 @@ from django.views import generic
 from django.views.generic.edit import FormView
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag
-
+# from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -260,10 +260,10 @@ def log_item(request):
                 item.save()
                 messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
             else:
-                if item.quantity > amount:
-                    item_quantity = F('quantity')-amount
+                if item.quantity >= amount:
+                    item.quantity = F('quantity')-amount
                     item.save()
-                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (helpremoved ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
                     return redirect(reverse('custom_admin:index'))

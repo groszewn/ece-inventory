@@ -47,12 +47,12 @@ class AddTagForm(forms.Form):
     tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags')
-        
+         
 class EditTagForm(forms.ModelForm):  
     class Meta:
         model = Tag 
         fields = ('tag',)
-         
+          
 class CreateItemForm(forms.ModelForm):
     choices = []
     for myTag in Tag.objects.all():
