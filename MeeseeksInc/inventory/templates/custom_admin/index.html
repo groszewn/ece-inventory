@@ -1,4 +1,5 @@
 {% extends 'custom_admin/base.html' %} 
+{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
@@ -24,21 +25,29 @@
 <h2>All available items</h2>
 {% if item_list %}
 
-<table cellspacing='0' cellpadding='1' border='1'>
-	<tr>
-		<td>
-			<div style="overflow:auto; height:160px">
-				<table cellspacing='0' cellpadding='1' border='1'>
-					{% for item in item_list %}
-						<tr>
-							<td style="padding-right: 10px;"><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
-							<td style="padding-right: 10px;">{{ item.quantity }}</td>
-						</tr>
-					{% endfor %}
-				</table>
-			</div>
-		</td>
-	</tr>
+<table class = "table table-hover">
+	<thead>
+		<tr>
+			<th>Item Name</th>
+			<th># Item</th>
+			<th>Item Location</th>
+			<th>Item Model Number</th>
+			<th>Item Description</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			{% for item in item_list %}
+				<tr>
+					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
+					<td>{{ item.quantity }}</td>
+					<td>{{ item.location }}</td>
+					<td>{{ item.model_number }}</td>
+					<td>{{ item.description }}</td>
+				</tr>
+			{% endfor %}
+		</tr>
+	</tbody>
 </table>
 {% endif %}
 
@@ -47,7 +56,7 @@
 	<h3>Item Name: {{ request_tuple.0 }}</h3>
 	<ul>
 		{% for request in request_tuple.1 %}
-			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
+			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
 			{% if request.status == "Pending" %}
 				Reason: {{ request.reason }}
 				{% block comment_accept %}
@@ -93,8 +102,8 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="{% static "js/bootstrap.min.js" %}"></script>
+<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.deny').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -124,8 +133,8 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="{% static "js/bootstrap.min.js" %}"></script>
+<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form

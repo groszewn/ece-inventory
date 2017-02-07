@@ -1,23 +1,27 @@
-from django.db.models import F
-from django.http import HttpResponseRedirect
-from django.db import connection, transaction
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse
-from django.utils import timezone
-from django.views import generic
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
-from django.urls import reverse_lazy 
-from django.views.generic.edit import FormView
-from inventory.models import Instance, Request, Item, Disbursement
-from inventory.models import Tag
-from django.contrib import messages
+from django.db import connection, transaction
+from django.db.models import F
+from django.http import HttpResponseRedirect
+from django.http.response import Http404
+from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
 from django.template.defaulttags import comment
- 
+from django.urls import reverse
+from django.urls import reverse_lazy 
+from django.utils import timezone
+from django.views import generic
+from django.views.generic.edit import FormView
+
+from inventory.models import Instance, Request, Item, Disbursement, Tag
+# from inventory.models import Instance, Request, Item, Disbursement
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
+
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -152,6 +156,9 @@ def post_new_disburse(request):
 @login_required(login_url='/login/')
 def approve_all_requests(request):
     pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to accept!'))
+        return redirect(reverse('custom_admin:index'))
     for indiv_request in pending_requests:
         item = get_object_or_404(Item,item_name=indiv_request.item_name.item_name)
         if item.quantity >= indiv_request.request_quantity:
@@ -255,12 +262,20 @@ def log_item(request):
             if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
                 item.save()
+                messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
             else:
-                item.quantity = F('quantity')-amount
-                item.save()
+                if item.quantity >= amount:
+                    item.quantity = F('quantity')-amount
+                    item.save()
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (helpremoved ' + str(amount) +')'))
+                else:
+                    messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
+                    return redirect(reverse('custom_admin:index'))
             form.save()
             return redirect('/customadmin')
     return render(request, 'inventory/log_item.html', {'form': form})
+
+
 def edit_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     if request.method == "POST":
@@ -293,6 +308,7 @@ def create_new_item(request):
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['new_tags'].value()
             post.save()
+            messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
             for oneTag in pickedTags:
                 t = Tag(item_name=item, tag=oneTag)
@@ -302,6 +318,9 @@ def create_new_item(request):
                 for oneTag in tag_list:
                     t = Tag(item_name=item, tag=oneTag)
                     t.save()
+            return redirect('/customadmin')
+        else:
+            messages.error(request, (form['item_name'].value() + " has already been created."))
             return redirect('/customadmin')
     return render(request, 'inventory/item_create.html', {'form':CreateItemForm(),})
  
@@ -316,6 +335,9 @@ def deny_request(request, pk):
 @login_required(login_url='/login/')
 def deny_all_request(request):
     pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to deny!'))
+        return redirect(reverse('custom_admin:index'))
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
         indiv_request.save()

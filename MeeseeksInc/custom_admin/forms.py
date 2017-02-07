@@ -50,12 +50,12 @@ class AddTagForm(forms.Form):
         
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags')
-        
+         
 class EditTagForm(forms.ModelForm):  
     class Meta:
         model = Tag 
         fields = ('tag',)
-         
+          
 class CreateItemForm(forms.ModelForm):
     choices = []
     tags = Tag.objects.all()
