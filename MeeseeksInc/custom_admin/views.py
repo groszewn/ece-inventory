@@ -1,21 +1,27 @@
-from django.db.models import F
-from django.http import HttpResponseRedirect
-from django.db import connection, transaction
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse
-from django.utils import timezone
-from django.views import generic
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
-from django.urls import reverse_lazy 
-from django.views.generic.edit import FormView
-from inventory.models import Instance, Request, Item, Disbursement, Tag
-from django.contrib import messages
+from django.db import connection, transaction
+from django.db.models import F
+from django.http import HttpResponseRedirect
+from django.http.response import Http404
+from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
 from django.template.defaulttags import comment
- 
+from django.urls import reverse
+from django.urls import reverse_lazy 
+from django.utils import timezone
+from django.views import generic
+from django.views.generic.edit import FormView
+
+from inventory.models import Instance, Request, Item, Disbursement, Tag
+# from inventory.models import Instance, Request, Item, Disbursement
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
+
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -32,9 +38,13 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
             for request_ID in raw_request_ids:
                 raw_request[1][counter] = Request.objects.get(request_id=request_ID)
                 counter += 1
-         
-        context['request_list'] = raw_request_list
-        context['pending_requests'] = Request.objects.filter(status="Pending")
+        tags = Tag.objects.all()
+        context['form'] = SearchForm(tags)
+#         context['request_list'] = raw_request_list
+        context['request_list'] = Request.objects.all()
+        context['approved_request_list'] = Request.objects.filter(status="Approved")
+        context['pending_request_list'] = Request.objects.filter(status="Pending")
+        context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
         # And so on for more models
@@ -68,15 +78,13 @@ def register_page(request):
             return HttpResponseRedirect('/customadmin')
     form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})
- 
+
 @login_required(login_url='/login/')
 def add_comment_to_request_accept(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
             comment = form['comment'].value()
-            
-            
             indiv_request = Request.objects.get(request_id=pk)
             item = Item.objects.get(item_name=indiv_request.item_name)
             if item.quantity >= indiv_request.request_quantity:
@@ -149,6 +157,9 @@ def post_new_disburse(request):
 @login_required(login_url='/login/')
 def approve_all_requests(request):
     pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to accept!'))
+        return redirect(reverse('custom_admin:index'))
     for indiv_request in pending_requests:
         item = get_object_or_404(Item,item_name=indiv_request.item_name.item_name)
         if item.quantity >= indiv_request.request_quantity:
@@ -200,19 +211,46 @@ def approve_request(request, pk):
     return redirect(reverse('custom_admin:index'))
 #         ("Successfully disbursed " + indiv_request.request_quantity + " " + indiv_request.item_name + " to " + indiv_request.user_id))
          
- 
 #     return redirect('/')
 @login_required(login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
+    tags = []
+#     tags = Tag.objects.filter(item_name=item)
     if request.method == "POST":
-        form = ItemEditForm(request.POST or None, instance=item, initial = {'item_field': item.item_name})
+        form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
             form.save()
             return redirect('/customadmin')
     else:
-        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
+        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def add_tags(request, pk):
+    if request.method == "POST":
+        tags = Tag.objects.all()
+        form = AddTagForm(tags, request.POST or None)
+        if form.is_valid():
+            pickedTags = form.cleaned_data.get('tag_field')
+            createdTags = form['create_new_tags'].value()
+            item = Item.objects.get(item_id=pk)
+            if pickedTags:
+                for oneTag in pickedTags:
+                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                        t = Tag(item_name=item, tag=oneTag) 
+                        t.save(force_insert=True)
+            if createdTags is not "":
+                tag_list = [x.strip() for x in createdTags.split(',')]
+                for oneTag in tag_list:
+                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                        t = Tag(item_name=item, tag=oneTag)
+                        t.save(force_insert=True)
+            return redirect('/customadmin')
+    else:
+        tags = Tag.objects.all()
+        form = AddTagForm(tags)
+    return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
 def log_item(request):
@@ -222,32 +260,74 @@ def log_item(request):
         if form.is_valid():
             item = Item.objects.get(item_id=form['item_name'].value())
             change_type = form['item_change_status'].value()
-            print(change_type)
             amount = int(form['item_amount'].value())
             if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
                 item.save()
+                messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
             else:
-                item.quantity = F('quantity')-amount
-                item.save()
+                if item.quantity >= amount:
+                    item.quantity = F('quantity')-amount
+                    item.save()
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (helpremoved ' + str(amount) +')'))
+                else:
+                    messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
+                    return redirect(reverse('custom_admin:index'))
             form.save()
             return redirect('/customadmin')
     return render(request, 'inventory/log_item.html', {'form': form})
+
+
+def edit_tag(request, pk):
+    tag = Tag.objects.get(id=pk)
+    if request.method == "POST":
+        form = EditTagForm(request.POST or None, instance=tag)
+        if form.is_valid():
+            form.save()
+            return redirect('/customadmin')
+    else:
+        form = EditTagForm(instance=tag)
+    return render(request, 'inventory/tag_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     item.delete()
     return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
+def delete_tag(request, pk):
+    tag = Tag.objects.get(id=pk)
+    tag.delete()
+    return redirect('/customadmin')
  
 @login_required(login_url='/login/')
 def create_new_item(request):
+    tags = Tag.objects.all()
     if request.method== 'POST':
-        form = CreateItemForm(request.POST)
+        form = CreateItemForm(tags, request.POST or None)
         if form.is_valid():
-            form.save()
+            post = form.save(commit=False)
+            pickedTags = form.cleaned_data.get('tag_field')
+            createdTags = form['new_tags'].value()
+            post.save()
+            messages.success(request, (form['item_name'].value() + " created successfully."))
+            item = Item.objects.get(item_name = form['item_name'].value())
+            if pickedTags:
+                for oneTag in pickedTags:
+                    t = Tag(item_name=item, tag=oneTag)
+                    t.save(force_insert=True)
+            if createdTags is not "":
+                tag_list = [x.strip() for x in createdTags.split(',')]
+                for oneTag in tag_list:
+                    t = Tag(item_name=item, tag=oneTag)
+                    t.save()
             return redirect('/customadmin')
-    return render(request, 'inventory/item_create.html', {'form':CreateItemForm(),})
+        else:
+            messages.error(request, (form['item_name'].value() + " has already been created."))
+    else:
+        form = CreateItemForm(tags)
+    return render(request, 'inventory/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')
 def deny_request(request, pk):
@@ -260,6 +340,9 @@ def deny_request(request, pk):
 @login_required(login_url='/login/')
 def deny_all_request(request):
     pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to deny!'))
+        return redirect(reverse('custom_admin:index'))
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
         indiv_request.save()
@@ -300,5 +383,71 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         return super(DisburseFormView, self).form_valid(form)
-    
+
+def search_form(request):
+    if request.method == "POST":
+        tags = Tag.objects.all()
+        form = SearchForm(tags, request.POST)
+        if form.is_valid():
+            picked = form.cleaned_data.get('tags1')
+            excluded = form.cleaned_data.get('tags2')
+            keyword = form.cleaned_data.get('keyword')
+            modelnum = form.cleaned_data.get('model_number')
+            itemname = form.cleaned_data.get('item_name')
+            
+            keyword_list = []
+            for item in Item.objects.all():
+                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
+                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
+                    and ((itemname is "") or (itemname in item.item_name)) \
+                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
+                    keyword_list.append(item)
+            
+            excluded_list = []
+            if excluded:
+                for excludedTag in excluded:
+                    tagQSEx = Tag.objects.filter(tag = excludedTag)
+                    for oneTag in tagQSEx:
+                        excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+             # have list of all excluded items
+            included_list = []
+            if picked:
+                for pickedTag in picked:
+                    tagQSIn = Tag.objects.filter(tag = pickedTag)
+                    for oneTag in tagQSIn:
+                        included_list.append(Item.objects.get(item_name = oneTag.item_name))
+            # have list of all included items
+            
+            final_list = []
+            item_list = Item.objects.all()
+            if not picked:
+                if excluded:
+                    final_list = [x for x in item_list if x not in excluded_list]
+            else:
+                final_list = [x for x in included_list if x not in excluded_list]
+            
+            # for a more constrained search
+            if not final_list:
+                search_list = keyword_list
+            elif not keyword_list:
+                search_list = final_list
+            else:
+                search_list = [x for x in final_list if x in keyword_list]
+            # for a less constrained search
+            # search_list = final_list + keyword_list
+            cursor = connection.cursor()
+            cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
+            raw_request_list = cursor.fetchall()
+            for raw_request in raw_request_list:
+                raw_request_ids = raw_request[1] # all the ids in this item
+                counter = 0
+                for request_ID in raw_request_ids:
+                    raw_request[1][counter] = Request.objects.get(request_id=request_ID)
+                    counter += 1
+            return render(request,'custom_admin/search_result.html', {'item_list': item_list,'request_list': raw_request_list,'search_list': set(search_list)})
+    else:
+        tags = Tag.objects.all()
+        form = SearchForm(tags)
+    return render(request, 'inventory/search.html', {'form': form})    
 ################################################################

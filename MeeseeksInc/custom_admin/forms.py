@@ -1,6 +1,7 @@
 from django import forms
 from inventory.models import Request
-from inventory.models import Item, Disbursement, Item_Log, Tag
+from inventory.models import Item, Disbursement, Item_Log
+from inventory.models import Tag
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -33,23 +34,43 @@ class RequestEditForm(forms.ModelForm):
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
          
-class ItemEditForm(forms.ModelForm):     
+class ItemEditForm(forms.ModelForm):
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')        
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+       
+class AddTagForm(forms.Form):
+    def __init__(self, tags, *args, **kwargs):
+        super(AddTagForm, self).__init__(*args, **kwargs)
+        choices = []
+        for myTag in tags:
+            if [myTag.tag,myTag.tag] not in choices:
+                choices.append([myTag.tag,myTag.tag])
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
         
+    create_new_tags = forms.CharField(required=False)
+    fields = ('tag_field','create_new_tags')
+         
+class EditTagForm(forms.ModelForm):  
+    class Meta:
+        model = Tag 
+        fields = ('tag',)
+          
 class CreateItemForm(forms.ModelForm):
-    tags = []
-    for myTag in Tag.objects.all():
-        if [myTag.tag,myTag.tag] not in tags:
-            tags.append([myTag.tag,myTag.tag])
-    tags1 = forms.MultipleChoiceField(tags, required=False, widget=forms.SelectMultiple, label="Choose tags to include")
+    def __init__(self, tags, *args, **kwargs):
+        super(CreateItemForm, self).__init__(*args, **kwargs)
+        choices = []
+        for myTag in tags:
+            if [myTag.tag,myTag.tag] not in choices:
+                choices.append([myTag.tag,myTag.tag])
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
     
+    new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'tags1')
-     
- 
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','new_tags',)
+        
+        
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
     email = forms.EmailField(label='Email')

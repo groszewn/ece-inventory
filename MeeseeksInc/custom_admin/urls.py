@@ -13,7 +13,6 @@ urlpatterns = [
      
     # this is what it goes to if typed /
 #     url(r'^$', views.AdminIndexView.as_view(), name='index'),
-    
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.add_comment_to_request_accept), name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.add_comment_to_request_deny), name='add_comment_to_request_deny'),
     url(r'^disburse/item$', permission_required('is_staff', login_url='/login/check_login/')(views.post_new_disburse), name='post_new_disburse'),
@@ -27,4 +26,8 @@ urlpatterns = [
     url(r'^delete/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.delete_item), name='delete_item'),
     url(r'^$', permission_required('is_staff', login_url='/login/check_login/')(views.AdminIndexView.as_view()), name='index'),
     url(r'^log_item$', permission_required('is_staff', login_url='/login/check_login/')(views.log_item), name='log_item'),
+    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)$', views.edit_tag, name='edit_tag'),
+    url(r'^add/tag/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='add_tags'),
+    url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
+    url(r'^search_setup/$', views.search_form, name='search_setup'),
 ]
