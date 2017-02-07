@@ -302,8 +302,9 @@ def delete_tag(request, pk):
  
 @login_required(login_url='/login/')
 def create_new_item(request):
+    tags = Tag.objects.all()
     if request.method== 'POST':
-        form = CreateItemForm(request.POST)
+        form = CreateItemForm(tags, request.POST or None)
         if form.is_valid():
             post = form.save(commit=False)
             pickedTags = form.cleaned_data.get('tag_field')
@@ -322,8 +323,9 @@ def create_new_item(request):
             return redirect('/customadmin')
         else:
             messages.error(request, (form['item_name'].value() + " has already been created."))
-            return redirect('/customadmin')
-    return render(request, 'inventory/item_create.html', {'form':CreateItemForm(),})
+    else:
+        form = CreateItemForm(tags)
+    return render(request, 'inventory/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')
 def deny_request(request, pk):
