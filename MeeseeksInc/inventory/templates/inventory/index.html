@@ -28,7 +28,7 @@
 	{% if disbursed_list %}
 		<h2>Disbursed to you</h2>
 		{% for disbursed in disbursed_list %}
-			<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }}, ADMIN COMMENT : {{ disbursed.comment }}  </li>
+			<li> Disbursed <b>{{ disbursed.total_quantity }}</b> {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }}, ADMIN COMMENT : {{ disbursed.comment }}  </li>
 		{% endfor %}
 	{% endif %}
 	
