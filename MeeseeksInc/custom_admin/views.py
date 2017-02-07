@@ -430,9 +430,16 @@ def search_form(request):
                 search_list = [x for x in final_list if x in keyword_list]
             # for a less constrained search
             # search_list = final_list + keyword_list
-            
-            request_list = Request.objects.all()
-            return render(request,'custom_admin/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+            cursor = connection.cursor()
+            cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
+            raw_request_list = cursor.fetchall()
+            for raw_request in raw_request_list:
+                raw_request_ids = raw_request[1] # all the ids in this item
+                counter = 0
+                for request_ID in raw_request_ids:
+                    raw_request[1][counter] = Request.objects.get(request_id=request_ID)
+                    counter += 1
+            return render(request,'custom_admin/search_result.html', {'item_list': item_list,'request_list': raw_request_list,'search_list': set(search_list)})
     else:
         tags = Tag.objects.all()
         form = SearchForm(tags)
