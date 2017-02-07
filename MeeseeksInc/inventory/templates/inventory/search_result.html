@@ -18,11 +18,30 @@
 
 {% if item_list %}
 	<h2>All Inventory Items</h2>
-	<ul>
-		{% for item in item_list %}
-			<li><a href="{% url 'inventory:detail' item.item_id %}">{{item.item_name }}: # Available= {{ item.quantity }}</a></li>
-		{% endfor %}
-	</ul>
+	<table class = "table table-hover">
+		<thead>
+			<tr>
+				<th>Item Name</th>
+				<th># Item</th>
+				<th>Item Location</th>
+				<th>Item Model Number</th>
+				<th>Item Description</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				{% for item in item_list %}
+					<tr>
+						<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
+						<td>{{ item.quantity }}</td>
+						<td>{{ item.location }}</td>
+						<td>{{ item.model_number }}</td>
+						<td>{{ item.description }}</td>
+					</tr>
+				{% endfor %}
+			</tr>
+		</tbody>
+	</table>
 	
 	<h2>Requests</h2>
 	<ul>
