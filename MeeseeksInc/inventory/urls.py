@@ -14,7 +14,6 @@ urlpatterns = [
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
 #     url(r'^(?P<pk>[0-9]+)/results/$', views.ResultsView.as_view(), name='results'),
-    url(r'^search_setup/$', views.search_form, name='search_setup'),
     url(r'^post/request/$', views.post_new_request, name='post_new_request'),
     url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_detail'),
     url(r'^request_cancel/(?P<pk>[\w\-\ ]+)$', views.request_cancel_view.as_view(), name='request_cancel'),

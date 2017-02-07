@@ -1,7 +1,6 @@
 from django import forms
 from inventory.models import Request
 from inventory.models import Item, Disbursement, Item_Log
-from inventory.models import Tag
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -40,30 +39,14 @@ class ItemEditForm(forms.ModelForm):
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
        
 class AddTagForm(forms.Form):
-    choices = []
-    for myTag in Tag.objects.all():
-        if [myTag.tag,myTag.tag] not in choices:
-            choices.append([myTag.tag,myTag.tag])
-    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
-    create_new_tags = forms.CharField(required=False)
-    fields = ('tag_field','create_new_tags')
+    pass
         
 class EditTagForm(forms.ModelForm):  
-    class Meta:
-        model = Tag 
-        fields = ('tag',)
+    pass
          
 class CreateItemForm(forms.ModelForm):
-    choices = []
-    for myTag in Tag.objects.all():
-        if [myTag.tag,myTag.tag] not in choices:
-            choices.append([myTag.tag,myTag.tag])
-    tag_field = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
-    new_tags = forms.CharField(required=False)
-    class Meta:
-        model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','tag_field','new_tags')     
- 
+    pass
+
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
     email = forms.EmailField(label='Email')

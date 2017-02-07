@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
-from inventory.models import Instance, Request, Item, Disbursement, Tag
+from inventory.models import Instance, Request, Item, Disbursement
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 
