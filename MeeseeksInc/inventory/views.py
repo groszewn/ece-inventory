@@ -102,7 +102,7 @@ def search_form(request):
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
                 for oneTag in tagQSEx:
                     excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-             # have list of all excluded items
+#              have list of all excluded items
             included_list = []
             for pickedTag in picked:
                 tagQSIn = Tag.objects.filter(tag = pickedTag)

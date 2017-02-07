@@ -211,7 +211,8 @@ def approve_request(request, pk):
 @login_required(login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
-    tags = Tag.objects.filter(item_name=item)
+    tags = []
+#     tags = Tag.objects.filter(item_name=item)
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():

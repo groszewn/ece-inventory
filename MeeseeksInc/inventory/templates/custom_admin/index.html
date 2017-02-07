@@ -75,7 +75,7 @@
 {% if disbursed_list %}
 	<h2>Disbursed by you</h2>
 	{% for disbursed in disbursed_list %}
-		<li> Disbursed {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
+		<li> Disbursed <b>{{ disbursed.total_quantity }}</b> {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
 	{% endfor %}
 {% endif %}
 {#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
