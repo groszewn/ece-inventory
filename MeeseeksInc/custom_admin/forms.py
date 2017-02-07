@@ -40,10 +40,14 @@ class ItemEditForm(forms.ModelForm):
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
        
 class AddTagForm(forms.Form):
-    tag_field = forms.ModelChoiceField(queryset=Tag.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label="Add new tags...")
     def __init__(self, tags, *args, **kwargs):
         super(AddTagForm, self).__init__(*args, **kwargs)
-        self.fields['tag_field'] = forms.ModelChoiceField(queryset=Tag.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...') 
+        choices = []
+        for myTag in tags:
+            if [myTag.tag,myTag.tag] not in choices:
+                choices.append([myTag.tag,myTag.tag])
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
+        
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags')
          
@@ -60,11 +64,13 @@ class CreateItemForm(forms.ModelForm):
             if [myTag.tag,myTag.tag] not in choices:
                 choices.append([myTag.tag,myTag.tag])
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
+    
     new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','new_tags',)     
- 
+        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','new_tags',)
+        
+        
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
     email = forms.EmailField(label='Email')
