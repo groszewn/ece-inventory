@@ -259,7 +259,6 @@ def log_item(request):
         if form.is_valid():
             item = Item.objects.get(item_id=form['item_name'].value())
             change_type = form['item_change_status'].value()
-            print(change_type)
             amount = int(form['item_amount'].value())
             if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
