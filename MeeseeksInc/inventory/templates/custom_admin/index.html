@@ -44,8 +44,8 @@
     </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
+<h2>Requests made by users</h2>
 {% if request_list %}
-		<h2>Requests made by users</h2>
 		<ul class="nav nav-tabs">
 		  <li><a href="#all" data-toggle="tab">All Requests</a></li>
 		  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
@@ -201,6 +201,8 @@
 		    </table>
 	        </div>
 		</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
 	{% endif %}
 	
 {#{% for request_tuple in request_list %}#}

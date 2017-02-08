@@ -449,5 +449,5 @@ def search_form(request):
     else:
         tags = Tag.objects.all()
         form = SearchForm(tags)
-    return render(request, 'inventory/search.html', {'form': form})    
+    return render(request, 'custom_admin/search.html', {'form': form})    
 ################################################################
