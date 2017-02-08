@@ -1,10 +1,13 @@
 {% extends 'inventory/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
-
 {% block content %}
 
 <h1>{{ item.item_name }}</h1>
 <h2>Quantity: {{ item.quantity }} </h2>
+<h2>Model Number: {{ item.model_number }} </h2>
+<h2>Description: {{ item.description }} </h2>
+<h2>Location: {{ item.location }} </h2>
+    
 <h2>Tags: </h2>
 {% if tag_list%}
 	{% for oneTag in tag_list %}
@@ -54,13 +57,151 @@
 	{% endif %}
 </div>
 
-<h2>Outstanding Requests for This Item:  </h2>
+{% block request_specific_item %}
+<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
+{% endblock request_specific_item %}
+
 {% if request_list%}
-	{% for request in request_list %}
-		<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"> <b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
-	{% endfor %}
+<h2>Outstanding Requests for This Item:  </h2>
+	<table id="inventory-request-indiv-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>Status</th>
+					<th>Time Requested</th>
+					<th>Requested by</th>
+					<th>Quantity</th>
+					<th>Reason</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for request in request_list %}
+		        		<tr class="clickable-row" data-href="{% url 'inventory:request_detail' request.request_id %}">
+							<td>{{ request.status }}</td>
+							<td>{{ request.time_requested }}</td>
+							<td>{{ request.user_id }}</td>
+							<td>{{ request.request_quantity}}</td>
+							<td>{{ request.reason }}</td>
+							<td>
+								{% if user.is_staff %}
+								{# TODO: ADD ACCEPT AND DENY MODALS#}
+									{% block comment_accept %}
+									<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
+									{% endblock comment_accept %}
+									{% block comment_deny %}
+									<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
+									{% endblock comment_deny %}
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+								{% else %}
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+								{% endif %}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	
+	<script>
+	$('#inventory-request-indiv-item tr td:not(:last-child)').click(function ()    {
+	 window.document.location = $(this).parent().data('href');
+	});
+	$(document).ready(function(){
+	    $('#inventory-request-indiv-item').dataTable();
+	});
+	</script>
+	
+	
+{############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-approve %}
+<script>
+    $('.accept').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept').load(('../../customadmin/request/accept/addcomment/'+request_id), function () {
+        	$('#formID-comment-accept').attr("request-comment", request_id);
+            $('#form-modal-accept').modal('show');
+        });
+    });
+</script>
+{% endblock js-approve %}
+
+{############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Deny</h4>
+            </div>
+            <div id="form-modal-body-deny" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-deny %}
+<script>
+    $('.deny').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny').load(('../../customadmin/request/deny/addcomment/'+request_id), function () {
+        	$('#formID-comment-deny').attr("request-comment", request_id);
+            $('#form-modal-deny').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny %}
 {% endif %} 
 
+{############################# ITEM REQUEST QUANTITY AND COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-request" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Request {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-request" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-request %}
+<script>
+    $('.request').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-request').load(('../../post/request/'+ item_id), function () {
+            $('#form-modal-request').modal('toggle');
+        });
+    });
+</script>
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-request %}
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
 {% endblock %}

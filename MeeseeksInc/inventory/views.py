@@ -11,9 +11,7 @@ from django.views.generic.edit import FormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from .forms import RequestForm
-from .forms import RequestEditForm
-from .forms import SearchForm
+from .forms import RequestForm, RequestEditForm, RequestSpecificForm,  SearchForm
 from .models import Instance, Request, Item, Disbursement
 from .models import Tag
 from django.contrib.auth.models import User
@@ -29,6 +27,9 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
+        context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
+        context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
+        context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
         return context
@@ -67,7 +68,7 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
-        if(user.is_staff=="True"):
+        if(not user.is_staff):
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         else:
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
@@ -104,7 +105,7 @@ def search_form(request):
                 tagQSEx = Tag.objects.filter(tag = excludedTag)
                 for oneTag in tagQSEx:
                     excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-             # have list of all excluded items
+#              have list of all excluded items
             included_list = []
             for pickedTag in picked:
                 tagQSIn = Tag.objects.filter(tag = pickedTag)
@@ -186,3 +187,20 @@ class request_cancel_view(generic.DetailView):
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()
     return redirect('/')
+
+def request_specific_item(request, pk):
+    if request.method == "POST":
+        form = RequestSpecificForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            reason = form['reason'].value()
+            quantity = form['quantity'].value()
+            item = Item.objects.get(item_id=pk)
+            specific_request = Request(user_id=request.user.username, item_name=item, 
+                                            request_quantity=quantity, status="Pending", reason=reason, time_requested=timezone.localtime(timezone.now()))
+            specific_request.save()
+            
+            messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = RequestSpecificForm() # blank request form with no data yet
+    return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
