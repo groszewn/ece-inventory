@@ -327,7 +327,7 @@ def create_new_item(request):
             messages.error(request, (form['item_name'].value() + " has already been created."))
     else:
         form = CreateItemForm(tags)
-    return render(request, 'inventory/item_create.html', {'form':form,})
+    return render(request, 'custom_admin/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')
 def deny_request(request, pk):
