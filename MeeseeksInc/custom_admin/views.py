@@ -221,7 +221,7 @@ def edit_item(request, pk):
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
             form.save()
-            return redirect('/customadmin')
+            return redirect('/item/' + pk)
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
     return render(request, 'inventory/item_edit.html', {'form': form})
@@ -229,8 +229,10 @@ def edit_item(request, pk):
 @login_required(login_url='/login/')
 def add_tags(request, pk):
     if request.method == "POST":
+        item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        form = AddTagForm(tags, request.POST or None)
+        item_tags = Tag.objects.filter(item_name = item)
+        form = AddTagForm(tags, item_tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['create_new_tags'].value()
@@ -246,10 +248,15 @@ def add_tags(request, pk):
                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
                         t = Tag(item_name=item, tag=oneTag)
                         t.save(force_insert=True)
-            return redirect(reverse('inventory:detail'))
+            for ittag in item_tags:
+                ittag.tag = form[ittag.tag].value()
+                ittag.save()
+            return redirect('/item/' + pk)
     else:
+        item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        form = AddTagForm(tags)
+        item_tags = Tag.objects.filter(item_name = item)
+        form = AddTagForm(tags, item_tags)
     return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -284,7 +291,7 @@ def edit_tag(request, pk):
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
             form.save()
-            return redirect(reverse('inventory:detail'))
+            return redirect('/item/' + pk)
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
@@ -299,7 +306,7 @@ def delete_item(request, pk):
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    return redirect('inventory/item'+pk)
+    return redirect('/item/' + tag.item_name.item_id)
  
 @login_required(login_url='/login/')
 def create_new_item(request):

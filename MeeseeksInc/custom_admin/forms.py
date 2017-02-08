@@ -40,13 +40,15 @@ class ItemEditForm(forms.ModelForm):
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
        
 class AddTagForm(forms.Form):
-    def __init__(self, tags, *args, **kwargs):
+    def __init__(self, tags, item_tags, *args, **kwargs):
         super(AddTagForm, self).__init__(*args, **kwargs)
         choices = []
         for myTag in tags:
             if [myTag.tag,myTag.tag] not in choices:
                 choices.append([myTag.tag,myTag.tag])
-        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Add new tags...')
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
+        for tag in item_tags:
+            self.fields["%s" % tag.tag] = forms.CharField(initial = tag.tag, label = "Edit existing tag #%d" % tag.id)
         
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags')
