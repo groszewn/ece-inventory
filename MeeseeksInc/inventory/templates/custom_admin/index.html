@@ -13,13 +13,7 @@
 {#{% endif %}#}
 
 
-{########################## LOG ITEMS ##########################}
- <h2><a href="{% url 'custom_admin:log_item' %}" class="top-menu">Log acquisition/loss of item<span class="glyphicon glyphicon-plus"></span></a> </h2>
 
-{########################## CREATE ITEMS ##########################}
-<h2><a href="{% url 'custom_admin:create_new_item' %}" class="top-menu">Create new item<span class="glyphicon glyphicon-plus"></span></a> </h2>
-
-<h2><a href="{% url 'custom_admin:search_setup' %}" class="top-menu"> Search Parameters </a> </h2>
 {########################## ALL ITEMS ##########################}
 
 
@@ -50,8 +44,8 @@
     </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
+<h2>Requests made by users</h2>
 {% if request_list %}
-		<h2>Requests made by users</h2>
 		<ul class="nav nav-tabs">
 		  <li><a href="#all" data-toggle="tab">All Requests</a></li>
 		  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
@@ -207,6 +201,8 @@
 		    </table>
 	        </div>
 		</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
 	{% endif %}
 	
 {#{% for request_tuple in request_list %}#}
@@ -226,8 +222,9 @@
 {#		{% endfor %}#}
 {#	</ul>#}
 {#{% endfor %}#}
-<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
-<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	
+
+	<a class="btn btn-default" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+	<a class="btn btn-default" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}

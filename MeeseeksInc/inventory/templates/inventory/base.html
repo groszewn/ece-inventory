@@ -50,6 +50,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
+
           	{% if user.is_staff %}#}
           		<a class="navbar-brand" href="{% url 'custom_admin:index' %}">Duke University ECE Department Inventory</a>
         	{% else %}
@@ -59,7 +60,9 @@
         </div>
 
       <ul class="nav navbar-nav navbar-right">
+      	<li><a href="{% url 'inventory:search_setup' %}"> Search Parameters </a></li>
         <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
+        
         
       </ul>
         </div><!--/.navbar-collapse -->

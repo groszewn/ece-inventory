@@ -50,17 +50,26 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          {% if user.is_staff %}#}
+
+          	{% if user.is_staff %}#}
           		<a class="navbar-brand" href="{% url 'custom_admin:index' %}">Duke University ECE Department Inventory</a>
         	{% else %}
         		<a class="navbar-brand" href="{% url 'inventory:index' %}">Duke University ECE Department Inventory</a>
         	{% endif %}
         </div>
  
-
       <ul class="nav navbar-nav navbar-right">
+       <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Administration<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{% url 'custom_admin:log_item' %}?next=/">Report Loss</a></li>
+            <li><a href="{% url 'custom_admin:create_new_item' %}?next=/">Add New Item</a></li>
+            <li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
+            <li><a href="{% url 'custom_admin:search_setup' %}"> Search Parameters </a></li>
+          </ul>
+        </li>
         <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
-        <li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
+        
       </ul>
         </div><!--/.navbar-collapse -->
       </div>
