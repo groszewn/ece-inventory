@@ -259,22 +259,5 @@ def request_specific_item(request, pk):
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
-        
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
 
-def add_to_shopping_cart(request, pk):
-    if request.method == "POST":
-        form = AddToCartForm(request.POST) # create request-form with the data from the request
-        if form.is_valid():
-            print("hi this is called")
-            quantity = form['quantity'].value()
-            item = Item.objects.get(item_id=pk)
-            cart_instance = ShoppingCartInstance(user_id=request.user.username, item=item, 
-                                            quantity=quantity)
-            cart_instance.save()
-            
-            messages.success(request, ('Successfully added ' + item.item_name + ' to shopping cart.'))
-            return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
-    else:
-        form = AddToCartForm() # blank request form with no data yet
-    return render(request, 'inventory/detail.html', {'form': form})

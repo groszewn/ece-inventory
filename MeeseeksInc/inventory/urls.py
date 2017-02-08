@@ -12,7 +12,6 @@ urlpatterns = [
     # this allows us to change the url of a page without changing it in the HTML files
      
     # this is what it goes to if typed /
-    url(r'^cart/add/(?P<pk>[\w\-\ ]+)$', views.add_to_shopping_cart, name='add_to_cart'),
     url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
