@@ -1,0 +1,11 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+<h3>Enter quantity and reason for request</h3>
+<div class="row">
+    <form id="formID-specific-request" request-comment ="" action="{% url 'inventory:request_specific_item' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+    </form>
+</div>

@@ -40,8 +40,11 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
                 counter += 1
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
-        context['request_list'] = raw_request_list
-        context['pending_requests'] = Request.objects.filter(status="Pending")
+#         context['request_list'] = raw_request_list
+        context['request_list'] = Request.objects.all()
+        context['approved_request_list'] = Request.objects.filter(status="Approved")
+        context['pending_request_list'] = Request.objects.filter(status="Pending")
+        context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
         # And so on for more models
@@ -75,15 +78,13 @@ def register_page(request):
             return HttpResponseRedirect('/customadmin')
     form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})
- 
+
 @login_required(login_url='/login/')
 def add_comment_to_request_accept(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
             comment = form['comment'].value()
-            
-            
             indiv_request = Request.objects.get(request_id=pk)
             item = Item.objects.get(item_name=indiv_request.item_name)
             if item.quantity >= indiv_request.request_quantity:
@@ -259,7 +260,6 @@ def log_item(request):
         if form.is_valid():
             item = Item.objects.get(item_id=form['item_name'].value())
             change_type = form['item_change_status'].value()
-            print(change_type)
             amount = int(form['item_amount'].value())
             if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount

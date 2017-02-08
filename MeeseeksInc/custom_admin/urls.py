@@ -13,7 +13,6 @@ urlpatterns = [
      
     # this is what it goes to if typed /
 #     url(r'^$', views.AdminIndexView.as_view(), name='index'),
-    
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.add_comment_to_request_accept), name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.add_comment_to_request_deny), name='add_comment_to_request_deny'),
     url(r'^disburse/item$', permission_required('is_staff', login_url='/login/check_login/')(views.post_new_disburse), name='post_new_disburse'),

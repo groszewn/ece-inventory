@@ -22,22 +22,22 @@
 <h2><a href="{% url 'custom_admin:search_setup' %}" class="top-menu"> Search Parameters </a> </h2>
 {########################## ALL ITEMS ##########################}
 
-<h2>All available items</h2>
+
 {% if item_list %}
 
-<table class = "table table-hover">
-	<thead>
-		<tr>
+<h2>All available items</h2>
+	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
 			<th>Item Name</th>
 			<th># Item</th>
 			<th>Item Location</th>
 			<th>Item Model Number</th>
 			<th>Item Description</th>
 		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			{% for item in item_list %}
+        </thead>
+        <tbody>
+            {% for item in item_list %}
 				<tr>
 					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
 					<td>{{ item.quantity }}</td>
@@ -46,44 +46,220 @@
 					<td>{{ item.description }}</td>
 				</tr>
 			{% endfor %}
-		</tr>
-	</tbody>
-</table>
-{% endif %}
+        </tbody>
+    </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
-{% for request_tuple in request_list %}
-	<h3>Item Name: {{ request_tuple.0 }}</h3>
-	<ul>
-		{% for request in request_tuple.1 %}
-			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>
-			{% if request.status == "Pending" %}
-				Reason: {{ request.reason }}
-				{% block comment_accept %}
-				<a id = "accept" request-id="{{ request.request_id }}" class="accept">Approve this request<span class="glyphicon glyphicon-plus"></span></a>
-				{% endblock comment_accept %}
-				{% block comment_deny %}
-				<a id = "deny" request-id="{{ request.request_id }}" class="deny">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	
-				{% endblock comment_deny %}
-			{% endif %}
-		{% endfor %}
-	</ul>
-{% endfor %}
+{% if request_list %}
+		<h2>Requests made by users</h2>
+		<ul class="nav nav-tabs">
+		  <li><a href="#all" data-toggle="tab">All Requests</a></li>
+		  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
+		  <li class="active"><a href="#pending" data-toggle="tab">Pending</a></li>
+		  <li><a href="#denied" data-toggle="tab">Denied</a></li>
+		</ul>
+		<div class="tab-content">
+	        <div class="tab-pane" id="all">
+	            <table border="0" cellspacing="5" cellpadding="5">
+			        <tbody>
+				        <tr>
+				            <td>Tags:</td>
+				            <td><input type="text" id="tag" name="tag"></td>
+				        </tr>
+		    		</tbody>
+		    	</table>
+				<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Request</th>
+					<th># Item</th>
+					<th>Status</th>
+					<th>Requested by</th>
+					<th>Student Reason</th>
+					<th>Admin Comment</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for request in request_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	        </div>
+	        <div class="tab-pane" id="accepted">
+	            <table border="0" cellspacing="5" cellpadding="5">
+			        <tbody>
+				        <tr>
+				            <td>Tags:</td>
+				            <td><input type="text" id="tag" name="tag"></td>
+				        </tr>
+		    		</tbody>
+		    	</table>
+				<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Request</th>
+					<th># Item</th>
+					<th>Status</th>
+					<th>Requested by</th>
+					<th>Student Reason</th>
+					<th>Admin Comment</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for request in approved_request_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	        </div>
+	        <div class="tab-pane active" id="pending">
+	            <table border="0" cellspacing="5" cellpadding="5">
+			        <tbody>
+				        <tr>
+				            <td>Tags:</td>
+				            <td><input type="text" id="tag" name="tag"></td>
+				        </tr>
+		    		</tbody>
+		    	</table>
+				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Request</th>
+					<th># Item</th>
+					<th>Status</th>
+					<th>Requested by</th>
+					<th>Student Reason</th>
+					<th>Admin Comment</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for request in pending_request_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+							<td>
+								{% block comment_accept %}
+								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
+								{% endblock comment_accept %}
+								{% block comment_deny %}
+								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
+								{% endblock comment_deny %}
+								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	        </div>
+	        <div class="tab-pane" id="denied">
+	            <table border="0" cellspacing="5" cellpadding="5">
+			        <tbody>
+				        <tr>
+				            <td>Tags:</td>
+				            <td><input type="text" id="tag" name="tag"></td>
+				        </tr>
+		    		</tbody>
+		    	</table>
+				<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Request</th>
+					<th># Item</th>
+					<th>Status</th>
+					<th>Request by</th>
+					<th>Student Reason</th>
+					<th>Admin Comment</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for request in denied_request_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.status }}</td>
+							<td>{{ request.user_id }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	        </div>
+		</div>
+	{% endif %}
+	
+{#{% for request_tuple in request_list %}#}
+{#	<h3>Item Name: {{ request_tuple.0 }}</h3>#}
+{#	<ul>#}
+{#		{% for request in request_tuple.1 %}#}
+{#			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>#}
+{#			{% if request.status == "Pending" %}#}
+{#				Reason: {{ request.reason }}#}
+{#				{% block comment_accept %}#}
+{#				<a id = "accept" request-id="{{ request.request_id }}" class="accept">Approve this request<span class="glyphicon glyphicon-plus"></span></a>#}
+{#				{% endblock comment_accept %}#}
+{#				{% block comment_deny %}#}
+{#				<a id = "deny" request-id="{{ request.request_id }}" class="deny">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	#}
+{#				{% endblock comment_deny %}#}
+{#			{% endif %}#}
+{#		{% endfor %}#}
+{#	</ul>#}
+{#{% endfor %}#}
 <a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
 <a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
-	<h2>Disbursed by you</h2>
-	{% for disbursed in disbursed_list %}
-		<li> Disbursed <b>{{ disbursed.total_quantity }}</b> {{ disbursed.item_name }} to {{ disbursed.user_name }} by {{ disbursed.admin_name }} @ {{ disbursed.time_disbursed }} </li>
-	{% endfor %}
-{% endif %}
+		<h2>Disbursed by you</h2>
+		<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Item Name</th>
+					<th># Item</th>
+					<th>Disbursed to</th>
+					<th>Admin Comment</th>
+					<th>Time Disbursed</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for disbursed in disbursed_list %}
+		        		<tr>
+							<td>{{ disbursed.item_name }}</td>
+							<td>{{ disbursed.total_quantity }}</td>
+							<td>{{ disbursed.user_name }}</td>
+							<td>{{ disbursed.comment}}</td>
+							<td>{{ disbursed.time_disbursed }}</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	{% endif %}
 {#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
 {% block modal %}
 <button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
 {% endblock modal %}
-
+{% endif %}
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -174,6 +350,40 @@
     });
 </script>
 {% endblock js %}
+{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
+<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
+<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+ 
+ <script>
+	$(document).ready(function(){
+		$.fn.dataTable.ext.search.push(
+		    function( settings, data, dataIndex, originalData ) {
+		    	if (settings.nTable.id !== 'inventory-disbursed') { // only do this for all tables but disbursed (no tags)
+		    		var tag = $('#tag').val();
+		    		id = originalData[0].split("\"")[1].split("/")[2]; 
+		        	console.log(id);
+       			}
+		    	// first get tag for this data row
+		       	
+		        return true;
+		    }
+		);
+	    var itemTable = $('#inventory-item').dataTable();
+	     // Event listener to the two range filtering inputs to redraw on input
+	    $('#tag, #min, max').keyup( function() {
+	        itemTable.draw();
+	    } );
+	});
+	$(document).ready(function(){
+	    $('#inventory-request-all').dataTable();
+	    $('#inventory-request-approved').dataTable();
+	    $('#inventory-request-pending').dataTable();
+	    $('#inventory-request-denied').dataTable();
+	    $('#inventory-disbursed').dataTable();
+	});
+	</script>
+
 {% endblock %}
 
 
