@@ -2,6 +2,7 @@ from django import forms
 from .models import Request
 from .models import Item
 from .models import Tag
+from inventory.models import ShoppingCartInstance
  
 class RequestForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
@@ -16,14 +17,19 @@ class RequestSpecificForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(RequestSpecificForm, self).__init__(*args, **kwargs)
         self.fields.keyOrder = ['available_quantity','quantity', 'reason']
-
-       
+      
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
-  
+
+class AddToCartForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super(AddToCartForm, self).__init__(*args, **kwargs)
+        self.fields['quantity'] = forms.IntegerField(required=True)
+    fields =('quantity')
+
 class SearchForm(forms.Form):
     tags1 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
     tags2 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False, widget=forms.CheckboxSelectMultiple,label="Tags to exclude")
