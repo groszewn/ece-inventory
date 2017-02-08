@@ -174,8 +174,7 @@
 		</div>
 	{% endif %}
 	
-	
-	<a href="{% url 'inventory:post_new_request' %}" class="top-menu"> Click Here to Request an Item <span class="glyphicon glyphicon-plus"></span></a>	
+	<a class="btn btn-default" href="{% url 'inventory:post_new_request' %}" role="button">Request an Item</a>
 	
 	{% if disbursed_list %}
 		<h2>Disbursed to you</h2>
