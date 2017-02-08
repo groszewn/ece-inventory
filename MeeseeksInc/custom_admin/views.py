@@ -243,7 +243,7 @@ def add_tags(request, pk):
                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
                         t = Tag(item_name=item, tag=oneTag)
                         t.save(force_insert=True)
-            return redirect('/customadmin')
+            return redirect(reverse('inventory:detail'))
     else:
         tags = Tag.objects.all()
         form = AddTagForm(tags)
@@ -282,7 +282,7 @@ def edit_tag(request, pk):
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
             form.save()
-            return redirect('/customadmin')
+            return redirect(reverse('inventory:detail'))
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
@@ -297,7 +297,7 @@ def delete_item(request, pk):
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    return redirect('/customadmin')
+    return redirect('inventory/item'+pk)
  
 @login_required(login_url='/login/')
 def create_new_item(request):
