@@ -1,7 +1,8 @@
 from django.conf.urls import url
- 
+
 from . import views
- 
+
+
 #this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'inventory'  
@@ -11,6 +12,7 @@ urlpatterns = [
     # this allows us to change the url of a page without changing it in the HTML files
      
     # this is what it goes to if typed /
+    url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
 #     url(r'^(?P<pk>[0-9]+)/results/$', views.ResultsView.as_view(), name='results'),
