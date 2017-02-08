@@ -93,6 +93,7 @@
 									{% endblock comment_deny %}
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% else %}
+									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
 							</td>

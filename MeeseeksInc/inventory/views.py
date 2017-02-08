@@ -202,5 +202,6 @@ def request_specific_item(request, pk):
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
-        form = RequestSpecificForm() # blank request form with no data yet
+        form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
+        
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})

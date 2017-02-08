@@ -10,9 +10,12 @@ class RequestForm(forms.ModelForm):
         fields = ('item_field', 'request_quantity', 'reason')
 
 class RequestSpecificForm(forms.Form):  
+    available_quantity = forms.IntegerField(disabled=True, required=False)
     quantity = forms.IntegerField()
     reason = forms.CharField(max_length=200)
-    fields = ('quantity', 'reason')
+    def __init__(self, *args, **kwargs):
+        super(RequestSpecificForm, self).__init__(*args, **kwargs)
+        self.fields.keyOrder = ['available_quantity','quantity', 'reason']
 
        
 class RequestEditForm(forms.ModelForm):
