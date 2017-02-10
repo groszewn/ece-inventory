@@ -196,6 +196,7 @@ def approve_request(request, pk):
          
         # change status of request to approved
         indiv_request.status = "Approved"
+        indiv_request.comment = 'ta da a comment thing'
         indiv_request.save()
          
         # add new disbursement item to table

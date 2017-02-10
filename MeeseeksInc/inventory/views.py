@@ -7,7 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
-from django.views.generic.edit import FormMixin
+from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -176,10 +176,35 @@ def post_new_request(request):
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
   
-class request_detail(generic.DetailView):
+class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
+    login_url = "/login/"
     model = Request
     template_name = 'inventory/request_detail.html'
-      
+    form_class = RequestEditForm
+    context_object_name = 'form'
+    context_object_name = 'request'
+    
+    def get_context_data(self, **kwargs):
+        context = super(request_detail, self).get_context_data(**kwargs)
+        context['form'] = self.get_form()
+        context['request'] = self.get_object()
+        return context
+    
+    def post(self, request, pk):
+        instance = Request.objects.get(request_id=pk)
+        if request.method == "POST":
+            form = RequestEditForm(request.POST, instance=instance)
+            if form.is_valid():
+                post = form.save(commit=False)
+                post.comment = ""
+                post.status = "Pending"
+                post.time_requested = timezone.localtime(timezone.now())
+                post.save()
+                return redirect('/')
+            else:
+                form = RequestEditForm(instance=instance)
+                return render(request, 'inventory/request_detail.html', {'form': form})
+        
 class request_cancel_view(generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'

@@ -1,41 +1,36 @@
-{% extends 'inventory/base.html' %} 
+{% extends 'custom_admin/base.html' %}  
+{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
 
 <center> <h1>  Request for: {{ request.item_name }} </h1> </center> 
+<center> <h1>  Status: {{ request.status }} </h1> </center> 
 
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Quantity:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.request_quantity  }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Status:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.status  }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Reason:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.reason  }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Admin Comment:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.comment  }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Time Request:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.item_requested  }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Request Id:</div> </h2>
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);">{{request.request_id  }}</div> </h2>
-</div>
-
+			</table>
+				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>ID:</th>
+					<th>Quantity:</th>
+					<th>Reason:</th>
+					<th>Admin Comment:</th>
+					<th>Time Requested:</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        		<tr>
+		        			<td>{{ request.request_id }}</td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
+						</tr>
+		        </tbody>
+		    </table>
+		    
 <br/>
+
 	<script>
 	function clickEvent(){
 	    if (confirm("Do you want to cancel this request?")) {
@@ -43,15 +38,51 @@
 	    }
 	}
 	</script>
+	
 	<script>
-	function clickEvent2() {
-		window.location='{%url 'inventory:request_edit' request.request_id %}';
+	function clickEventAccept(){
+	    if (confirm("Do you want to accept this request?")) {
+	    	window.location='{% url 'custom_admin:approve_request' request.request_id %}';
+	    }
 	}
 	</script>
 	
-		<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
-	    <button value="Cancel Request" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Cancel Request</button>
+	<script>
+	function clickEventDeny(){
+	    if (confirm("Do you want to deny this request?")) {
+	    	window.location='{% url 'custom_admin:deny_request' request.request_id %}';
+	    }
+	}
+	</script>
+
+	{#% if user.is_staff %#}
+		{#do nothing#}
+	{#% else %#}
+		 <h2>Edit This Request </h2>
+		 Change the parameters below and hit the resubmit button to update this request.
+		 <br/>
+ 	<form method="POST" class="post-form">{% csrf_token %}
+		{{ form.request_quantity }}
+		{{ form.reason}}
+		{{ form.comment }}
+		<button type="submit" class="btn btn-primary btn-md">Resubmit Request</button>
+	</form>
+<br/>
+
+	<form method="ACCEPT" class="post-form">{% csrf_token %}
+		{{ form.comment }}
+		<button type="submit" class="btn btn-success btn-md">Approve Request</button>
+	</form>
+	
+	{#% endif %#}
+
+	{% if user.is_staff %}
+		<button value="Accept Request" onclick="clickEventAccept();" type="button" class="btn btn-success btn-md">Approve Request</button>
+		<button value="Deny Request" onclick="clickEventDeny();" type="button" class="btn btn-warning btn-md">Deny Request</button>
+	{%endif%}						
+		  <button value="Cancel Request" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Cancel Request</button>
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	
 	
 {% endblock %}

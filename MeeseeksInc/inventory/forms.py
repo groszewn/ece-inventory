@@ -16,10 +16,9 @@ class RequestSpecificForm(forms.Form):
 
        
 class RequestEditForm(forms.ModelForm):
-    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     class Meta:
         model = Request
-        fields = ('item_field', 'request_quantity', 'reason')
+        fields = ('request_quantity', 'reason','comment')
   
 class SearchForm(forms.Form):
     tags1 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
