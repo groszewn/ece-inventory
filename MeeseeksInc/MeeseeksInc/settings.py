@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
+    'rest_framework',
     'crispy_forms',
     'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
@@ -98,6 +99,14 @@ DATABASES = {
 
 }
 
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
 
@@ -128,7 +137,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+# USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)

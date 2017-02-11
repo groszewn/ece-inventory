@@ -1,6 +1,10 @@
 import uuid
+
 from django.db import models
- 
+from django.utils import timezone
+from datetime import datetime
+
+
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     item_name = models.CharField(unique=True, max_length=200)
@@ -37,20 +41,20 @@ class Request(models.Model):
         ('Denied', 'Denied'),
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Pending')
-    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null, used for denial 
+    comment = models.CharField(max_length=200, null=True, default = '') # comment left by admin, can be null, used for denial 
     reason = models.CharField(max_length=200, null=False) # reason given by user
-    time_requested = models.TimeField()
+    time_requested = models.DateTimeField(default=timezone.now)
     def __str__(self):
         return self.item_name.item_name + " " + self.request_id
  
-class Disbursement(models.Model):
+class Disbursement(models.Model):   
     disburse_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     admin_name = models.CharField(max_length=200, null=False)
     user_name = models.CharField(max_length=200, null=False)
     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
     total_quantity = models.SmallIntegerField(null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
-    time_disbursed = models.TimeField()
+    time_disbursed = models.DateTimeField(default=timezone.now)
     def __str__(self):
         return self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
 
