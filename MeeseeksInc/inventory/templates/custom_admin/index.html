@@ -12,14 +12,51 @@
 {#</ul>#}
 {#{% endif %}#}
 
+{########################## ALL USERS ##########################}
+
+<h2>All Users</h2>
+
+{% if user %}
+	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+            <th>Username</th>
+			<th>First Name</th>
+			<th>Last Name</th>
+			<th>Email</th>
+			<th>Staff Status</th>
+			<th>Active User</th>
+			<th>Actions</th>
+		</tr>
+        </thead>
+        
+        <tbody>
+            {% for user in user_list %}
+				<tr>
+					<td>{{ user.username }}</a></td>
+					<td>{{ user.first_name }}</td>
+					<td>{{ user.last_name }}</td>
+					<td>{{ user.email }}</td>
+					<td>{{ user.is_staff }}</td>
+					<td>{{ user.is_active }}</td>
+					<td>
+						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
+					</td>	
+				</tr>
+			{% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
 
 
 {########################## ALL ITEMS ##########################}
 
 
-{% if item_list %}
+{% if user_list %}
 
-<h2>All available items</h2>
+	<h2>All available items</h2>
+	
 	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
             <tr>
@@ -30,6 +67,7 @@
 			<th>Item Description</th>
 		</tr>
         </thead>
+        
         <tbody>
             {% for item in item_list %}
 				<tr>
@@ -44,14 +82,17 @@
     </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
+
 <h2>Requests made by users</h2>
-{% if request_list %}
+
+	{% if request_list %}
 		<ul class="nav nav-tabs">
 		  <li><a href="#all" data-toggle="tab">All Requests</a></li>
 		  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
 		  <li class="active"><a href="#pending" data-toggle="tab">Pending</a></li>
 		  <li><a href="#denied" data-toggle="tab">Denied</a></li>
 		</ul>
+		
 		<div class="tab-content">
 	        <div class="tab-pane" id="all">
 	            <table border="0" cellspacing="5" cellpadding="5">
@@ -87,6 +128,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane" id="accepted">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -121,6 +163,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane active" id="pending">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -166,6 +209,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane" id="denied">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -200,6 +244,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 		</div>
 	{% else %}
 		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
@@ -227,7 +272,7 @@
 	<a class="btn btn-default" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 
 {########################## DISBURSEMENTS #####################}
-{% if disbursed_list %}
+	{% if disbursed_list %}
 		<h2>Disbursed by you</h2>
 		<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -252,11 +297,15 @@
 		        </tbody>
 		    </table>
 	{% endif %}
-{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
-{% block modal %}
-<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
-{% endblock modal %}
+
+	{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
+		{% block modal %}
+			<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
+		{% endblock modal %}
+
+
 {% endif %}
+
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -378,6 +427,7 @@
 	    $('#inventory-request-pending').dataTable();
 	    $('#inventory-request-denied').dataTable();
 	    $('#inventory-disbursed').dataTable();
+	    $('#user-table').dataTable();
 	});
 	</script>
 

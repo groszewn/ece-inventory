@@ -38,6 +38,11 @@ class ItemEditForm(forms.ModelForm):
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        
+class UserPermissionEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('username', 'is_staff', 'is_active')
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, *args, **kwargs):
