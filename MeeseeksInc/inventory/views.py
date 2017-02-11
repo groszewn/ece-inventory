@@ -1,25 +1,36 @@
-import random
+
+############################# IMPORTS FOR ORIGINAL DJANGO ####################
+from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db import connection, transaction
-from django.db.models import F
+from django.contrib.auth.models import User
+from django.db.models.expressions import F
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404, redirect
+from django.http.response import Http404
+from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormMixin
+from rest_framework import status, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from inventory.models import ShoppingCartInstance
+from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
+from inventory.serializers import ItemSerializer, RequestSerializer, \
+    RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
+    DisbursementSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
-from .models import Instance, Request, Item, Disbursement
-from .models import Tag
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance
 
 
+########################### IMPORTS FOR API ##############################
+########################## ORIGINAL DJANGO VIEW CLASSES ###################################
+###########################################################################################
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -123,7 +134,7 @@ def edit_quantity_cart(request, pk):
             post.item_id = form['item_field'].value()
             post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
-            post.time_requested = timezone.localtime(timezone.now())
+            post.time_requested = timezone.now()
             post.save()
             return redirect('/')
     else:
@@ -203,7 +214,7 @@ def edit_request(request, pk):
             post.item_id = form['item_field'].value()
             post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
-            post.time_requested = timezone.localtime(timezone.now())
+            post.time_requested = timezone.now()
             post.save()
             return redirect('/')
     else:
@@ -225,7 +236,7 @@ def post_new_request(request):
             post.item_name = Item.objects.get(item_id = post.item_id)
             post.user_id = request.user.username
             post.status = "Pending"
-            post.time_requested = timezone.localtime(timezone.now())
+            post.time_requested = timezone.now()
             post.save()
             return redirect('/')
     else:
@@ -252,7 +263,7 @@ def request_specific_item(request, pk):
             quantity = form['quantity'].value()
             item = Item.objects.get(item_id=pk)
             specific_request = Request(user_id=request.user.username, item_name=item, 
-                                            request_quantity=quantity, status="Pending", reason=reason, time_requested=timezone.localtime(timezone.now()))
+                                            request_quantity=quantity, status="Pending", reason=reason, time_requested=timezone.now())
             specific_request.save()
             
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
@@ -261,3 +272,205 @@ def request_specific_item(request, pk):
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
 
+
+
+
+#################################### API VIEW CLASSES #####################################
+###########################################################################################
+###########################################################################################
+
+########################################## Item ###########################################
+class APIItemList(APIView):
+    """
+    List all Items, or create a new item (for admin only)
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        items = Item.objects.all()
+        serializer = ItemSerializer(items, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = ItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class APIItemDetail(APIView):
+    """
+    Retrieve, update or delete a snippet instance.
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get_object(self, pk):
+        try:
+            return Item.objects.get(item_id=pk)
+        except Item.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        item = self.get_object(pk)
+        serializer = ItemSerializer(item)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        item = self.get_object(pk)
+        serializer = ItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        item = self.get_object(pk)
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+########################################## Request ########################################
+class APIRequestList(APIView):
+    """
+    List all Requests (for yourself if user, all if admin), or create a new request 
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        requests = [];
+        if self.request.user == []:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.get(username=request.user.username).is_staff:
+            requests = Request.objects.all()
+        else:
+            requests = Request.objects.filter(user_id=request.user.username)
+        serializer = RequestSerializer(requests, many=True)
+        return Response(serializer.data)
+    
+class APIRequestDetail(APIView):
+    """
+    Retrieve, update or delete a request instance.
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get_object(self, pk):
+        try:
+            return Request.objects.get(request_id=pk)
+        except Request.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
+            serializer = RequestSerializer(indiv_request)
+            return Response(serializer.data)
+        return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
+            serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save(time_requested=timezone.now())
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
+            indiv_request.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
+
+class APIRequestThroughItem(APIView):
+    """
+    Create an item request
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def post(self, request, pk, format=None):
+        context = {
+            "request": self.request,
+        }
+        serializer = RequestPostSerializer(data=request.data, context=context)
+        if serializer.is_valid():
+            serializer.save(item_name=Item.objects.get(item_id=pk))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class APIApproveRequest(APIView):
+    """
+    Approve a request with an optional reason.
+    """
+    permission_classes = (IsAdminOrUser,)
+    def get_object(self, pk):
+        try:
+            return Request.objects.get(request_id=pk)
+        except Request.DoesNotExist:
+            raise Http404
+        
+    def put(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if not indiv_request.status == "Pending":
+            return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
+        serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
+        item = Item.objects.get(item_id=indiv_request.item_name_id)
+        if item.quantity >= indiv_request.request_quantity:
+            # decrement quantity in item
+            item.quantity = F('quantity')-indiv_request.request_quantity
+            item.save()
+            
+            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+                                    total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+            disbursement.save()
+            
+            if serializer.is_valid():
+                serializer.save(status="Approved")
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class APIDenyRequest(APIView):
+    """
+    Retrieve, update or delete a request instance.
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get_object(self, pk):
+        try:
+            return Request.objects.get(request_id=pk)
+        except Request.DoesNotExist:
+            raise Http404
+        
+    def put(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if not indiv_request.status == "Pending":
+            return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
+        serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(status="Denied")
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+########################################## Disbursement ###########################################
+class APIDisbursementList(APIView):
+    """
+    List all Requests (for yourself if user, all if admin), or create a new request 
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        requests = [];
+        if not request.user.username:
+            return Response("Not logged in", status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.get(username=request.user.username).is_staff:
+            requests = Disbursement.objects.all()
+        else:
+            requests = Disbursement.objects.filter(user_name=request.user.username)
+        serializer = DisbursementSerializer(requests, many=True)
+        return Response(serializer.data)
+    
+    
