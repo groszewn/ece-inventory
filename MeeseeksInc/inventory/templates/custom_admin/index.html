@@ -405,7 +405,7 @@
 	$(document).ready(function(){
 		$.fn.dataTable.ext.search.push(
 		    function( settings, data, dataIndex, originalData ) {
-		    	if (settings.nTable.id !== 'inventory-disbursed') { // only do this for all tables but disbursed (no tags)
+		    	if (settings.nTable.id !== 'inventory-disbursed' && settings.nTable.id !== 'user-table') { // only do this for all tables but disbursed (no tags)
 		    		var tag = $('#tag').val();
 		    		id = originalData[0].split("\"")[1].split("/")[2]; 
 		        	console.log(id);
