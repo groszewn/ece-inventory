@@ -10,4 +10,40 @@
     <button type="submit" class="btn btn-success">Login</button>
     <input type="hidden" name="next" value="check_login/" />
   </form>
+
+<html>
+<script>
+
+var access_token = null;
+const OAUTH_URL = "https://oauth.oit.duke.edu/oauth/authorize.php";
+
+var getAccessToken = function() {
+   var url = window.location.href;
+   var regex = new RegExp("access_token" + "(=([^&#]*)|&|#|$)"),
+   results = regex.exec(url);
+   if (results == null) return 0;
+   return results[2];
+};
+
+var getQueryString = function() {
+   return "?" + $.param({
+       response_type: 'token',
+       redirect_uri: 'https://localhost:8000',
+       client_id: 'meeseeks-inc--inventory-system',
+       scope: 'basic',
+       state: 11291
+   });
+};
+
+var checkAccessToken = function() {
+   access_token = getAccessToken();
+   console.log(access_token);
+   if (!access_token) {
+       window.location.replace(OAUTH_URL + getQueryString());
+   }
+};
+
+</script>
+<button type="submit" onclick="checkAccessToken();" class="save btn btn-default">Oauth</button>
+</html>
 {% endblock %}
