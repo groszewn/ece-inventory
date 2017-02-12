@@ -23,4 +23,15 @@ urlpatterns = [
     url(r'^request_cancel/(?P<pk>[\w\-\ ]+)$', views.request_cancel_view.as_view(), name='request_cancel'),
     url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.edit_request, name='request_edit'),
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel'),
+    
+    
+    ################################### API URLS #######################################
+    url(r'^api/items/$', views.APIItemList.as_view()),
+    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view()),
+    url(r'^api/requests/$', views.APIRequestList.as_view()),
+    url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', views.APIRequestThroughItem.as_view()),
+    url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', views.APIRequestDetail.as_view()),
+    url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', views.APIApproveRequest.as_view()),
+    url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', views.APIDenyRequest.as_view()),
+    url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
 ]
