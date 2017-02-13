@@ -1,0 +1,14 @@
+{% extends 'custom_admin/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block content %}
+<h2>Create A New Custom Field</h2>
+<form method="post" action=".">
+{% csrf_token %}
+{{ form.as_p }}
+<input type="hidden" value="Create Field" />
+<button type="submit" class="btn btn-success">Create New Field</button>
+
+</form>
+
+{% endblock %}

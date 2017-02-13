@@ -9,10 +9,12 @@
         <thead>
             <tr>
 			<th>Item Name</th>
-			<th># Item</th>
-			<th>Item Location</th>
+			<th>Quantity</th>
 			<th>Item Model Number</th>
 			<th>Item Description</th>
+			{% for field in custom_fields%}
+				<th>{{field.field_name}}</th>
+			{% endfor %}
 		</tr>
         </thead>
         <tbody>
@@ -20,9 +22,17 @@
 				<tr>
 					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
 					<td>{{ item.quantity }}</td>
-					<td>{{ item.location }}</td>
 					<td>{{ item.model_number }}</td>
 					<td>{{ item.description }}</td>
+					{% for field in custom_fields%}
+						<td default = "">
+						{% for value in custom_vals%}
+							{% if value.item == item and value.field == field %}
+								{{value.field_value_short_text}}
+							{% endif %}
+						{% endfor %}
+						</td>
+					{% endfor %}
 				</tr>
 			{% endfor %}
         </tbody>
@@ -51,7 +61,7 @@
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
@@ -83,7 +93,7 @@
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
@@ -115,7 +125,7 @@
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
@@ -152,7 +162,7 @@
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
@@ -183,7 +193,7 @@
 		        <thead>
 		            <tr>
 					<th>Item Name</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Disbursed by</th>
 					<th>Admin Comment</th>
 					<th>Time Disbursed</th>

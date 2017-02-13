@@ -32,4 +32,6 @@ urlpatterns = [
     url(r'^add/tag/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='add_tags'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
     url(r'^search_setup/$', views.search_form, name='search_setup'),
+    url(r'^add_custom_field/$', views.add_custom_field, name='add_custom_field'),
+    url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
 ]

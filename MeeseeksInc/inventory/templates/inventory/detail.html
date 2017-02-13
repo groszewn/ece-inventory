@@ -13,16 +13,26 @@
 		            <tr>
 					<th>Quantity:</th>
 					<th>Model Number:</th>
-					<th>Location:</th>
 					<th>Description:</th>
+					{% for field in custom_fields%}
+					<th>{{field.field_name}}</th>
+					{% endfor %}
 				</tr>
 		        </thead>
 		        <tbody>
 		        		<tr>
 		        			<td>{{ item.quantity }}</td>
 							<td>{{ item.model_number }}</td>
-							<td>{{ item.location}}</td>
 							<td>{{ item.description }}</td>
+							{% for field in custom_fields%}
+							<td default = "">
+							{% for value in custom_vals%}
+								{% if value.item == item and value.field == field %}
+									{{value.field_value_short_text}}
+								{% endif %}
+							{% endfor %}
+							</td>
+					{% endfor %}
 						</tr>
 		        </tbody>
 		    </table>

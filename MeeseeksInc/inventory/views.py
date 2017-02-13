@@ -13,7 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm,  SearchForm
 from custom_admin.forms import AdminRequestEditForm
-from .models import Instance, Request, Item, Disbursement
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Tag
 from django.contrib.auth.models import User
 from django.views.generic.base import View, TemplateResponseMixin
@@ -35,6 +35,8 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -61,6 +63,8 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
     context_object_name = 'tag_list'
     context_object_name = 'item'
     context_object_name = 'request_list'
+    context_object_name = 'custom_fields'
+    context_object_name = 'custom_vals'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
         
     def get_context_data(self, **kwargs):
@@ -72,9 +76,12 @@ class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to displ
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
         if(not user.is_staff):
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         else:
-            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
+            context['custom_fields'] = Custom_Field.objects.all()
+            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         return context
       
 def check_login(request):

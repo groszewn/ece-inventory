@@ -27,8 +27,8 @@ class SearchForm(forms.Form):
     def __init__(self, tags, *args, **kwargs):
         super(SearchForm, self).__init__(*args, **kwargs)
 
-        self.fields['tags1'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
-        self.fields['tags2'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to exclude")
+        self.fields['tags1'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.SelectMultiple(), label="Tags to include")
+        self.fields['tags2'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.SelectMultiple(), label="Tags to exclude")
 
     keyword = forms.CharField(required=False)
     model_number = forms.CharField(required=False)

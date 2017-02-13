@@ -1,10 +1,11 @@
 from django import forms
 from inventory.models import Request
-from inventory.models import Item, Disbursement, Item_Log
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field
 from inventory.models import Tag
 import re
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.admindocs.tests.test_fields import CustomField
  
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -35,9 +36,16 @@ class AdminRequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'reason','comment')
          
 class ItemEditForm(forms.ModelForm):
+    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+        super(ItemEditForm, self).__init__(*args, **kwargs)
+        for field in custom_fields:
+            self.fields["%s" % field.field_name] = forms.CharField(required=False)
+            for val in custom_values:
+                if val.field == field:
+                    self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_name', 'quantity', 'model_number', 'description')
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
@@ -59,20 +67,34 @@ class EditTagForm(forms.ModelForm):
         fields = ('tag',)
           
 class CreateItemForm(forms.ModelForm):
-    def __init__(self, tags, *args, **kwargs):
+    def __init__(self, tags, custom_fields, *args, **kwargs):
         super(CreateItemForm, self).__init__(*args, **kwargs)
+        for field in custom_fields:
+            self.fields["%s" % field.field_name] = forms.CharField()
         choices = []
         for myTag in tags:
             if [myTag.tag,myTag.tag] not in choices:
                 choices.append([myTag.tag,myTag.tag])
-        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...')
     
     new_tags = forms.CharField(required=False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description','new_tags',)
+        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags',)
+
+class CustomFieldForm(forms.ModelForm):  
+    class Meta:
+        model = Custom_Field
+        fields = ('field_name','is_private','field_type',) 
         
-        
+class DeleteFieldForm(forms.Form):
+    def __init__(self, fields, *args, **kwargs):
+        super(DeleteFieldForm, self).__init__(*args, **kwargs)
+        choices = []
+        for field in fields:
+            choices.append([field.field_name, field.field_name])
+        self.fields['fields'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple(), label='Pick fields to delete...')
+          
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30)
     email = forms.EmailField(label='Email')

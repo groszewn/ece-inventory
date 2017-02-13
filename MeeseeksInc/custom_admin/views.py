@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import connection, transaction
@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
-from inventory.models import Instance, Request, Item, Disbursement, Tag
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Custom_Field, Custom_Field_Value
 # from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
@@ -47,6 +47,8 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
         context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
+        context['custom_fields'] = Custom_Field.objects.all()
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         # And so on for more models
         return context
     def get_queryset(self):
@@ -64,6 +66,34 @@ class DisburseView(LoginRequiredMixin, generic.ListView): ## DetailView to displ
     template_name = 'custom_admin/single_disburse.html' # w/o this line, default would've been inventory/<model_name>.html
  
 #####################################################################
+
+@login_required(login_url='/login/')
+def add_custom_field(request):
+    if request.method == 'POST':
+        form = CustomFieldForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('custom_admin:index'))
+    else:
+        form = CustomFieldForm()
+    return render(request, 'custom_admin/create_custom_field.html', {'form': form})
+
+@login_required(login_url='/login/')
+def delete_custom_field(request):
+    fields = Custom_Field.objects.all()
+    if request.method == 'POST':
+        form = DeleteFieldForm(fields,request.POST)
+        if form.is_valid():
+            pickedFields = form.cleaned_data.get('fields')
+            if pickedFields:
+                for field in pickedFields:
+                    delField = Custom_Field.objects.get(field_name = field)
+                    delField.delete()
+            return redirect(reverse('custom_admin:index'))
+    else:
+        form = DeleteFieldForm(fields)
+    return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
+
 @login_required(login_url='/login/')
 def register_page(request):
     if request.method == 'POST':
@@ -237,15 +267,24 @@ def approve_request(request, pk):
 @login_required(login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
-    tags = []
-#     tags = Tag.objects.filter(item_name=item)
+    custom_fields = Custom_Field.objects.all()
+    custom_vals = Custom_Field_Value.objects.filter(item = item)
     if request.method == "POST":
-        form = ItemEditForm(request.POST or None, instance=item)
+        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             form.save()
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                    custom_val.field_value_short_text = field_value
+                    custom_val.save()
+                else: 
+                    f = Custom_Field_Value(item=item, field=field, field_value_short_text=field_value)
+                    f.save()
             return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
+        form = ItemEditForm(custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -333,8 +372,9 @@ def delete_tag(request, pk):
 @login_required(login_url='/login/')
 def create_new_item(request):
     tags = Tag.objects.all()
+    custom_fields = Custom_Field.objects.all()
     if request.method== 'POST':
-        form = CreateItemForm(tags, request.POST or None)
+        form = CreateItemForm(tags, custom_fields, request.POST or None)
         if form.is_valid():
             post = form.save(commit=False)
             pickedTags = form.cleaned_data.get('tag_field')
@@ -351,11 +391,15 @@ def create_new_item(request):
                 for oneTag in tag_list:
                     t = Tag(item_name=item, tag=oneTag)
                     t.save()
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                f = Custom_Field_Value(item=item, field=field, field_value_short_text=field_value)
+                f.save()
             return redirect('/customadmin')
         else:
             messages.error(request, (form['item_name'].value() + " has already been created."))
     else:
-        form = CreateItemForm(tags)
+        form = CreateItemForm(tags, custom_fields)
     return render(request, 'custom_admin/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')
