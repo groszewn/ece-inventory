@@ -142,10 +142,17 @@ def edit_quantity_cart(request, pk):
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
   
-  
-
 def check_OAuth_login(request):
-    token = request.METADATA
+#     tokenurl = "https://oauth.oit.duke.edu/oauth/authorize.php"
+#     client_auth = requests.auth.HTTPBasicAuth('meeseeks-inc--inventory-system', 'mPjr9aRkm@SEp9@dBqFkQ3pHK*9o8ZUasEEeu+$G7b#ASEG$9k')
+#     post_data = {
+#         "grant_type": 'authorization_code', 
+#         'redirect_uri':'http://localhost:8000/login/check_OAuth_login',          
+#         'code':'bar'
+#      }
+#     response = requests.post(tokenurl, auth=client_auth, data=post_data)
+#     print(response.json())
+    token = request.GET
     print(token)
     url = "https://api.colab.duke.edu/identity/v1/"
     headers = {'Accept':'application/json', 'x-api-key':'api-docs', 'Authorization': 'Bearer ' + token}
@@ -166,10 +173,13 @@ def check_OAuth_login(request):
     
 def check_login(request):    
     if request.user.is_staff:
-        return HttpResponseRedirect(reverse('custom_admin:index'))
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    elif request.user.is_superuser:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
-        return HttpResponseRedirect(reverse('inventory:index'))
-      
+        print("FUCK")
+        return  HttpResponseRedirect(reverse('inventory:index'))
+    
 def search_form(request):
     if request.method == "POST":
         tags = Tag.objects.all()
