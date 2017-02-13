@@ -110,6 +110,27 @@ def add_comment_to_request_accept(request, pk):
     return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
+def edit_item_module(request, pk):
+    item = Item.objects.get(item_id=pk)
+    if request.method == "POST":
+        form = ItemEditForm(request.POST or None, instance=item)
+        if form.is_valid():
+            name = form['item_name'].value()
+            quantity = form['quantity'].value()
+            location = form['location'].value()
+            model_num = form['model_number'].value()
+            desc = form['description'].value()
+            item.item_name = name
+            item.save()
+            messages.success(request, ('Successfully Saved Item Changes.'))
+            return redirect(reverse('custom_admin:index'))
+            #form.save()
+            # return redirect('/item/' + pk)
+    else:
+        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
+    return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
 def add_comment_to_request_deny(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request

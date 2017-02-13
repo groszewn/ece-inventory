@@ -5,31 +5,27 @@
 {#put this at the top so that the base template is "base.html"#}
 {% block content %}
 
-<center> <h1>  {{ item.item_name }} </h1> </center> 
+<center> <h1>  Item: {{ item.item_name }} </h1> </center> 
 
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Quantity:</div> </h2>
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);">{{ item.quantity }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Model Number:</div> </h2>
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);">{{ item.model_number }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Location:</div> </h2>
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);">{{ item.location }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);"> Description:</div> </h2>
-  <h2> <div class="col-md-4" style="background-color:rgba(71, 202, 255, 0.66);">{{ item.description }}</div> </h2>
-</div>
-
-<div class="row">
-  <h2> <div class="col-md-8" style="background-color:rgba(71, 202, 255, 0.66);"> Tags: </div> </h2>
-</div>
+			</table>
+				<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Quantity:</th>
+					<th>Model Number:</th>
+					<th>Location:</th>
+					<th>Description:</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        		<tr>
+		        			<td>{{ item.quantity }}</td>
+							<td>{{ item.model_number }}</td>
+							<td>{{ item.location}}</td>
+							<td>{{ item.description }}</td>
+						</tr>
+		        </tbody>
+		    </table>
 
 <br/>
     
@@ -96,7 +92,16 @@
 	</script>
 		<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
 	   	<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
-	    <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-primary btn-md">Delete Item</button>
+	    
+{% block edit_specific_item %}
+<a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
+{% endblock edit_specific_item %}
+
+{% block tag_item %}
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
+{% endblock tag_item %}
+	
+	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-primary btn-md">Delete Item</button>
 	
 </div>
 
@@ -163,6 +168,77 @@
 	    $('#inventory-request-indiv-item').dataTable();
 	});
 	</script>
+	
+	
+	
+
+{############################# EDIT ITEM LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-edit %}
+<script>
+    $('.edit').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-edit %}
+
+{############################# EDIT TAG LOGIC ##############################}
+<div id="form-modal-tag" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-tag %}
+<script>
+    $('.tag').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
+            $('#form-modal-tag').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-tag %}
 	
 	
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}

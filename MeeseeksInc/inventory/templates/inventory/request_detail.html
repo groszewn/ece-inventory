@@ -39,49 +39,43 @@
 	}
 	</script>
 	
-	<script>
-	function clickEventAccept(){
-	    if (confirm("Do you want to accept this request?")) {
-	    	window.location='{% url 'custom_admin:approve_request' request.request_id %}';
-	    }
-	}
-	</script>
+	{% if request.status == "Pending" %}
 	
-	<script>
-	function clickEventDeny(){
-	    if (confirm("Do you want to deny this request?")) {
-	    	window.location='{% url 'custom_admin:deny_request' request.request_id %}';
-	    }
-	}
-	</script>
-
-	{#% if user.is_staff %#}
-		{#do nothing#}
-	{#% else %#}
 		 <h2>Edit This Request </h2>
-		 Change the parameters below and hit the resubmit button to update this request.
+		  Change the parameters below and hit the resubmit button to update this request.
 		 <br/>
+		 <br/>
+		 
  	<form method="POST" class="post-form">{% csrf_token %}
-		{{ form.request_quantity }}
-		{{ form.reason}}
-		{{ form.comment }}
-		<button type="submit" class="btn btn-primary btn-md">Resubmit Request</button>
+		{{form.request_quantity.label}}:{{ form.request_quantity }}
+		<br/>
+		<br/>
+		{{form.reason.label}}:{{ form.reason}}
+		<br/>
+		<br/>
+		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
+		<br/>
+		<br/>
+		{% if user.is_staff %}
+		<h2>Handle This Request </h2>
+		 Add a comment to this request.
+		<br/>
+		<br/>
+		{{form.comment.label}}:{{ form.comment }}
+		<br/>
+		<br/>
+		<button type="submit" class="btn btn-success btn-md" value="Approve" name="approve">Approve Request</button>
+		<button type="submit" class="btn btn-warning btn-md" value="Deny" name="deny">Deny Request</button>
+		{%endif%}
+		<button value="Cancel Request" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Cancel Request</button>
 	</form>
+	
+	{%endif%}
 <br/>
 
-	<form method="ACCEPT" class="post-form">{% csrf_token %}
-		{{ form.comment }}
-		<button type="submit" class="btn btn-success btn-md">Approve Request</button>
-	</form>
 	
-	{#% endif %#}
-
-	{% if user.is_staff %}
-		<button value="Accept Request" onclick="clickEventAccept();" type="button" class="btn btn-success btn-md">Approve Request</button>
-		<button value="Deny Request" onclick="clickEventDeny();" type="button" class="btn btn-warning btn-md">Deny Request</button>
-	{%endif%}						
-		  <button value="Cancel Request" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Cancel Request</button>
-
+	
+	
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
 	

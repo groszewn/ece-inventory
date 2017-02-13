@@ -12,9 +12,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm,  SearchForm
+from custom_admin.forms import AdminRequestEditForm
 from .models import Instance, Request, Item, Disbursement
 from .models import Tag
 from django.contrib.auth.models import User
+from django.views.generic.base import View, TemplateResponseMixin
+from django.views.generic.edit import FormMixin, ProcessFormView
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
@@ -180,7 +183,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
     login_url = "/login/"
     model = Request
     template_name = 'inventory/request_detail.html'
-    form_class = RequestEditForm
+    form_class = AdminRequestEditForm
     context_object_name = 'form'
     context_object_name = 'request'
     
@@ -192,18 +195,43 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
     
     def post(self, request, pk):
         instance = Request.objects.get(request_id=pk)
+        item = Item.objects.get(item_id=instance.item_name_id)
         if request.method == "POST":
-            form = RequestEditForm(request.POST, instance=instance)
+            form = AdminRequestEditForm(request.POST, instance=instance)
             if form.is_valid():
-                post = form.save(commit=False)
-                post.comment = ""
-                post.status = "Pending"
-                post.time_requested = timezone.localtime(timezone.now())
-                post.save()
-                return redirect('/')
+                if 'edit' in request.POST:
+                    post = form.save(commit=False)
+                    post.comment = ""
+                    post.status = "Pending"
+                    post.time_requested = timezone.localtime(timezone.now())
+                    post.save()
+                    return render(request, 'inventory/request_detail.html', {'form': form})
+                if 'approve' in request.POST:
+                    if item.quantity >= instance.request_quantity:
+                        # decrement quantity in item
+                        item.quantity = F('quantity')-instance.request_quantity
+                        item.save()
+         
+                        # change status of request to approved
+                        instance.status = "Approved"
+                        instance.save()
+         
+                        # add new disbursement item to table
+                        # TODO: add comments!!
+                        disbursement = Disbursement(admin_name=request.user.username, user_name=instance.user_id, item_name=Item.objects.get(item_id = instance.item_name_id), 
+                                    total_quantity=instance.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                        disbursement.save()
+                        messages.success(request, ('Successfully disbursed ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
+                    else:
+                        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                if 'deny' in request.POST:
+                    instance.status = "Denied"
+                    instance.save()
+                    messages.success(request, ('Denied disbursement ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
+                return redirect(reverse('custom_admin:index'))
             else:
-                form = RequestEditForm(instance=instance)
-                return render(request, 'inventory/request_detail.html', {'form': form})
+                form = AdminRequestEditForm(instance=instance)
+                return render(request, 'inventory/request_detail.html', {'form': form}) 
         
 class request_cancel_view(generic.DetailView):
     model = Request

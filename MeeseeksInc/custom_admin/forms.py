@@ -28,11 +28,11 @@ class LogForm(forms.ModelForm):
         model = Item_Log
         fields = ('item_name', 'item_change_status', 'item_amount')
 
-class RequestEditForm(forms.ModelForm):
-    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+class AdminRequestEditForm(forms.ModelForm):    
+    comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
     class Meta:
         model = Request
-        fields = ('item_field', 'request_quantity', 'reason')
+        fields = ('request_quantity', 'reason','comment')
          
 class ItemEditForm(forms.ModelForm):
     class Meta:
@@ -48,10 +48,10 @@ class AddTagForm(forms.Form):
                 choices.append([myTag.tag,myTag.tag])
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
-            self.fields["%s" % tag.tag] = forms.CharField(initial = tag.tag, label = "Edit existing tag #%d" % tag.id)
+            self.fields["%s" % tag.tag] = forms.CharField(initial = tag.tag, label = "Edit existing tag")
         
     create_new_tags = forms.CharField(required=False)
-    fields = ('tag_field','create_new_tags')
+    fields = ('tag_field','create_new_tags',)
          
 class EditTagForm(forms.ModelForm):  
     class Meta:
