@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.http import HttpResponseRedirect
@@ -18,6 +18,7 @@ from django.views.generic.edit import FormMixin
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import requests, json, urllib
 
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
@@ -141,7 +142,29 @@ def edit_quantity_cart(request, pk):
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
   
-def check_login(request):
+  
+
+def check_OAuth_login(request):
+    token = request.METADATA
+    print(token)
+    url = "https://api.colab.duke.edu/identity/v1/"
+    headers = {'Accept':'application/json', 'x-api-key':'api-docs', 'Authorization': 'Bearer ' + token}
+    returnDict = requests.get(url, headers=headers)
+    dct = returnDict.json()
+    name = dct['displayName']
+    email = dct["eduPersonPrincipalName"]
+    netid = dct['netid']
+    userExists = User.objects.filter(username=netid).count()
+    if userExists:
+        user = User.objects.get(username=netid)
+        login(request, user)
+    else:
+        user = User.objects.create_user(username=netid,email=email, password=None)
+        user.save()
+        login(request, user)
+    return check_login(request)
+    
+def check_login(request):    
     if request.user.is_staff:
         return HttpResponseRedirect(reverse('custom_admin:index'))
     else:

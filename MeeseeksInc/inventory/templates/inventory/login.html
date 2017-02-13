@@ -28,7 +28,7 @@ var getAccessToken = function() {
 var getQueryString = function() {
    return "?" + $.param({
        response_type: 'token',
-       redirect_uri: 'https://localhost:8000',
+       redirect_uri: 'http://localhost:8000/login/check_OAuth_login',
        client_id: 'meeseeks-inc--inventory-system',
        scope: 'basic',
        state: 11291
@@ -37,7 +37,7 @@ var getQueryString = function() {
 
 var checkAccessToken = function() {
    access_token = getAccessToken();
-   console.log(access_token);
+   console.log(access_token)
    if (!access_token) {
        window.location.replace(OAUTH_URL + getQueryString());
    }
