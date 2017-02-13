@@ -9,6 +9,8 @@ from django.core.exceptions import ObjectDoesNotExist
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    total_quantity = forms.IntegerField(min_value=1)
+    comment = forms.CharField(required=False)
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
@@ -30,11 +32,16 @@ class LogForm(forms.ModelForm):
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
          
 class ItemEditForm(forms.ModelForm):
+    quantity = forms.IntegerField(min_value=0)
+    location = forms.CharField(required=False)
+    model_number = forms.CharField(required=False)
+    description = forms.CharField(required=False)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
@@ -71,6 +78,10 @@ class CreateItemForm(forms.ModelForm):
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple, label='Tags to include...')
     
     new_tags = forms.CharField(required=False)
+    location = forms.CharField(required=False)
+    model_number = forms.CharField(required=False)
+    description = forms.CharField(required=False)
+    quantity = forms.IntegerField(min_value=0)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'location', 'model_number', 'description','new_tags',)
