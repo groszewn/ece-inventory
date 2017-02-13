@@ -34,4 +34,6 @@ urlpatterns = [
     url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', views.APIApproveRequest.as_view()),
     url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', views.APIDenyRequest.as_view()),
     url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
+    url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', views.APIDirectDisbursement.as_view()),
+    url(r'^api/users/create/$', views.APICreateNewUser.as_view()),
 ]

@@ -6,13 +6,14 @@ from inventory.models import ShoppingCartInstance
  
 class RequestForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')
 
 class RequestSpecificForm(forms.Form):  
     available_quantity = forms.IntegerField(disabled=True, required=False)
-    quantity = forms.IntegerField()
+    quantity = forms.IntegerField(min_value=1)
     reason = forms.CharField(max_length=200)
     def __init__(self, *args, **kwargs):
         super(RequestSpecificForm, self).__init__(*args, **kwargs)
@@ -20,6 +21,7 @@ class RequestSpecificForm(forms.Form):
       
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity', 'reason')

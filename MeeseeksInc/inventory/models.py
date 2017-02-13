@@ -32,7 +32,7 @@ class Instance(models.Model):
 class Request(models.Model):
     request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     user_id = models.CharField(max_length=200, null=False)
-    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
+    item_name = models.ForeignKey(Item, null=True, related_name='requests', on_delete=models.CASCADE) 
 #     item_name = models.CharField(max_length=200, null=False)
     request_quantity = models.SmallIntegerField(null=False)
     CHOICES = (
@@ -45,7 +45,8 @@ class Request(models.Model):
     reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.DateTimeField(default=timezone.now)
     def __str__(self):
-        return self.item_name.item_name + " " + self.request_id
+        return "Request for " + str(self.request_quantity) + " " + self.item_name.item_name + " by " + self.user_id  + " (ID: " + self.request_id + ")"
+        
  
 class Disbursement(models.Model):   
     disburse_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
