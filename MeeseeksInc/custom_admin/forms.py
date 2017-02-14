@@ -10,6 +10,8 @@ from django.contrib.admindocs.tests.test_fields import CustomField
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    total_quantity = forms.IntegerField(min_value=1)
+    comment = forms.CharField(required=False)
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
@@ -31,6 +33,10 @@ class LogForm(forms.ModelForm):
 
 class AdminRequestEditForm(forms.ModelForm):    
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
+
+class RequestEditForm(forms.ModelForm):
+    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
         fields = ('request_quantity', 'reason','comment')
@@ -43,9 +49,17 @@ class ItemEditForm(forms.ModelForm):
             for val in custom_values:
                 if val.field == field:
                     self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)
+    quantity = forms.IntegerField(min_value=0)
+    model_number = forms.CharField(required=False)
+    description = forms.CharField(required=False)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description')
+        
+class UserPermissionEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('username', 'is_staff', 'is_active')
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
@@ -78,6 +92,10 @@ class CreateItemForm(forms.ModelForm):
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...')
     
     new_tags = forms.CharField(required=False)
+    location = forms.CharField(required=False)
+    model_number = forms.CharField(required=False)
+    description = forms.CharField(required=False)
+    quantity = forms.IntegerField(min_value=0)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description','new_tags',)

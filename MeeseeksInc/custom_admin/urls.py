@@ -34,4 +34,5 @@ urlpatterns = [
     url(r'^search_setup/$', views.search_form, name='search_setup'),
     url(r'^add_custom_field/$', views.add_custom_field, name='add_custom_field'),
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
+    url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.edit_permission), name='edit_permission'),
 ]

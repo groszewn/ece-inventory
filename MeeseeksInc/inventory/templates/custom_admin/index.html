@@ -3,9 +3,60 @@
 
 {% block content %}
 
-{% if item_list %}
+{########################## MESSAGES (SUCCESS / ERRORS) #####################}
+{#{% if messages %}#}
+{#<ul class="messages">#}
+{#    {% for message in messages %}#}
+{#    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>#}
+{#    {% endfor %}#}
+{#</ul>#}
+{#{% endif %}#}
 
-<h2>All available items</h2>
+{########################## ALL USERS ##########################}
+
+<h2>All Users</h2>
+
+{% if user %}
+	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+            <th>Username</th>
+			<th>First Name</th>
+			<th>Last Name</th>
+			<th>Email</th>
+			<th>Staff Status</th>
+			<th>Active User</th>
+			<th>Actions</th>
+		</tr>
+        </thead>
+        
+        <tbody>
+            {% for user in user_list %}
+				<tr>
+					<td>{{ user.username }}</a></td>
+					<td>{{ user.first_name }}</td>
+					<td>{{ user.last_name }}</td>
+					<td>{{ user.email }}</td>
+					<td>{{ user.is_staff }}</td>
+					<td>{{ user.is_active }}</td>
+					<td>
+						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
+					</td>	
+				</tr>
+			{% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+
+
+{########################## ALL ITEMS ##########################}
+
+
+{% if user_list %}
+
+	<h2>All available items</h2>
+	
 	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
             <tr>
@@ -18,6 +69,7 @@
 			{% endfor %}
 		</tr>
         </thead>
+        
         <tbody>
             {% for item in item_list %}
 				<tr>
@@ -40,14 +92,17 @@
     </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
+
 <h2>Requests made by users</h2>
-{% if request_list %}
+
+	{% if request_list %}
 		<ul class="nav nav-tabs">
 		  <li><a href="#all" data-toggle="tab">All Requests</a></li>
 		  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
 		  <li class="active"><a href="#pending" data-toggle="tab">Pending</a></li>
 		  <li><a href="#denied" data-toggle="tab">Denied</a></li>
 		</ul>
+		
 		<div class="tab-content">
 	        <div class="tab-pane" id="all">
 	            <table border="0" cellspacing="5" cellpadding="5">
@@ -83,6 +138,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane" id="accepted">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -117,6 +173,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane active" id="pending">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -162,6 +219,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 	        <div class="tab-pane" id="denied">
 	            <table border="0" cellspacing="5" cellpadding="5">
 			        <tbody>
@@ -196,6 +254,7 @@
 		        </tbody>
 		    </table>
 	        </div>
+	        
 		</div>
 	{% else %}
 		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
@@ -218,11 +277,12 @@
 {#		{% endfor %}#}
 {#	</ul>#}
 {#{% endfor %}#}
-<a href="{% url 'custom_admin:approve_all_requests' %}" class="top-menu">Approve all requests<span class="glyphicon glyphicon-plus"></span></a>	
-<a href="{% url 'custom_admin:deny_all_requests' %}" class="top-menu">Deny all requests<span class="glyphicon glyphicon-plus"></span></a>	
+
+	<a class="btn btn-default" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+	<a class="btn btn-default" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 
 {########################## DISBURSEMENTS #####################}
-{% if disbursed_list %}
+	{% if disbursed_list %}
 		<h2>Disbursed by you</h2>
 		<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -247,11 +307,15 @@
 		        </tbody>
 		    </table>
 	{% endif %}
-{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
-{% block modal %}
-<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
-{% endblock modal %}
+
+	{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
+		{% block modal %}
+			<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
+		{% endblock modal %}
+
+
 {% endif %}
+
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -351,7 +415,7 @@
 	$(document).ready(function(){
 		$.fn.dataTable.ext.search.push(
 		    function( settings, data, dataIndex, originalData ) {
-		    	if (settings.nTable.id !== 'inventory-disbursed') { // only do this for all tables but disbursed (no tags)
+		    	if (settings.nTable.id !== 'inventory-disbursed' && settings.nTable.id !== 'user-table') { // only do this for all tables but disbursed (no tags)
 		    		var tag = $('#tag').val();
 		    		id = originalData[0].split("\"")[1].split("/")[2]; 
 		        	console.log(id);
@@ -373,6 +437,7 @@
 	    $('#inventory-request-pending').dataTable();
 	    $('#inventory-request-denied').dataTable();
 	    $('#inventory-disbursed').dataTable();
+	    $('#user-table').dataTable();
 	});
 	</script>
 

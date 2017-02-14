@@ -20,6 +20,7 @@ from django.views.generic.edit import FormView
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Custom_Field, Custom_Field_Value
 # from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from custom_admin.forms import UserPermissionEditForm
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -49,6 +50,7 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
         context['custom_fields'] = Custom_Field.objects.all()
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['user_list'] = User.objects.all()
         # And so on for more models
         return context
     def get_queryset(self):
@@ -286,6 +288,18 @@ def edit_item(request, pk):
     else:
         form = ItemEditForm(custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+def edit_permission(request, pk):
+    user = User.objects.get(username = pk)
+    if request.method == "POST":
+        form = UserPermissionEditForm(request.POST or None, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('/customadmin')
+    else:
+        form = UserPermissionEditForm(instance = user, initial = {'username': user.username})
+    return render(request, 'custom_admin/user_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
 def add_tags(request, pk):
