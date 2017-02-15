@@ -21,10 +21,12 @@ from rest_framework.views import APIView
 import requests, json, urllib, subprocess
 from django.test import Client
 
+from custom_admin.forms import DisburseForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
-    DisbursementSerializer
+    DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
+    GetItemSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance
@@ -358,7 +360,11 @@ class APIItemDetail(APIView):
 
     def get(self, request, pk, format=None):
         item = self.get_object(pk)
-        serializer = ItemSerializer(item)
+        context = {
+            "request": self.request,
+            "pk": pk,
+        }
+        serializer = GetItemSerializer(item, context=context)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
@@ -383,8 +389,6 @@ class APIRequestList(APIView):
     
     def get(self, request, format=None):
         requests = [];
-        if self.request.user == []:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
         if User.objects.get(username=request.user.username).is_staff:
             requests = Request.objects.all()
         else:
@@ -503,20 +507,60 @@ class APIDenyRequest(APIView):
 ########################################## Disbursement ###########################################
 class APIDisbursementList(APIView):
     """
-    List all Requests (for yourself if user, all if admin), or create a new request 
+    List all Disbursements (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
         requests = [];
-        if not request.user.username:
-            return Response("Not logged in", status=status.HTTP_400_BAD_REQUEST)
-        
         if User.objects.get(username=request.user.username).is_staff:
             requests = Disbursement.objects.all()
         else:
             requests = Disbursement.objects.filter(user_name=request.user.username)
         serializer = DisbursementSerializer(requests, many=True)
         return Response(serializer.data)
+    
+class APIDirectDisbursement(APIView):
+    """
+    Create a direct disbursement
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get_object(self, pk): #get the item to directly disburse to
+        try:
+            return Item.objects.get(item_id=pk)
+        except Item.DoesNotExist:
+            raise Http404
+        
+    def post(self, request, pk, format=None):
+        context = {
+            "request": self.request,
+        }
+        item_to_disburse = self.get_object(pk)
+        serializer = DisbursementPostSerializer(data=request.data, context=context)
+        if serializer.is_valid():
+            if item_to_disburse.quantity >= int(request.data.get('total_quantity')):
+                # decrement quantity in item
+                item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
+                item_to_disburse.save()
+                serializer.save(item_name=item_to_disburse)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+########################################## Users ###########################################
+class APICreateNewUser(APIView):
+    """
+    Create new user as an admin 
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def post(self, request, format=None):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     

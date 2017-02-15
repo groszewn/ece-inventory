@@ -30,6 +30,6 @@ urlpatterns = [
     url(r'^add/tag/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='add_tags'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
     url(r'^search_setup/$', views.search_form, name='search_setup'),
-    url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
-    url(r'^log$', views.LogView.as_view(), name='log'),
+    url(r'^log$', permission_required('is_staff', login_url='/login/check_login')(views.LogView.as_view()), name='log'),
+    url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', permission_required('is_staff', login_url='/login/check_login/')(views.edit_permission), name='edit_permission'),
 ]
