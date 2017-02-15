@@ -85,8 +85,8 @@ class Custom_Field_Value(models.Model):
     field = models.ForeignKey(Custom_Field, null=False, on_delete=models.CASCADE)
     field_value_short_text = models.CharField(max_length=400,null=True)
     field_value_long_text = models.TextField(max_length=1000,null=True)
-    field_value_integer = models.IntegerField(null=True)
-    field_value_floating = models.FloatField(null=True)
+    field_value_integer = models.IntegerField(null=True, blank=True)
+    field_value_floating = models.FloatField(null=True, blank=True)
     
     class Meta:
        unique_together = (("item", "field"),)

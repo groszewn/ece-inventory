@@ -16,6 +16,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
+from django.db import models
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Custom_Field, Custom_Field_Value
 # from inventory.models import Instance, Request, Item, Disbursement
@@ -279,11 +280,23 @@ def edit_item(request, pk):
                 field_value = form[field.field_name].value()
                 if Custom_Field_Value.objects.filter(item = item, field = field).exists():
                     custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                else:
+                    custom_val = Custom_Field_Value(item=item, field=field)
+                if field.field_type == 'Short':    
                     custom_val.field_value_short_text = field_value
-                    custom_val.save()
-                else: 
-                    f = Custom_Field_Value(item=item, field=field, field_value_short_text=field_value)
-                    f.save()
+                if field.field_type == 'Long':
+                    custom_val.field_value_long_text = field_value
+                if field.field_type == 'Int':
+                    if field_value != '':
+                        custom_val.field_value_integer = field_value
+                    else:
+                        custom_val.field_value_integer = None
+                if field.field_type == 'Float':
+                    if field_value != '':
+                        custom_val.field_value_floating = field_value 
+                    else:
+                        custom_val.field_value_floating = None
+                custom_val.save()
             return redirect('/item/' + pk)
     else:
         form = ItemEditForm(custom_fields, custom_vals, instance=item)
@@ -407,8 +420,22 @@ def create_new_item(request):
                     t.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
-                f = Custom_Field_Value(item=item, field=field, field_value_short_text=field_value)
-                f.save()
+                custom_val = Custom_Field_Value(item=item, field=field)
+                if field.field_type == 'Short':    
+                    custom_val.field_value_short_text = field_value
+                if field.field_type == 'Long':
+                    custom_val.field_value_long_text = field_value
+                if field.field_type == 'Int':
+                    if field_value != '':
+                        custom_val.field_value_integer = field_value
+                    else:
+                        custom_val.field_value_floating = None
+                if field.field_type == 'Float':
+                    if field_value != '':
+                        custom_val.field_value_floating = field_value
+                    else:
+                        custom_val.field_value_floating = None
+                custom_val.save()
             return redirect('/customadmin')
         else:
             messages.error(request, (form['item_name'].value() + " has already been created."))

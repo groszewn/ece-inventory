@@ -28,7 +28,26 @@
 						<td default = "">
 						{% for value in custom_vals%}
 							{% if value.item == item and value.field == field %}
-								{{value.field_value_short_text}}
+									{% if field.field_type == "Short"%}
+										{{value.field_value_short_text}}
+									{% endif %}
+									{% if field.field_type == "Long"%}
+										{{value.field_value_long_text}}
+									{% endif %}
+									{% if field.field_type == "Int"%}
+										{% if value.field_value_integer != None%}
+											{{value.field_value_integer}}
+										{% else %}
+											{{""}}
+										{% endif %}
+									{% endif %}
+									{% if field.field_type == "Float"%}
+										{% if value.field_value_floating != None%}
+											{{value.field_value_floating}}
+										{% else %}
+											{{""}}
+										{% endif %}
+									{% endif %}
 							{% endif %}
 						{% endfor %}
 						</td>

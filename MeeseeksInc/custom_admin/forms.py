@@ -48,10 +48,24 @@ class ItemEditForm(forms.ModelForm):
     def __init__(self, custom_fields, custom_values, *args, **kwargs):
         super(ItemEditForm, self).__init__(*args, **kwargs)
         for field in custom_fields:
-            self.fields["%s" % field.field_name] = forms.CharField(required=False)
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False,widget=forms.Textarea) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = forms.IntegerField(required=False) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = forms.FloatField(required=False)
             for val in custom_values:
                 if val.field == field:
-                    self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)
+                    if field.field_type == 'Short':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)                    
+                    if field.field_type == 'Long':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_long_text,widget=forms.Textarea,required=False) 
+                    if field.field_type == 'Int':
+                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
+                    if field.field_type == 'Float':
+                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False)
@@ -87,7 +101,14 @@ class CreateItemForm(forms.ModelForm):
     def __init__(self, tags, custom_fields, *args, **kwargs):
         super(CreateItemForm, self).__init__(*args, **kwargs)
         for field in custom_fields:
-            self.fields["%s" % field.field_name] = forms.CharField()
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False,widget=forms.Textarea) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = forms.IntegerField(required=False) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = forms.FloatField(required=False)
         choices = []
         for myTag in tags:
             if [myTag.tag,myTag.tag] not in choices:
