@@ -16,7 +16,7 @@ class Item(models.Model):
         return self.item_name
     
 class Tag(models.Model):
-    item_name = models.ForeignKey(Item, on_delete=models.CASCADE) 
+    item_name = models.ForeignKey(Item, null = True, on_delete=models.CASCADE) 
     tag = models.CharField(max_length=200)
     def __str__(self):
         return self.tag
