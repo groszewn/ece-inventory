@@ -92,7 +92,13 @@ def register_page(request):
                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
             return HttpResponseRedirect('/customadmin')
-    form = RegistrationForm()
+        
+        elif form['password1'].value() != form['password2'].value():
+            messages.error(request, (" passwords do not match."))
+        else:
+            messages.error(request, (form['username'].value() + " has already been created."))
+    else:
+        form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})
 
 @login_required(login_url='/login/')

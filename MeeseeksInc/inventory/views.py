@@ -385,7 +385,7 @@ class APIItemDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ########################################## Request ########################################
-class APIRequestList(APIView):
+class APIRequestList(APIView):  
     """
     List all Requests (for yourself if user, all if admin), or create a new request 
     """
