@@ -20,8 +20,9 @@ from django.contrib.auth.models import User
 from rest_framework import routers, serializers, viewsets
 
 from inventory import views as inventory_views
-from inventory.models import Item, Request
-from inventory.serializers import ItemSerializer, RequestSerializer
+from inventory.models import Item, Request, Disbursement
+from inventory.serializers import ItemSerializer, RequestSerializer, \
+    DisbursementSerializer
 
 
 # Serializers define the API representation.
@@ -42,12 +43,17 @@ class ItemViewSet(viewsets.ModelViewSet):
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
+
+class DisbursementViewSet(viewsets.ModelViewSet):  
+    queryset = Disbursement.objects.all()
+    serializer_class = DisbursementSerializer
     
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'items', ItemViewSet)
 router.register(r'requests', RequestViewSet)
+router.register(r'disbursements', DisbursementViewSet)
 
 urlpatterns = [
     url(r'^', include('inventory.urls')),
