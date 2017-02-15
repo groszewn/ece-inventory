@@ -128,6 +128,7 @@ class CartListView(LoginRequiredMixin, generic.ListView): ## DetailView to displ
         """Return the last five published questions."""
         return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
 
+@login_required(login_url='/login/')
 def edit_quantity_cart(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
@@ -173,7 +174,6 @@ def check_OAuth_login(request):
     headers = {'Accept':'application/json', 'x-api-key':'api-docs', 'Authorization': 'Bearer ' + token}
     returnDict = requests.get(url, headers=headers)
     dct = returnDict.json()
-    print(dct)
     name = dct['displayName']
     email = dct["eduPersonPrincipalName"]
     netid = dct['netid']
@@ -194,7 +194,8 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
-    
+
+@login_required(login_url='/login/')    
 def search_form(request):
     if request.method == "POST":
         tags = Tag.objects.all()
@@ -251,7 +252,8 @@ def search_form(request):
         tags = Tag.objects.all()
         form = SearchForm(tags)
     return render(request, 'inventory/search.html', {'form': form})
-  
+
+@login_required(login_url='/login/')
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
@@ -291,18 +293,20 @@ def post_new_request(request):
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
   
-class request_detail(generic.DetailView):
+class request_detail(LoginRequiredMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_detail.html'
-      
-class request_cancel_view(generic.DetailView):
+
+class request_cancel_view(LoginRequiredMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
-      
+
+@login_required(login_url='/login/')      
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()
     return redirect('/')
 
+@login_required(login_url='/login/')
 def request_specific_item(request, pk):
     if request.method == "POST":
         form = RequestSpecificForm(request.POST) # create request-form with the data from the request
