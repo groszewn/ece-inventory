@@ -8,7 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpRequest
 from django.http.response import Http404
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -18,7 +18,8 @@ from django.views.generic.edit import FormMixin
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import requests, json, urllib
+import requests, json, urllib, subprocess
+from django.test import Client
 
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
@@ -141,23 +142,36 @@ def edit_quantity_cart(request, pk):
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
-  
+
+def request_token(request):
+    request_url = "https://oauth.oit.duke.edu/oauth/authorize.php?"
+    params = {
+        'response_type':'token',
+        'client_id': 'meeseeks-inc--inventory-system',
+        #'redirect_uri' : 'http://localhost:8000/login/check_OAuth_login',
+        'redirect_uri':'http://localhost:8000/get_access_token',
+        'scope':'basic identity:netid:read',
+        'state':11291,
+    }
+    url = request_url #+ '?'urllib.parse.urlencode(params)
+    for key, val in params.items():
+        url+=str(key)
+        url+='='
+        url+=str(val)
+        url+='&'
+    url=url[:-1]
+    return HttpResponseRedirect(url)
+
+def getAccessToken(request):
+    return render(request, 'inventory/oauth_access_token.html')
+    
 def check_OAuth_login(request):
-#     tokenurl = "https://oauth.oit.duke.edu/oauth/authorize.php"
-#     client_auth = requests.auth.HTTPBasicAuth('meeseeks-inc--inventory-system', 'mPjr9aRkm@SEp9@dBqFkQ3pHK*9o8ZUasEEeu+$G7b#ASEG$9k')
-#     post_data = {
-#         "grant_type": 'authorization_code', 
-#         'redirect_uri':'http://localhost:8000/login/check_OAuth_login',          
-#         'code':'bar'
-#      }
-#     response = requests.post(tokenurl, auth=client_auth, data=post_data)
-#     print(response.json())
-    token = request.GET
-    print(token)
+    token = request.GET['token']
     url = "https://api.colab.duke.edu/identity/v1/"
     headers = {'Accept':'application/json', 'x-api-key':'api-docs', 'Authorization': 'Bearer ' + token}
     returnDict = requests.get(url, headers=headers)
     dct = returnDict.json()
+    print(dct)
     name = dct['displayName']
     email = dct["eduPersonPrincipalName"]
     netid = dct['netid']
@@ -177,7 +191,6 @@ def check_login(request):
     elif request.user.is_superuser:
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
-        print("FUCK")
         return  HttpResponseRedirect(reverse('inventory:index'))
     
 def search_form(request):

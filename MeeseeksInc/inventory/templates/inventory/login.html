@@ -42,8 +42,7 @@ var checkAccessToken = function() {
        window.location.replace(OAUTH_URL + getQueryString());
    }
 };
-
 </script>
-<button type="submit" onclick="checkAccessToken();" class="save btn btn-default">Oauth</button>
+<input type="button" name='login' value='Login using netid' onclick="location.href='{% url 'request_token' %}'" class="save btn btn-default"></button>
 </html>
 {% endblock %}

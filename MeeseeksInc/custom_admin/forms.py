@@ -83,6 +83,8 @@ class RegistrationForm(forms.Form):
                                 widget=forms.PasswordInput())
     password2 = forms.CharField(label='Confirm Password',
                                 widget=forms.PasswordInput())
+    staff = forms.BooleanField(label='Is new user a manager?', 
+                               widget = forms.CheckboxInput, required=False)
     admin = forms.BooleanField(label = 'Is new user an Admin?',
                                widget = forms.CheckboxInput, required=False)
     def clean_password2(self):

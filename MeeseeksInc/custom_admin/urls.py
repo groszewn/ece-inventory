@@ -31,4 +31,5 @@ urlpatterns = [
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
     url(r'^search_setup/$', views.search_form, name='search_setup'),
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
+    url(r'^log$', views.LogView.as_view(), name='log'),
 ]

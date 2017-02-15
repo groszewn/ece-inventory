@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
-from inventory.models import Instance, Request, Item, Disbursement, Tag
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log
 # from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from custom_admin.forms import UserPermissionEditForm
@@ -54,6 +54,18 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+    
+class LogView(LoginRequiredMixin, generic.ListView):
+    login_url='/login/'
+    template_name = 'custom_admin/log.html'
+    context_object_name = 'log_list'
+    def get_context_data(self, **kwargs):
+        context = super(LogView, self).get_context_data(**kwargs)
+        context['log_list'] = Log.objects.all()
+        return context
+        
+    def get_queryset(self):
+        return Log.objects.all()
  
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
@@ -74,6 +86,8 @@ def register_page(request):
             if form.cleaned_data['admin']:
                 user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
+            elif form.cleaned_data['staff']:
+                user = User.objects.create_user(username=form.cleaned_data['username'], password=form.cleaned_data['password1'], email=form.cleaned_data['email'], is_staff=True)
             else:
                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
@@ -142,8 +156,11 @@ def post_new_disburse(request):
             post.time_disbursed = timezone.localtime(timezone.now())
             if item.quantity >= int(form['total_quantity'].value()):
                 # decrement quantity in item
-                item.quantity = F('quantity')-int(form['total_quantity'].value())
+                quant_change = int(form['total_quantity'].value())
+                item.quantity = F('quantity')-int(form['total_quantity'].value()) 
                 item.save()
+                Log.objects.create(item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=None, change_occurred="Disbursed " + str(quant_change))
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
@@ -178,7 +195,8 @@ def approve_all_requests(request):
             disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
-             
+            Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         else:
@@ -205,6 +223,8 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
+        Log.objects.create(item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -223,6 +243,7 @@ def edit_item(request, pk):
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
             form.save()
+            
             return redirect('/customadmin')
     else:
         form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
@@ -307,12 +328,16 @@ def edit_tag(request, pk):
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     item.delete()
+    Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Deleted item " + item.item_name)
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
+    Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Deleted tag " + tag.tag)
     return redirect('/customadmin')
  
 @login_required(login_url='/login/')
@@ -327,6 +352,8 @@ def create_new_item(request):
             post.save()
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
+            Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user=None, change_occurred="Created item " + item.item_name)
             if pickedTags:
                 for oneTag in pickedTags:
                     t = Tag(item_name=item, tag=oneTag)
