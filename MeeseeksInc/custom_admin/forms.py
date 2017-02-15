@@ -30,9 +30,12 @@ class LogForm(forms.ModelForm):
     class Meta:
         model = Item_Log
         fields = ('item_name', 'item_change_status', 'item_amount')
-
+    
 class AdminRequestEditForm(forms.ModelForm):    
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
+    class Meta:
+        model = Request
+        fields = ('request_quantity', 'reason','comment')
 
 class RequestEditForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
