@@ -70,6 +70,22 @@ class Item_Log(models.Model):
     item_name = models.ForeignKey(Item, null=True)
     item_change_status = models.CharField(max_length=400, null=True)
     item_amount = models.SmallIntegerField(null=False)
+    
+class Log(models.Model):
+    item_name = models.CharField(max_length=200, null=True)
+    initiating_user = models.CharField(max_length=200, null=False)
+    CHOICES = (
+        ('Create', 'Create'),
+        ('Delete', 'Delete'),
+        ('Request', 'Request'),
+        ('Disburse', 'Disburse'), 
+        ('Edit', 'Edit'),
+        ('Override', 'Override')
+    )
+    nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
+    time_occurred = models.DateTimeField(default=timezone.now)
+    affected_user = models.CharField(max_length=200, null=True, default='')
+    change_occurred = models.CharField(max_length=200, null=False)
  
 
 ############################## FROM THE DJANGO TUTORIAL #############################

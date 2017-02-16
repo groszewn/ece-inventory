@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.forms.formsets import formset_factory
@@ -20,6 +20,8 @@ from django.views.generic.edit import FormMixin
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import requests, json, urllib, subprocess
+from django.test import Client
 
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
@@ -184,13 +186,57 @@ def delete_cart_instance(request, pk):
     ShoppingCartInstance.objects.get(cart_id=pk).delete()
     messages.success(request, 'You have successfully removed item from cart.')
     return redirect('/inventory_cart')
-  
+
+def request_token(request):
+    request_url = "https://oauth.oit.duke.edu/oauth/authorize.php?"
+    params = {
+        'response_type':'token',
+        'client_id': 'meeseeks-inc--inventory-system',
+        #'redirect_uri' : 'http://localhost:8000/login/check_OAuth_login',
+        'redirect_uri':'http://localhost:8000/get_access_token',
+        'scope':'basic identity:netid:read',
+        'state':11291,
+    }
+    url = request_url #+ '?'urllib.parse.urlencode(params)
+    for key, val in params.items():
+        url+=str(key)
+        url+='='
+        url+=str(val)
+        url+='&'
+    url=url[:-1]
+    return HttpResponseRedirect(url)
+
+def getAccessToken(request):
+    return render(request, 'inventory/oauth_access_token.html')
+    
+def check_OAuth_login(request):
+    token = request.GET['token']
+    url = "https://api.colab.duke.edu/identity/v1/"
+    headers = {'Accept':'application/json', 'x-api-key':'api-docs', 'Authorization': 'Bearer ' + token}
+    returnDict = requests.get(url, headers=headers)
+    dct = returnDict.json()
+    name = dct['displayName']
+    email = dct["eduPersonPrincipalName"]
+    netid = dct['netid']
+    userExists = User.objects.filter(username=netid).count()
+    if userExists:
+        user = User.objects.get(username=netid)
+        login(request, user)
+    else:
+        user = User.objects.create_user(username=netid,email=email, password=None)
+        user.save()
+        login(request, user)
+    return check_login(request)
+    
 def check_login(request):
     if request.user.is_staff:
-        return HttpResponseRedirect(reverse('custom_admin:index'))
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    elif request.user.is_superuser:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
-        return HttpResponseRedirect(reverse('inventory:index'))
-      
+        return  HttpResponseRedirect(reverse('inventory:index'))
+
+@login_required(login_url='/login/')    
 def search_form(request):
     if request.method == "POST":
         tags = Tag.objects.all()
@@ -247,7 +293,8 @@ def search_form(request):
         tags = Tag.objects.all()
         form = SearchForm(tags)
     return render(request, 'inventory/search.html', {'form': form})
-  
+
+@login_required(login_url='/login/')
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
@@ -287,18 +334,20 @@ def post_new_request(request):
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
   
-class request_detail(generic.DetailView):
+class request_detail(LoginRequiredMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_detail.html'
-      
-class request_cancel_view(generic.DetailView):
+
+class request_cancel_view(LoginRequiredMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
-      
+
+@login_required(login_url='/login/')      
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()
     return redirect('/')
 
+@login_required(login_url='/login/')
 def request_specific_item(request, pk):
     if request.method == "POST":
         form = RequestSpecificForm(request.POST) # create request-form with the data from the request
