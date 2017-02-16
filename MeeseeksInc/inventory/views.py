@@ -8,9 +8,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
+from django.forms.formsets import formset_factory
+from django.forms.models import inlineformset_factory, modelformset_factory
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, render_to_response
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
@@ -20,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from custom_admin.forms import DisburseForm
+from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
@@ -112,36 +115,137 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
         return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id})) 
 
-class CartListView(LoginRequiredMixin, generic.ListView): ## DetailView to display detail for the object
+class CartListView(LoginRequiredMixin, generic.CreateView): ## DetailView to display detail for the object
     login_url = "/login/"
-    context_object_name = 'cart_list'
+#     context_object_name = 'cart_list'
     template_name = 'inventory/inventory_cart.html' # w/o this line, default would've been inventory/<model_name>.html
+    model = ShoppingCartInstance
+    form_class = EditCartAndAddRequestForm
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Handles GET requests and instantiates blank versions of the form
+        and its inline formsets.
+        """
+        self.object = None
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+        formset = EditCartAddRequestFormSet(queryset=ShoppingCartInstance.objects.filter(user_id=self.request.user.username))
+        return self.render_to_response(
+            self.get_context_data(formset=formset))
         
+    def get_queryset(self):
+        return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
+    
     def get_context_data(self, **kwargs):
         context = super(CartListView, self).get_context_data(**kwargs)
-        context['cart_list'] = ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
+        context['cart_list'] = self.get_queryset()
         return context
     
-    def get_queryset(self):
-        """Return the last five published questions."""
-        return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+#         formset = EditCartAddRequestFormSet(self.request.POST)
+#         if formset.is_valid():
+#             print(formset)
+#             for idx,form in enumerate(formset):
+#                 if idx<len(self.get_queryset()):
+#                     dataFromForm = form.cleaned_data
+#                     quantity = dataFromForm.get('quantity')
+#                     reason = dataFromForm.get('reason')
+#                     cart_instance = self.get_queryset()[idx]
+#                     item = cart_instance.item
+#                     item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
+#                     item_request.save()
+#             
+#             # DELETE ALL CART INSTANCES
+#             for cart_instance in self.get_queryset():
+#                 cart_instance.delete()
+#             messages.success(request, 'You have successfully requested the items in the cart.')
+#             return HttpResponseRedirect('/')
+#         else:
+#             print(formset.errors)
+#             return render_to_response(self.get_context_data(formset=formset))
+        formset = EditCartAddRequestFormSet(self.request.POST)
+        if (formset.is_valid()):
+            return self.form_valid(formset)
+        else:
+            return self.form_invalid(formset)
 
-def edit_quantity_cart(request, pk):
-    instance = Request.objects.get(request_id=pk)
-    if request.method == "POST":
-        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
-        if form.is_valid():
-            messages.success(request, 'You just edited the request successfully.')
-            post = form.save(commit=False)
-            post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id)
-            post.status = "Pending"
-            post.time_requested = timezone.now()
-            post.save()
-            return redirect('/')
-    else:
-        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
-    return render(request, 'inventory/request_edit.html', {'form': form})
+    def form_valid(self, formset):
+        """
+        Called if all forms are valid. Creates a Recipe instance along with
+        associated Ingredients and Instructions and then redirects to a
+        success page.
+        """
+        for idx,form in enumerate(formset):
+            if idx<len(self.get_queryset()):
+                dataFromForm = form.cleaned_data
+                quantity = dataFromForm.get('quantity')
+                reason = dataFromForm.get('reason')
+                cart_instance = self.get_queryset()[idx]
+                item = cart_instance.item
+                item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
+                item_request.save()
+         
+        # DELETE ALL CART INSTANCES
+        for cart_instance in self.get_queryset():
+            cart_instance.delete()
+        messages.success(self.request, 'You have successfully requested the items in the cart.')
+        return HttpResponseRedirect('/')
+
+    def form_invalid(self, formset):
+        return self.render_to_response(
+            self.get_context_data(formset=formset))
+        
+#     def get_formset(self):
+#         return modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+#         
+#     def get_context_data(self, **kwargs):
+#         context = super(CartListView, self).get_context_data(**kwargs)
+#         context['object_list'] = self.get_queryset()
+#         EditCartAddRequestFormSet = self.get_formset()
+#         if self.request.POST:
+#             context['formset'] = EditCartAddRequestFormSet(self.request.POST)
+#         else:
+#             context['formset'] = EditCartAddRequestFormSet(queryset=ShoppingCartInstance.objects.filter(user_id=self.request.user.username))
+#         return context
+#     
+#     def get_queryset(self):
+#         return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
+#     
+#     def post(self, request, *args, **kwargs):
+# #         EditCartAddRequestFormSet = formset_factory(EditCartAndAddRequestForm, extra=len(ShoppingCartInstance.objects.filter(user_id=self.request.user.username)))
+#         EditCartAddRequestFormSet = self.get_formset()
+#         formset = EditCartAddRequestFormSet(self.request.POST)
+#         if formset.is_valid():
+#             print(formset)
+#             for idx,form in enumerate(formset):
+#                 if idx<len(self.get_queryset()):
+#                     dataFromForm = form.cleaned_data
+#                     quantity = dataFromForm.get('quantity')
+#                     reason = dataFromForm.get('reason')
+#                     cart_instance = self.get_queryset()[idx]
+#                     item = cart_instance.item
+#                     item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
+#                     item_request.save()
+#             
+#             # DELETE ALL CART INSTANCES
+#             for cart_instance in self.get_queryset():
+#                 cart_instance.delete()
+#             messages.success(request, 'You have successfully requested the items in the cart.')
+#             return HttpResponseRedirect('/')
+#         else:
+#             print(formset.errors)
+#             return render_to_response(self.get_context_data(formset=formset))
+
+def delete_cart_instance(request, pk): 
+    ShoppingCartInstance.objects.get(cart_id=pk).delete()
+    messages.success(request, 'You have successfully removed item from cart.')
+    return redirect('/inventory_cart')
   
 def check_login(request):
     if request.user.is_staff:
