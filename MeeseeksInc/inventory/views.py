@@ -289,7 +289,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
                     post.status = "Pending"
                     post.time_requested = timezone.localtime(timezone.now())
                     post.save()
-                    return render(request, 'inventory/request_detail.html', {'form': form})
+                    #return render(request, 'inventory/request_detail.html', {'form': form})
                 if 'approve' in request.POST:
                     if item.quantity >= instance.request_quantity:
                         # decrement quantity in item
