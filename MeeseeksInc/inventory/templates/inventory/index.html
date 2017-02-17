@@ -84,6 +84,7 @@
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -94,6 +95,7 @@
 							<td>{{ request.status }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -116,6 +118,7 @@
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -126,6 +129,7 @@
 							<td>{{ request.status }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -148,6 +152,7 @@
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -159,6 +164,7 @@
 							<td>{{ request.status }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 							<td>
 								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
@@ -185,6 +191,7 @@
 					<th>Status</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -195,6 +202,7 @@
 							<td>{{ request.status }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>

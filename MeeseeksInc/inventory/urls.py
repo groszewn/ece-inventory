@@ -23,6 +23,7 @@ urlpatterns = [
     url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.edit_request, name='request_edit'),
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel'),
     url(r'^(?P<pk>[\w\-\ ]+)/approve/$', views.approve_request, name='request_approve'),
+    url(r'^inventory_cart/delete/(?P<pk>[\w\-\ ]+)/$', views.delete_cart_instance, name='delete_cart_instance'),
     
     ################################### API URLS #######################################
     url(r'^api/items/$', views.APIItemList.as_view()),

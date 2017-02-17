@@ -15,7 +15,7 @@ class Item(models.Model):
         return self.item_name
     
 class Tag(models.Model):
-    item_name = models.ForeignKey(Item, on_delete=models.CASCADE) 
+    item_name = models.ForeignKey(Item, null = True, on_delete=models.CASCADE) 
     tag = models.CharField(max_length=200)
     def __str__(self):
         return self.tag
@@ -63,6 +63,7 @@ class ShoppingCartInstance(models.Model):
     user_id = models.CharField(max_length=200, null=False)
     item = models.ForeignKey(Item, null = True, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField(null=False)
+    reason=models.CharField(max_length=200, null=False, default="")
 
 class Item_Log(models.Model):
     item_name = models.ForeignKey(Item, null=True)
@@ -90,4 +91,22 @@ class Custom_Field_Value(models.Model):
     
     class Meta:
        unique_together = (("item", "field"),)
+
+class Log(models.Model):
+    reference_id = models.CharField(max_length=200, null=True, default=None)
+    item_name = models.CharField(max_length=200, null=True)
+    initiating_user = models.CharField(max_length=200, null=False)
+    CHOICES = (
+        ('Create', 'Create'),
+        ('Delete', 'Delete'),
+        ('Request', 'Request'),
+        ('Disburse', 'Disburse'), 
+        ('Edit', 'Edit'),
+        ('Override', 'Override')
+    )
+    nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
+    time_occurred = models.DateTimeField(default=timezone.now)
+    affected_user = models.CharField(max_length=200, null=True, default='')
+    change_occurred = models.CharField(max_length=200, null=False)
+
 
