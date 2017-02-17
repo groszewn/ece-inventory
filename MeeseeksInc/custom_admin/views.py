@@ -279,7 +279,7 @@ def edit_permission(request, pk):
         form = UserPermissionEditForm(request.POST or None, instance=user)
         if form.is_valid():
             form.save()
-            Log.objects.create(reference_id = None, item_name=user.username, initiating_user=request.user, nature_of_event='Edit', 
+            Log.objects.create(reference_id = None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=user.username, change_occurred="Changed permissions for " + user.username)
             return redirect('/customadmin')
     else:
