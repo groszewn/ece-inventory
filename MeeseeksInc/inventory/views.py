@@ -347,11 +347,11 @@ class request_cancel_view(LoginRequiredMixin, generic.DetailView):
     template_name = 'inventory/request_cancel.html'
 
 @login_required(login_url='/login/')      
-def cancel_request(self, pk):
+def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     Log.objects.create(reference_id = str(instance.request_id), item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
                                          affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
-    messages.success(request, ('Successfully deleted request for ' + str(item.item_name )))
+    messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
     return redirect('/')
 

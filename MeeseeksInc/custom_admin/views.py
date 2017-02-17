@@ -237,7 +237,6 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
-        print("Create log")
         Log.objects.create(reference_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -258,11 +257,9 @@ def edit_item(request, pk):
     if request.method == "POST":
         form = ItemEditForm(request.POST or None, instance=item)
         if form.is_valid():
-            if int(form['quantity'].value())!=item.quantity:
-                print(type(form['quantity'].value()))
-                print(type(item.quantity))
+            if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from  " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
                 Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
@@ -306,8 +303,6 @@ def add_tags(request, pk):
                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
                         t = Tag(item_name=item, tag=oneTag)
                         t.save(force_insert=True)
-            Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Added tags to " + item.item_name)
             return redirect('/customadmin')
     else:
         tags = Tag.objects.all()
