@@ -59,9 +59,15 @@ class LogView(LoginRequiredMixin, generic.ListView):
     login_url='/login/'
     template_name = 'custom_admin/log.html'
     context_object_name = 'log_list'
+    context_object_name = 'request_list'
     def get_context_data(self, **kwargs):
         context = super(LogView, self).get_context_data(**kwargs)
         context['log_list'] = Log.objects.all()
+        lst = []
+        for log in Log.objects.all():
+            if log.nature_of_event == "Request" and Request.objects.filter(request_id=log.reference_id).exists():
+                lst.append(log.reference_id)
+        context['request_list'] = lst
         return context
         
     def get_queryset(self):
