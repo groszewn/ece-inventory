@@ -166,7 +166,7 @@ def post_new_disburse(request):
                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
                 item.save()
                 Log.objects.create(item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
-                                         affected_user=None, change_occurred="Disbursed " + str(quant_change))
+                                         affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
@@ -229,6 +229,7 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
+        print("Create log")
         Log.objects.create(item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))

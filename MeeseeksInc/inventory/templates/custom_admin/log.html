@@ -22,7 +22,11 @@
         <tbody>
             {% for instance in log_list %}
 				<tr>
-					<td>{{ instance.nature_of_event }}</a></td>
+					{% if instance.nature_of_event == 'Request' %}
+						<td><a href="{% url 'inventory:request_detail' instance.reference_id %}">Request</a></td>
+					{% else %}
+						<td>{{ instance.nature_of_event }}</td>
+					{% endif %}
 					<td>{{ instance.initiating_user }}</td>
 					<td>{{ instance.item_name }}</td>
 					<td>{{ instance.affected_user }}</td>
@@ -32,6 +36,9 @@
 			{% endfor %}
         </tbody>
     </table>
+    
+{% else %}
+	<h3>There are no log events to display!</h3>
 {% endif %}
 
 

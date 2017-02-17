@@ -71,6 +71,7 @@ class Item_Log(models.Model):
     item_amount = models.SmallIntegerField(null=False)
     
 class Log(models.Model):
+    reference_id = models.CharField(max_length=200, null=True, default=None)
     item_name = models.CharField(max_length=200, null=True)
     initiating_user = models.CharField(max_length=200, null=False)
     CHOICES = (

@@ -29,7 +29,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
 
 
 ########################### IMPORTS FOR API ##############################
@@ -288,6 +288,8 @@ def post_new_request(request):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
+            Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
+                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
             return redirect('/')
     else:
         form = RequestForm() # blank request form with no data yet
@@ -319,6 +321,9 @@ def request_specific_item(request, pk):
             specific_request.save()
             
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
+            request_id = specific_request.request_id
+            Log.objects.create(reference_id=request_id,item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
+                                         affected_user=None, change_occurred="Requested " + str(quantity))
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
