@@ -5,7 +5,15 @@
 {% block content %}
 
 <center> <h1>  Request for: {{ request.item_name }} </h1> </center> 
-<center> <h1>  Status: {{ request.status }} </h1> </center> 
+{% if request.status == "Pending"%}
+<center> <h1 style="color:gold">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
+{% if request.status == "Approved"%}
+<center> <h1 style="color:green">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
+{% if request.status == "Denied"%}
+<center> <h1 style="color:red">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
 
 			</table>
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -28,14 +36,6 @@
 		    </table>
 		    
 <br/>
-
-	<script>
-	function clickEvent(){
-	    if (confirm("Do you want to cancel this request?")) {
-	    	window.location='{% url 'inventory:request_cancel' request.request_id %}';
-	    }
-	}
-	</script>
 	
 	{% if request.status == "Pending" %}
 	
@@ -62,10 +62,10 @@
 		{{form.comment.label}}:{{ form.comment }}
 		<br/>
 		<br/>
-		<button type="submit" class="btn btn-success btn-md" value="Approve" name="approve">Approve Request</button>
-		<button type="submit" class="btn btn-warning btn-md" value="Deny" name="deny">Deny Request</button>
+		<button type="submit" class="btn btn-success btn-md" onclick="return confirm('Are you sure you want to APPROVE this request?')" value="Approve" name="approve">Approve Request</button>
+		<button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to DENY this request?')" value="Deny" name="deny">Deny Request</button>
 		{%endif%}
-		<button value="Cancel Request" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Cancel Request</button>
+		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
 	</form>
 	
 	{%endif%}

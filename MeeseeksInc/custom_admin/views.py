@@ -250,13 +250,13 @@ def approve_request(request, pk):
          
         # change status of request to approved
         indiv_request.status = "Approved"
-        indiv_request.comment = 'ta da a comment thing'
+        indiv_request.comment = request.POST.get('comment')
         indiv_request.save()
          
         # add new disbursement item to table
         # TODO: add comments!!
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
-                                    total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                                    total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
@@ -264,9 +264,7 @@ def approve_request(request, pk):
         return redirect(reverse('custom_admin:index'))
  
     return redirect(reverse('custom_admin:index'))
-#         ("Successfully disbursed " + indiv_request.request_quantity + " " + indiv_request.item_name + " to " + indiv_request.user_id))
-         
-#     return redirect('/')
+
 @login_required(login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
@@ -372,14 +370,13 @@ def log_item(request):
             return redirect('/customadmin')
     return render(request, 'inventory/log_item.html', {'form': form})
 
-
 def edit_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
             form.save()
-            return redirect('/item/' + pk)
+            return redirect('/item/' + tag.item_name.item_id)
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})

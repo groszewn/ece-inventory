@@ -289,7 +289,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
                     post.status = "Pending"
                     post.time_requested = timezone.localtime(timezone.now())
                     post.save()
-                    #return render(request, 'inventory/request_detail.html', {'form': form})
+                    messages.success(request, ('Successfully edited ' + instance.item_name.item_name + '.'))
+                    return redirect('/request_detail/' + pk)
                 if 'approve' in request.POST:
                     if item.quantity >= instance.request_quantity:
                         # decrement quantity in item
@@ -301,9 +302,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
                         instance.save()
          
                         # add new disbursement item to table
-                        # TODO: add comments!!
                         disbursement = Disbursement(admin_name=request.user.username, user_name=instance.user_id, item_name=Item.objects.get(item_id = instance.item_name_id), 
-                                    total_quantity=instance.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                                    total_quantity=instance.request_quantity, comment=instance.comment, time_disbursed=timezone.localtime(timezone.now()))
                         disbursement.save()
                         messages.success(request, ('Successfully disbursed ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
                     else:
@@ -312,17 +312,39 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
                     instance.status = "Denied"
                     instance.save()
                     messages.success(request, ('Denied disbursement ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
+                if 'cancel' in request.POST:
+                    instance = Request.objects.get(request_id=pk)
+                    Request.objects.get(request_id=pk).delete()
+                    messages.success(request, ('Canceled request for ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
+                    return redirect('/')
                 return redirect(reverse('custom_admin:index'))
             else:
                 form = AdminRequestEditForm(instance=instance)
                 return render(request, 'inventory/request_detail.html', {'form': form}) 
-        
-class request_cancel_view(generic.DetailView):
-    model = Request
-    template_name = 'inventory/request_cancel.html'
       
-def cancel_request(self, pk):
+def cancel_request(self, request, pk):
     Request.objects.get(request_id=pk).delete()
+    return redirect('/')
+
+def approve_request(self, pk):
+    instance = Request.objects.get(request_id=pk)
+    item = Item.objects.get(item_id=instance.item_name_id)
+    if item.quantity >= instance.request_quantity:
+        # decrement quantity in item
+        item.quantity = F('quantity')-instance.request_quantity
+        item.save()
+
+        # change status of request to approved
+        instance.status = "Approved"
+        instance.save()
+
+         # add new disbursement item to table
+        disbursement = Disbursement(admin_name=request.user.username, user_name=instance.user_id, item_name=Item.objects.get(item_id = instance.item_name_id), 
+                    total_quantity=instance.request_quantity, comment=instance.comment, time_disbursed=timezone.localtime(timezone.now()))
+        disbursement.save()
+        messages.success(request, ('Successfully disbursed ' + instance.item_name.item_name + ' (' + instance.user_id +')'))
+    else:
+        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect('/')
 
 def request_specific_item(request, pk):

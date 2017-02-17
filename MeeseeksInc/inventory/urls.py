@@ -20,10 +20,9 @@ urlpatterns = [
     url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.request_specific_item, name='request_specific_item'),
     url(r'^post/request/$', views.post_new_request, name='post_new_request'),
     url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_detail'),
-    url(r'^request_cancel/(?P<pk>[\w\-\ ]+)$', views.request_cancel_view.as_view(), name='request_cancel'),
     url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.edit_request, name='request_edit'),
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel'),
-    
+    url(r'^(?P<pk>[\w\-\ ]+)/approve/$', views.approve_request, name='request_approve'),
     
     ################################### API URLS #######################################
     url(r'^api/items/$', views.APIItemList.as_view()),
