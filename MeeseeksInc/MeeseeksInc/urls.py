@@ -62,8 +62,9 @@ urlpatterns = [
     url(r'^login/$', auth_views.login, {'template_name': 'inventory/login.html'}, name='login'), 
     url(r'^login/check_login/$', inventory_views.check_login, name='check_login'),
     url(r'^logout/$', auth_views.logout, {'template_name': 'inventory/logged_out.html'}, name='logout'),
-    
-    
+    url(r'^login/check_OAuth_login/$', inventory_views.check_OAuth_login, name='check_OAuth_login'),
+    url(r'^request_oauth/$', inventory_views.request_token, name='request_token'),
+    url(r'^get_access_token/$', inventory_views.getAccessToken, name='get_access_token'), 
     # API URLS 
     url(r'^api-viewer/', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework'))
