@@ -79,6 +79,7 @@ class Log(models.Model):
         ('Delete', 'Delete'),
         ('Request', 'Request'),
         ('Disburse', 'Disburse'), 
+        ('Deny', 'Deny'), 
         ('Edit', 'Edit'),
         ('Override', 'Override')
     )

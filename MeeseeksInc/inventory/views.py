@@ -266,6 +266,8 @@ def edit_request(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             return redirect('/')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
@@ -305,7 +307,11 @@ class request_cancel_view(LoginRequiredMixin, generic.DetailView):
 
 @login_required(login_url='/login/')      
 def cancel_request(self, pk):
-    Request.objects.get(request_id=pk).delete()
+    instance = Request.objects.get(request_id=pk)
+    Log.objects.create(reference_id = str(instance.request_id), item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
+                                         affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
+    instance.delete()
+    messages.success(request, ('Successfully deleted request for ' + str(item.item_name )))
     return redirect('/')
 
 @login_required(login_url='/login/')
