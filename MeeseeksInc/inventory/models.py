@@ -64,6 +64,7 @@ class ShoppingCartInstance(models.Model):
     user_id = models.CharField(max_length=200, null=False)
     item = models.ForeignKey(Item, null = True, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField(null=False)
+    reason=models.CharField(max_length=200, null=False, default="")
 
 class Item_Log(models.Model):
     item_name = models.ForeignKey(Item, null=True)

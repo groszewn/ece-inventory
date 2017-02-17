@@ -32,6 +32,13 @@ class AddToCartForm(forms.Form):
         self.fields['quantity'] = forms.IntegerField(required=True)
     fields =('quantity')
 
+class EditCartAndAddRequestForm(forms.ModelForm):
+    quantity = forms.IntegerField(required=True)
+    reason = forms.CharField(required=True)
+    class Meta:
+        model = ShoppingCartInstance
+        fields = ('quantity', 'reason')
+
 class SearchForm(forms.Form):
     tags1 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
     tags2 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False, widget=forms.CheckboxSelectMultiple,label="Tags to exclude")
@@ -46,4 +53,6 @@ class SearchForm(forms.Form):
     model_number = forms.CharField(required=False)
     item_name = forms.CharField(required=False)
     fields = ('tags1','tags2','keyword','model_number','item_name')
-    
+
+
+
