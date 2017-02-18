@@ -1,6 +1,6 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from inventory.forms import SearchForm
@@ -17,14 +17,22 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
+
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log
 # from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from custom_admin.forms import UserPermissionEditForm
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 
+def staff_check(user):
+    return user.is_staff
+
+def admin_check(user):
+    return user.is_superuser
+    
+
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
     context_object_name = 'instance_list'
@@ -54,9 +62,12 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+    def test_func(self):
+        return self.request.user.is_staff
     
-class LogView(LoginRequiredMixin, generic.ListView):
+class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
+    permission_required = 'is_staff'
     template_name = 'custom_admin/log.html'
     context_object_name = 'log_list'
     context_object_name = 'request_list'
@@ -72,19 +83,30 @@ class LogView(LoginRequiredMixin, generic.ListView):
         
     def get_queryset(self):
         return Log.objects.all()
+    def test_func(self):
+        return self.request.user.is_staff
  
-class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
+class DetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
+    permission_required = 'is_staff'
     model = Instance
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
+    
+    def test_func(self):
+        return self.request.user.is_staff
  
-class DisburseView(LoginRequiredMixin, generic.ListView): ## DetailView to display detail for the object
+class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): ## DetailView to display detail for the object
     login_url = "/login/"
+    permission_required = 'is_staff'
     model = Instance
     template_name = 'custom_admin/single_disburse.html' # w/o this line, default would've been inventory/<model_name>.html
+    
+    def test_func(self):
+        return self.request.user.is_staff
  
 #####################################################################
 @login_required(login_url='/login/')
+@user_passes_test(admin_check, login_url='/login/')
 def register_page(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
@@ -108,6 +130,7 @@ def register_page(request):
     return render(request, 'custom_admin/register_user.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_request_accept(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
@@ -138,6 +161,7 @@ def add_comment_to_request_accept(request, pk):
     return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_request_deny(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
@@ -156,6 +180,7 @@ def add_comment_to_request_deny(request, pk):
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def post_new_disburse(request):
     if request.method == "POST":
         form = DisburseForm(request.POST) # create request-form with the data from the request
@@ -188,6 +213,7 @@ def post_new_disburse(request):
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
  
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def approve_all_requests(request):
     pending_requests = Request.objects.filter(status="Pending")
     if not pending_requests:
@@ -220,6 +246,7 @@ def approve_all_requests(request):
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def approve_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     item = Item.objects.get(item_id=indiv_request.item_name_id)
@@ -249,6 +276,7 @@ def approve_request(request, pk):
          
 #     return redirect('/')
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
     original_quantity = item.quantity
@@ -270,6 +298,7 @@ def edit_item(request, pk):
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(admin_check, login_url='/login/')
 def edit_permission(request, pk):
     user = User.objects.get(username = pk)
     if request.method == "POST":
@@ -284,6 +313,7 @@ def edit_permission(request, pk):
     return render(request, 'custom_admin/user_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def add_tags(request, pk):
     if request.method == "POST":
         tags = Tag.objects.all()
@@ -310,6 +340,7 @@ def add_tags(request, pk):
     return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def log_item(request):
     form = LogForm(request.POST or None)
     if request.method=="POST":
@@ -334,7 +365,8 @@ def log_item(request):
             return redirect('/customadmin')
     return render(request, 'inventory/log_item.html', {'form': form})
 
-
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def edit_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     if request.method == "POST":
@@ -347,6 +379,7 @@ def edit_tag(request, pk):
     return render(request, 'inventory/tag_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(admin_check, login_url='/login/')
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     item.delete()
@@ -355,12 +388,14 @@ def delete_item(request, pk):
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
     return redirect('/customadmin')
  
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def create_new_item(request):
     tags = Tag.objects.all()
     if request.method== 'POST':
@@ -391,6 +426,7 @@ def create_new_item(request):
     return render(request, 'custom_admin/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def deny_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     indiv_request.status = "Denied"
@@ -401,6 +437,7 @@ def deny_request(request, pk):
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def deny_all_request(request):
     pending_requests = Request.objects.filter(status="Pending")
     if not pending_requests:
