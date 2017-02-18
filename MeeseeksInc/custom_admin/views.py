@@ -2,10 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
-from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import connection, transaction
+from django.db import models
 from django.db.models import F
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
@@ -16,14 +15,17 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-from django.db import models
 
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
-# from inventory.models import Instance, Request, Item, Disbursement
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from custom_admin.forms import UserPermissionEditForm
-# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
+from inventory.forms import SearchForm
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+
+
+# from inventory.models import Instance, Request, Item, Disbursement
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -420,7 +422,7 @@ def delete_item(request, pk):
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+    Log.objects.create(item_name = tag.item_name, initiating_user=request.user, nature_of_event="Delete", 
                        affected_user=None, change_occurred="Deleted tag " + tag.tag)
     return redirect('/item/' + tag.item_name.item_id)
  

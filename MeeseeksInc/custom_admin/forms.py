@@ -146,6 +146,8 @@ class RegistrationForm(forms.Form):
                                 widget=forms.PasswordInput(), required = True )
     admin = forms.BooleanField(label = 'Is new user an Admin?',
                                widget = forms.CheckboxInput, required=False)
+    staff = forms.BooleanField(label = 'Is new user a Staff?',
+                               widget = forms.CheckboxInput, required=False)
     def clean_password2(self):
         if 'password1' in self.cleaned_data:
             password1 = self.cleaned_data['password1']
