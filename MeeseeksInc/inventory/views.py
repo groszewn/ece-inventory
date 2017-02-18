@@ -3,8 +3,8 @@
 from datetime import datetime
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
@@ -35,11 +35,14 @@ from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
 
 
+
+def active_check(user):
+    return user.is_active
 ########################### IMPORTS FOR API ##############################
 ########################## ORIGINAL DJANGO VIEW CLASSES ###################################
 ###########################################################################################
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
-class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
@@ -58,8 +61,11 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+    
+    def test_func(self):
+        return self.request.user.is_active
         
-class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
+class SearchResultView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/search_result.html'
     context_object_name = 'item_list'
@@ -73,8 +79,10 @@ class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## Lis
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+    def test_func(self):
+        return self.request.user.is_active
       
-class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
+class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Item
     context_object_name = 'tag_list'
@@ -116,8 +124,11 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
         return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id})) 
+    
+    def test_func(self):
+        return self.request.user.is_active
 
-class CartListView(LoginRequiredMixin, generic.CreateView): ## DetailView to display detail for the object
+class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView): ## DetailView to display detail for the object
     login_url = "/login/"
 #     context_object_name = 'cart_list'
     template_name = 'inventory/inventory_cart.html' # w/o this line, default would've been inventory/<model_name>.html
@@ -136,6 +147,9 @@ class CartListView(LoginRequiredMixin, generic.CreateView): ## DetailView to dis
         formset = EditCartAddRequestFormSet(queryset=ShoppingCartInstance.objects.filter(user_id=self.request.user.username))
         return self.render_to_response(
             self.get_context_data(formset=formset))
+        
+    def test_func(self):
+        return self.request.user.is_active
         
     def get_queryset(self):
         return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
@@ -182,6 +196,7 @@ class CartListView(LoginRequiredMixin, generic.CreateView): ## DetailView to dis
         return self.render_to_response(
             self.get_context_data(formset=formset))
 
+@user_passes_test(active_check, login_url='/login/')
 def delete_cart_instance(request, pk): 
     ShoppingCartInstance.objects.get(cart_id=pk).delete()
     messages.success(request, 'You have successfully removed item from cart.')
@@ -227,7 +242,8 @@ def check_OAuth_login(request):
         user.save()
         login(request, user)
     return check_login(request)
-    
+
+@user_passes_test(active_check, login_url='/login/')    
 def check_login(request):
     if request.user.is_staff:
         return  HttpResponseRedirect(reverse('custom_admin:index'))
@@ -237,6 +253,7 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('inventory:index'))
 
 @login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
 def search_form(request):
     if request.method == "POST":
         tags = Tag.objects.all()
@@ -295,6 +312,7 @@ def search_form(request):
     return render(request, 'inventory/search.html', {'form': form})
 
 @login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
@@ -320,6 +338,7 @@ def edit_request(request, pk):
 #     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html  
 
 @login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
         form = RequestForm(request.POST) # create request-form with the data from the request 
@@ -338,15 +357,23 @@ def post_new_request(request):
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
   
-class request_detail(LoginRequiredMixin, generic.DetailView):
+  
+class request_detail(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_detail.html'
+    
+    def test_func(self):
+        return self.request.user.is_active
 
-class request_cancel_view(LoginRequiredMixin, generic.DetailView):
+class request_cancel_view(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
+    
+    def test_func(self):
+        return self.request.user.is_active
 
-@login_required(login_url='/login/')      
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='login/')  
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     Log.objects.create(reference_id = str(instance.request_id), item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
@@ -356,6 +383,7 @@ def cancel_request(request, pk):
     return redirect('/')
 
 @login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
 def request_specific_item(request, pk):
     if request.method == "POST":
         form = RequestSpecificForm(request.POST) # create request-form with the data from the request
