@@ -3,9 +3,13 @@
 from datetime import datetime
 
 from django.contrib import messages
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth import login
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.forms.formsets import formset_factory
@@ -13,16 +17,20 @@ from django.forms.models import inlineformset_factory, modelformset_factory
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
+from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin
+from django.views.generic.edit import FormMixin, ModelFormMixin
+from django.views.generic.edit import FormMixin, ProcessFormView
+import requests, json, urllib, subprocess
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import requests, json, urllib, subprocess
-from django.test import Client
 
+from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
@@ -31,8 +39,11 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer
 
+from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
+from .models import Tag
 
 
 ########################### IMPORTS FOR API ##############################
@@ -54,6 +65,8 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -80,6 +93,8 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
     context_object_name = 'tag_list'
     context_object_name = 'item'
     context_object_name = 'request_list'
+    context_object_name = 'custom_fields'
+    context_object_name = 'custom_vals'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
         
@@ -93,9 +108,12 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
         user = User.objects.get(username=self.request.user.username)
         # if admin / not admin
         if(not user.is_staff):
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
         else:
-            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")
+            context['custom_fields'] = Custom_Field.objects.all()
+            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         return context
     
     def post(self, request, *args, **kwargs):
@@ -335,19 +353,95 @@ def post_new_request(request):
     else:
         form = RequestForm() # blank request form with no data yet
     return render(request, 'inventory/request_create.html', {'form': form})
-  
-class request_detail(LoginRequiredMixin, generic.DetailView):
+
+class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
+    login_url = "/login/"
     model = Request
     template_name = 'inventory/request_detail.html'
+    form_class = AdminRequestEditForm
+    context_object_name = 'form'
+    context_object_name = 'request'
+    
+    def get_context_data(self, **kwargs):
+        context = super(request_detail, self).get_context_data(**kwargs)
+        context['form'] = self.get_form()
+        context['request'] = self.get_object()
+        return context
+    
+    def post(self, request, pk):
+        indiv_request = Request.objects.get(request_id=pk)
+        item = Item.objects.get(item_id=indiv_request.item_name_id)
+        if request.method == "POST":
+            form = AdminRequestEditForm(request.POST, instance=indiv_request)
+            if form.is_valid():
+                if 'edit' in request.POST:
+                    post = form.save(commit=False)
+                    post.comment = ""
+                    post.status = "Pending"
+                    post.time_requested = timezone.localtime(timezone.now())
+                    post.save()
+                    messages.success(request, ('Successfully edited ' + indiv_request.item_name.item_name + '.'))
+                    return redirect('/request_detail/' + pk)
+                if 'approve' in request.POST:
+                    if item.quantity >= indiv_request.request_quantity:
+                        # decrement quantity in item
+                        item.quantity = F('quantity')-indiv_request.request_quantity
+                        item.save()
+         
+                        # change status of request to approved
+                        indiv_request.status = "Approved"
+                        indiv_request.save()
+         
+                        # add new disbursement item to table
+                        disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+                                    total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
+                        disbursement.save()
+                        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    else:
+                        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                if 'deny' in request.POST:
+                    indiv_request.status = "Denied"
+                    indiv_request.save()
+                    messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                if 'cancel' in request.POST:
+                    instance = Request.objects.get(request_id=pk)
+                    Request.objects.get(request_id=pk).delete()
+                    messages.success(request, ('Canceled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    return redirect('/')
+                return redirect(reverse('custom_admin:index'))
+            else:
+                form = AdminRequestEditForm(instance=instance)
+                return render(request, 'inventory/request_detail.html', {'form': form}) 
+ 
+@login_required(login_url='/login/')       
+def cancel_request(self, request, pk):
+    Request.objects.get(request_id=pk).delete()
+    return redirect('/')
+
+def approve_request(self, request, pk):
+    indiv_request = Request.objects.get(request_id=pk)
+    item = Item.objects.get(item_id=indiv_request.item_name_id)
+    if item.quantity >= indiv_request.request_quantity:
+        # decrement quantity in item
+        item.quantity = F('quantity')-indiv_request.request_quantity
+        item.save()
+
+        # change status of request to approved
+        indiv_request.status = "Approved"
+        indiv_request.save()
+
+         # add new disbursement item to table
+        disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+                    total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
+        disbursement.save()
+        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    else:
+        messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    return redirect('/')
 
 class request_cancel_view(LoginRequiredMixin, generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
-
-@login_required(login_url='/login/')      
-def cancel_request(self, pk):
-    Request.objects.get(request_id=pk).delete()
-    return redirect('/')
 
 @login_required(login_url='/login/')
 def request_specific_item(request, pk):
@@ -369,8 +463,6 @@ def request_specific_item(request, pk):
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
-
-
 
 
 #################################### API VIEW CLASSES #####################################
