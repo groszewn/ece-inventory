@@ -33,7 +33,6 @@
 </div>
 {% endif %} 
 <div>
-	{% if user.is_superuser %}
 	<script>
 	function clickEvent(){
 	    if (confirm("Delete this item?")) {
@@ -41,8 +40,6 @@
 	    }
 	}
 	</script>
-	{% endif %}
-	{% if user.is_staff %}
 	<script>
 	function clickEvent2() {
 		window.location='{%url 'custom_admin:edit_item' item.item_id %}';
@@ -53,8 +50,11 @@
 		window.location='{%url 'custom_admin:add_tags' item.item_id %}';
 	}
 	</script>
+	{% if user.is_staff %}
 	    <input type="button" value="Edit Item" onclick="clickEvent2();"/>
 	    <input type="button" value="Add or Create Tags" onclick="clickEvent3();"/>
+	{% endif %}
+	{% if user.is_superuser %}
 	    <input type="button" value="Delete Item" onclick="clickEvent();"/>
 	{% endif %}
 </div>
