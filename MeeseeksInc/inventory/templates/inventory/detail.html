@@ -1,18 +1,76 @@
 {% extends 'inventory/base.html' %} 
+
+<link href="/static/css/custom.css" rel="stylesheet">
+
 {#put this at the top so that the base template is "base.html"#}
 {% block content %}
 
-<h1>{{ item.item_name }}</h1>
-<h2>Quantity: {{ item.quantity }} </h2>
-<h2>Model Number: {{ item.model_number }} </h2>
-<h2>Description: {{ item.description }} </h2>
-<h2>Location: {{ item.location }} </h2>
+<center> <h1>  Item: {{ item.item_name }} </h1> </center> 
+
+			</table>
+				<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Quantity:</th>
+					<th>Model Number:</th>
+					<th>Description:</th>
+					{% for field in custom_fields%}
+					<th>{{field.field_name}}</th>
+					{% endfor %}
+				</tr>
+		        </thead>
+		        <tbody>
+		        		<tr>
+		        			<td>{{ item.quantity }}</td>
+							<td>{{ item.model_number }}</td>
+							<td>{{ item.description }}</td>
+							{% for field in custom_fields%}
+							<td default = "">
+							{% for value in custom_vals%}
+								{% if value.item == item and value.field == field %}
+									{% if field.field_type == "Short"%}
+										{{value.field_value_short_text}}
+									{% endif %}
+									{% if field.field_type == "Long"%}
+										{{value.field_value_long_text}}
+									{% endif %}
+									{% if field.field_type == "Int"%}
+										{% if value.field_value_integer != None%}
+											{{value.field_value_integer}}
+										{% else %}
+											{{""}}
+										{% endif %}
+									{% endif %}
+									{% if field.field_type == "Float"%}
+										{% if value.field_value_floating != None%}
+											{{value.field_value_floating}}
+										{% else %}
+											{{""}}
+										{% endif %}
+									{% endif %}
+								{% endif %}
+							{% endfor %}
+							</td>
+					{% endfor %}
+						</tr>
+		        </tbody>
+		    </table>
+
+<br/>
     
-<h2>Tags: </h2>
 {% if tag_list%}
+	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+			<th>Tag Name</th>
+			<th>Tag ID</th>
+			{% if user.is_staff %}
+			<th>Actions</th>
+			{% endif %}
+			</tr>
+        </thead>
+     <tbody>
 	{% for oneTag in tag_list %}
-	<div>
-		{{oneTag.tag}} 
 		<script>
 		function tagEvent(){
     		if (confirm("Delete this tag?")) {
@@ -25,13 +83,25 @@
 			window.location='{% url 'custom_admin:edit_tag' oneTag.id %}';
 		}
 		</script>
-		{% if user.is_staff %}
-		 <input type="button" value="Edit this tag" onclick="tagEvent3();"/>
-		 <input type="button" value="Delete this tag" onclick="tagEvent();"/>
-		 {% endif %}
+		
+				<tr>
+					<td>{{ oneTag.tag }}</td>
+					<td>{{ oneTag.id }}</td>
+					{% if user.is_staff %}
+					<td>						
+		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' oneTag.id %}" class="btn btn-primary btn-sm">Edit Tag</a>
+		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' oneTag.id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
+		 			</td> 
+		 			{% endif %}
+				</tr>
+	
 	{% endfor %}
+	</tbody>
+    </table>
 </div>
+
 {% endif %} 
+
 <div>
 	<script>
 	function clickEvent(){
@@ -40,34 +110,44 @@
 	    }
 	}
 	</script>
+	
 	<script>
 	function clickEvent2() {
 		window.location='{%url 'custom_admin:edit_item' item.item_id %}';
 	}
 	</script>
+	
 	<script>
 	function clickEvent3() {
 		window.location='{%url 'custom_admin:add_tags' item.item_id %}';
 	}
 	</script>
-	{% if user.is_staff %}
-	    <input type="button" value="Edit Item" onclick="clickEvent2();"/>
-	    <input type="button" value="Add or Create Tags" onclick="clickEvent3();"/>
-	{% endif %}
-	{% if user.is_superuser %}
-	    <input type="button" value="Delete Item" onclick="clickEvent();"/>
-	{% endif %}
+	
+{% if user.is_staff %}
+<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
+<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
+{% endif %} 
+
+{% if user.is_superuser %} 
+<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-primary btn-md">Delete Item</button>
+	
+{% endif %}
 </div>
+
+<br/>
+
 
 {% block request_specific_item %}
 <a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
 {% endblock request_specific_item %}
 
+<br/>
+<br/>
 
 <form id="addToCart" class="form-horizontal" method="post">
 	{% csrf_token %}
    	{{form.as_p}}
-    <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2" value="Add Item To Cart">
+    <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
 </form>
 
 
@@ -105,6 +185,13 @@
 								{% else %}
 									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									<script>
+										function clickEvent2() {
+										window.location='{%url 'inventory:request_edit' request.request_id %}';
+									}
+									</script>
+	
+									<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
 								{% endif %}
 							</td>
 						</tr>
@@ -120,6 +207,77 @@
 	    $('#inventory-request-indiv-item').dataTable();
 	});
 	</script>
+	
+	
+	
+
+{############################# EDIT ITEM LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-edit %}
+<script>
+    $('.edit').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-edit %}
+
+{############################# EDIT TAG LOGIC ##############################}
+<div id="form-modal-tag" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-tag %}
+<script>
+    $('.tag').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
+            $('#form-modal-tag').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-tag %}
 	
 	
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}

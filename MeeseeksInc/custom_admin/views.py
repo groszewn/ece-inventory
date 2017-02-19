@@ -2,10 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-from inventory.forms import SearchForm
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import connection, transaction
+from django.db import models
 from django.db.models import F
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
@@ -17,12 +16,9 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
-
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log
-# from inventory.models import Instance, Request, Item, Disbursement
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from custom_admin.forms import UserPermissionEditForm
-# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
+from inventory.forms import SearchForm
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
 def staff_check(user):
     return user.is_staff
@@ -31,6 +27,12 @@ def admin_check(user):
     return user.is_superuser
     
 
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+
+
+# from inventory.models import Instance, Request, Item, Disbursement
+# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -56,6 +58,8 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
+        context['custom_fields'] = Custom_Field.objects.all()
+        context['custom_vals'] = Custom_Field_Value.objects.all()
         context['user_list'] = User.objects.all()
         # And so on for more models
         return context
@@ -105,6 +109,38 @@ class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): #
         return self.request.user.is_staff
  
 #####################################################################
+
+@login_required(login_url='/login/')
+def add_custom_field(request):
+    if request.method == 'POST':
+        form = CustomFieldForm(request.POST)
+        if form.is_valid():
+            form.save()
+            Log.objects.create(reference_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user=None, change_occurred='Added custom field ' + str(form['field_name'].value()))
+            return redirect(reverse('custom_admin:index'))
+    else:
+        form = CustomFieldForm()
+    return render(request, 'custom_admin/create_custom_field.html', {'form': form})
+
+@login_required(login_url='/login/')
+def delete_custom_field(request):
+    fields = Custom_Field.objects.all()
+    if request.method == 'POST':
+        form = DeleteFieldForm(fields,request.POST)
+        if form.is_valid():
+            pickedFields = form.cleaned_data.get('fields')
+            if pickedFields:
+                for field in pickedFields:
+                    delField = Custom_Field.objects.get(field_name = field)
+                    delField.delete()
+                    Log.objects.create(reference_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user=None, change_occurred='Deleted custom field ' + str(field))
+            return redirect(reverse('custom_admin:index'))
+    else:
+        form = DeleteFieldForm(fields)
+    return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
+
 @login_required(login_url='/login/')
 @user_passes_test(admin_check, login_url='/login/')
 def register_page(request):
@@ -152,6 +188,8 @@ def add_comment_to_request_accept(request, pk):
                 disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                 disbursement.save()
+                Log.objects.create(reference_id=disbursement.disburse_id, item_name = item.item_name, initiating_user=indiv_request.admin_name, 
+                                   nature_of_event="Disburse", affected_user=indiv_request.user_name, change_occurred="Disbursed " + str(indiv_request.total_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -159,6 +197,35 @@ def add_comment_to_request_accept(request, pk):
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def edit_item_module(request, pk):
+    item = Item.objects.get(item_id=pk)
+    starting_quantity=item.quantity
+    if request.method == "POST":
+        form = ItemEditForm(request.POST or None, instance=item)
+        if form.is_valid():
+            name = form['item_name'].value()
+            quantity = form['quantity'].value()
+            location = form['location'].value()
+            model_num = form['model_number'].value()
+            desc = form['description'].value()
+            item.item_name = name
+            item.save()
+            messages.success(request, ('Successfully Saved Item Changes.'))
+            if int(quantity)!=starting_quantity:    
+                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+            else:
+                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited " + str(name))
+            return redirect(reverse('custom_admin:index'))
+            #form.save()
+            # return redirect('/item/' + pk)
+    else:
+        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
+    return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -257,12 +324,13 @@ def approve_request(request, pk):
          
         # change status of request to approved
         indiv_request.status = "Approved"
+        indiv_request.comment = request.POST.get('comment')
         indiv_request.save()
          
         # add new disbursement item to table
         # TODO: add comments!!
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
-                                    total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                                    total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
         Log.objects.create(reference_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
@@ -272,18 +340,16 @@ def approve_request(request, pk):
         return redirect(reverse('custom_admin:index'))
  
     return redirect(reverse('custom_admin:index'))
-#         ("Successfully disbursed " + indiv_request.request_quantity + " " + indiv_request.item_name + " to " + indiv_request.user_id))
-         
-#     return redirect('/')
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def edit_item(request, pk):
     item = Item.objects.get(item_id=pk)
+    custom_fields = Custom_Field.objects.all()
+    custom_vals = Custom_Field_Value.objects.filter(item = item)
     original_quantity = item.quantity
-    tags = []
-#     tags = Tag.objects.filter(item_name=item)
     if request.method == "POST":
-        form = ItemEditForm(request.POST or None, instance=item)
+        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -292,9 +358,30 @@ def edit_item(request, pk):
                 Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
-            return redirect('/customadmin')
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                else:
+                    custom_val = Custom_Field_Value(item=item, field=field)
+                if field.field_type == 'Short':    
+                    custom_val.field_value_short_text = field_value
+                if field.field_type == 'Long':
+                    custom_val.field_value_long_text = field_value
+                if field.field_type == 'Int':
+                    if field_value != '':
+                        custom_val.field_value_integer = field_value
+                    else:
+                        custom_val.field_value_integer = None
+                if field.field_type == 'Float':
+                    if field_value != '':
+                        custom_val.field_value_floating = field_value 
+                    else:
+                        custom_val.field_value_floating = None
+                custom_val.save()
+            return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name,'tag_field':tags})
+        form = ItemEditForm(custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -306,7 +393,7 @@ def edit_permission(request, pk):
         if form.is_valid():
             form.save()
             Log.objects.create(reference_id = None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=user.username, change_occurred="Changed permissions for " + user.username)
+                                         affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
             return redirect('/customadmin')
     else:
         form = UserPermissionEditForm(instance = user, initial = {'username': user.username})
@@ -316,8 +403,10 @@ def edit_permission(request, pk):
 @user_passes_test(staff_check, login_url='/login/')
 def add_tags(request, pk):
     if request.method == "POST":
+        item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        form = AddTagForm(tags, request.POST or None)
+        item_tags = Tag.objects.filter(item_name = item)
+        form = AddTagForm(tags, item_tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
             createdTags = form['create_new_tags'].value()
@@ -333,10 +422,17 @@ def add_tags(request, pk):
                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
                         t = Tag(item_name=item, tag=oneTag)
                         t.save(force_insert=True)
-            return redirect('/customadmin')
+            for ittag in item_tags:
+                ittag.tag = form[ittag.tag].value()
+                ittag.save()
+            Log.objects.create(reference_id=None, item_name = item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                               affected_user=None, change_occurred="Added tags to " + str(item.item_name))
+            return redirect('/item/' + pk)
     else:
+        item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        form = AddTagForm(tags)
+        item_tags = Tag.objects.filter(item_name = item)
+        form = AddTagForm(tags, item_tags)
     return render(request, 'inventory/add_tags.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -349,14 +445,28 @@ def log_item(request):
             item = Item.objects.get(item_id=form['item_name'].value())
             change_type = form['item_change_status'].value()
             amount = int(form['item_amount'].value())
-            if change_type == '2':  # this correlates to the item_change_option numbers for the tuples
+            if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
+                Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
+                                   affected_user=None, change_occurred="Acquired " + str(amount))
                 item.save()
-                messages.success(request, ('Successfully logged ' + item.item_name + ' (added ' + str(amount) +')'))
-            else:
+                messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
+            elif change_type == "Broken":
                 if item.quantity >= amount:
                     item.quantity = F('quantity')-amount
                     item.save()
+                    Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
+                                       affected_user=None, change_occurred="Broke " + str(amount))
+                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                else:
+                    messages.error(request, ("You can't break more of " + item.item_name + " than you have."))
+                    return redirect(reverse('custom_admin:index'))
+            elif change_type == "Lost":
+                if item.quantity >= amount:
+                    item.quantity = F('quantity')-amount
+                    item.save()
+                    Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
+                                       affected_user=None, change_occurred="Lost " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
@@ -372,8 +482,10 @@ def edit_tag(request, pk):
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
+            Log.objects.create(reference_id=None, item_name=tag.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                               affected_user=None, change_occurred="Edited tag on item " + str(tag.item_name))
             form.save()
-            return redirect('/customadmin')
+            return redirect('/item/' + tag.item_name.item_id)
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
@@ -384,7 +496,7 @@ def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     item.delete()
     Log.objects.create(reference_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + item.item_name)
+                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -392,14 +504,17 @@ def delete_item(request, pk):
 def delete_tag(request, pk):
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    return redirect('/customadmin')
+    Log.objects.create(item_name = tag.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Deleted tag " + str(tag.tag))
+    return redirect('/item/' + tag.item_name.item_id)
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def create_new_item(request):
     tags = Tag.objects.all()
+    custom_fields = Custom_Field.objects.all()
     if request.method== 'POST':
-        form = CreateItemForm(tags, request.POST or None)
+        form = CreateItemForm(tags, custom_fields, request.POST or None)
         if form.is_valid():
             post = form.save(commit=False)
             pickedTags = form.cleaned_data.get('tag_field')
@@ -408,7 +523,7 @@ def create_new_item(request):
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
             Log.objects.create(reference_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + item.item_name)
+                       affected_user=None, change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
                     t = Tag(item_name=item, tag=oneTag)
@@ -418,11 +533,29 @@ def create_new_item(request):
                 for oneTag in tag_list:
                     t = Tag(item_name=item, tag=oneTag)
                     t.save()
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                custom_val = Custom_Field_Value(item=item, field=field)
+                if field.field_type == 'Short':    
+                    custom_val.field_value_short_text = field_value
+                if field.field_type == 'Long':
+                    custom_val.field_value_long_text = field_value
+                if field.field_type == 'Int':
+                    if field_value != '':
+                        custom_val.field_value_integer = field_value
+                    else:
+                        custom_val.field_value_floating = None
+                if field.field_type == 'Float':
+                    if field_value != '':
+                        custom_val.field_value_floating = field_value
+                    else:
+                        custom_val.field_value_floating = None
+                custom_val.save()
             return redirect('/customadmin')
         else:
             messages.error(request, (form['item_name'].value() + " has already been created."))
     else:
-        form = CreateItemForm(tags)
+        form = CreateItemForm(tags, custom_fields)
     return render(request, 'custom_admin/item_create.html', {'form':form,})
  
 @login_required(login_url='/login/')

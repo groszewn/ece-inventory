@@ -9,7 +9,6 @@ class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     item_name = models.CharField(unique=True, max_length=200)
     quantity = models.SmallIntegerField(null=False)
-    location = models.CharField(max_length=200, null=True)
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=400, null=True)
     def __str__(self):
@@ -71,6 +70,28 @@ class Item_Log(models.Model):
     item_change_status = models.CharField(max_length=400, null=True)
     item_amount = models.SmallIntegerField(null=False)
     
+class Custom_Field(models.Model):
+    field_name = models.CharField(max_length=400, null=True, unique=True)
+    is_private = models.BooleanField(default = False)
+    CHOICES = (
+        ('Short', 'Short'),
+        ('Long', 'Long'),
+        ('Int', 'Int'),
+        ('Float','Float'),
+    )
+    field_type = models.CharField(max_length=200, null=True, choices=CHOICES, default='Short') 
+    
+class Custom_Field_Value(models.Model):
+    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
+    field = models.ForeignKey(Custom_Field, null=False, on_delete=models.CASCADE)
+    field_value_short_text = models.CharField(max_length=400,null=True)
+    field_value_long_text = models.TextField(max_length=1000,null=True)
+    field_value_integer = models.IntegerField(null=True, blank=True)
+    field_value_floating = models.FloatField(null=True, blank=True)
+    
+    class Meta:
+       unique_together = (("item", "field"),)
+
 class Log(models.Model):
     reference_id = models.CharField(max_length=200, null=True, default=None)
     item_name = models.CharField(max_length=200, null=True)
@@ -82,26 +103,14 @@ class Log(models.Model):
         ('Disburse', 'Disburse'), 
         ('Deny', 'Deny'), 
         ('Edit', 'Edit'),
-        ('Override', 'Override')
+        ('Override', 'Override'), 
+        ('Acquire', 'Acquire'), 
+        ('Lost', 'Lost'), 
+        ('Broken', 'Broken'),
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)
     affected_user = models.CharField(max_length=200, null=True, default='')
     change_occurred = models.CharField(max_length=200, null=False)
- 
 
-############################## FROM THE DJANGO TUTORIAL #############################
-class Question(models.Model):
-    question_text = models.CharField(max_length=200)
-    pub_date = models.DateTimeField('date published') 
-    def __str__(self):
-        return self.question_text
- 
-class Choice(models.Model):
-    #as you can see, this is adding the field "question" to "choice" 
-    question = models.ForeignKey(Question, on_delete=models.CASCADE) 
-    choice_text = models.CharField(max_length=200)  #tells Django that this is a Character Field
-    votes = models.IntegerField(default=0)  #tells Django that this is a Integer Field
-    def __str__(self):
-        return self.choice_text
-     
+

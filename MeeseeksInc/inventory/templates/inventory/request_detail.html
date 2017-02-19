@@ -1,20 +1,80 @@
-{% extends 'inventory/base.html' %} 
+{% extends 'custom_admin/base.html' %}  
+{% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
 
-<h1>Request for {{ request.item_name }}</h1>
-<h2>Quantity: {{request.request_quantity}}</h2>
-<h2>Reason for Request: {{request.reason}}</h2>
-<h2>Status: {{request.status}}</h2>
-<h2>Admin Comment: {{request.comment}}</h2>
-<h2>Time Requested: {{request.time_requested}}</h2>
-<h2>Request Id: {{request.request_id}}</h2>
+<center> <h1>  Request for: {{ request.item_name }} </h1> </center> 
+{% if request.status == "Pending"%}
+<center> <h1 style="color:gold">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
+{% if request.status == "Approved"%}
+<center> <h1 style="color:green">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
+{% if request.status == "Denied"%}
+<center> <h1 style="color:red">  Status: {{ request.status }} </h1> </center> 
+{% endif %}
 
-<a href="{% url 'inventory:request_edit' request.request_id %}" class="top-menu"> Edit Request </a>
-<br>
-<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="top-menu"> Cancel Request </a>
+			</table>
+				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Quantity:</th>
+					<th>Reason:</th>
+					<th>Admin Comment:</th>
+					<th>Time Requested:</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        		<tr>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.reason}}</td>
+							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
+						</tr>
+		        </tbody>
+		    </table>
+		    
+<br/>
+	
+	{% if request.status == "Pending" %}
+	
+		 <h2>Edit This Request </h2>
+		  Change the parameters below and hit the resubmit button to update this request.
+		 <br/>
+		 <br/>
+		 
+ 	<form method="POST" class="post-form">{% csrf_token %}
+		{{form.request_quantity.label}}:{{ form.request_quantity }}
+		<br/>
+		<br/>
+		{{form.reason.label}}:{{ form.reason}}
+		<br/>
+		<br/>
+		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
+		<br/>
+		<br/>
+		{% if user.is_staff %}
+		<h2>Handle This Request </h2>
+		 Add a comment to this request.
+		<br/>
+		<br/>
+		{{form.comment.label}}:{{ form.comment }}
+		<br/>
+		<br/>
+		<button type="submit" class="btn btn-success btn-md" onclick="return confirm('Are you sure you want to APPROVE this request?')" value="Approve" name="approve">Approve Request</button>
+		<button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to DENY this request?')" value="Deny" name="deny">Deny Request</button>
+		{%endif%}
+		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
+	</form>
+	
+	{%endif%}
+<br/>
 
+	
+	
+	
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	
 	
 {% endblock %}
