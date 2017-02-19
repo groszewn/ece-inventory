@@ -49,21 +49,6 @@
  
  <script>
 	$(document).ready(function(){
-		$.fn.dataTable.ext.search.push(
-		    function( settings, data, dataIndex, originalData ) {
-	    		var tag = $('#tag').val();
-	    		id = originalData[0].split("\"")[1].split("/")[2]; 
-	        	console.log(id);
-		        return true;
-		    }
-		);
-	    var itemTable = $('#log-table').dataTable();
-	     // Event listener to the two range filtering inputs to redraw on input
-	    $('#tag, #min, #max').keyup( function() {
-	        itemTable.draw();
-	    } );
-	});
-	$(document).ready(function(){
 	    $('#log-table').dataTable();
 	});
 	</script>
