@@ -24,7 +24,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer
 
-from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
+from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm, FilterTagForm
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance
 
 
@@ -34,24 +34,71 @@ from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInst
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
+    form_class = FilterTagForm
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
+    model = Tag
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        context['form'] = self.form_class
         return context
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
-        
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            # <process form cleaned data>
+            Tag2Include = form.cleaned_data.get('Tag2Include')
+            Tag2Exclude = form.cleaned_data.get('Tag2Exclude')
+            keyword_list = []
+            for item in Item.objects.all():
+                if  (item.description is not None) or (item.model_number is not None)  or (item.location is not None) or (item.model_number is not None): 
+                    keyword_list.append(item)
+             
+            excluded_list = []
+            for excludedTag in Tag2Exclude:
+                tagQSEx = Tag.objects.filter(tag = excludedTag)
+                for oneTag in tagQSEx:
+                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+#              have list of all excluded items
+            included_list = []
+            for pickedTag in Tag2Include:
+                tagQSIn = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQSIn:
+                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
+            # have list of all included items
+             
+            final_list = []
+            item_list = Item.objects.all()
+            if not Tag2Include:
+                if Tag2Exclude:
+                    final_list = [x for x in item_list if x not in excluded_list]
+            else:
+                final_list = [x for x in included_list if x not in excluded_list]
+             
+            # for a more constrained search
+            if not final_list:
+                search_list = keyword_list
+            elif not keyword_list:
+                search_list = final_list
+            else:
+                search_list = [x for x in final_list if x in keyword_list]
+            # for a less constrained search
+            # search_list = final_list + keyword_list
+            request_list = Request.objects.all()
+            return render(request,'inventory/filter_result.html', {'form': form, 'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+        else: 
+            return render(request, self.template_name, {'form': form})
+    
 class SearchResultView(FormMixin, LoginRequiredMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'inventory/search_result.html'
@@ -250,6 +297,10 @@ class request_detail(generic.DetailView):
 class request_cancel_view(generic.DetailView):
     model = Request
     template_name = 'inventory/request_cancel.html'
+    
+class filter_result_view(generic.DetailView):
+    model = Item
+    template_name = 'inventory/filter_result.html'
       
 def cancel_request(self, pk):
     Request.objects.get(request_id=pk).delete()

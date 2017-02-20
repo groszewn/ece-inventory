@@ -44,4 +44,16 @@ class SearchForm(forms.Form):
     model_number = forms.CharField(required=False)
     item_name = forms.CharField(required=False)
     fields = ('tags1','tags2','keyword','model_number','item_name')
+
+class FilterTagForm(forms.Form):
+    Tag2Include = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
+    Tag2Exclude = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False, widget=forms.CheckboxSelectMultiple,label="Tags to exclude")
+
+    def __init__(self, *args, **kwargs):
+        super(FilterTagForm, self).__init__(*args, **kwargs)
+
+        self.fields['Tag2Include'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")
+        self.fields['Tag2Exclude'] = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to exclude")
+    fields = ('Tag2Include','Tag2Exclude')
+    
     
