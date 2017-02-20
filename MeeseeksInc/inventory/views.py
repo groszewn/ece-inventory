@@ -86,14 +86,15 @@ class IndexView(LoginRequiredMixin, generic.ListView):  ## ListView to display a
                 final_list = [x for x in included_list if x not in excluded_list]
              
             # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
+#             if not final_list:
+#                 search_list = keyword_list
+#             elif not keyword_list:
+#                 search_list = final_list
+#             else:
+#                 search_list = [x for x in final_list if x in keyword_list]
             # for a less constrained search
-            # search_list = final_list + keyword_list
+            search_list = final_list 
+            
             request_list = Request.objects.all()
             return render(request,'inventory/filter_result.html', {'form': form, 'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
         else: 

@@ -53,10 +53,15 @@
 {########################## ALL ITEMS ##########################}
 
 
-{% if user_list %}
+{% if item_list %}
 
 	<h2>All available items</h2>
-	
+	<form method="POST" class="post-form">{% csrf_token %}
+	 {{ form.Tag2Include.label }} {{ form.Tag2Include }}
+	 {{ form.Tag2Exclude.label }} {{ form.Tag2Exclude }}
+	<button type="submit" class="save btn btn-default">Tag Filter</button>
+	<a class="btn btn-default" href="{% url 'inventory:index' %}" role="button">Cancel Filter</a>
+	</form>
 	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
             <tr>
@@ -67,7 +72,7 @@
 			<th>Item Description</th>
 		</tr>
         </thead>
-        
+        {% block item_filter_table%}
         <tbody>
             {% for item in item_list %}
 				<tr>
@@ -79,6 +84,7 @@
 				</tr>
 			{% endfor %}
         </tbody>
+        {% endblock %}
     </table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}

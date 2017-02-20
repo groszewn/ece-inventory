@@ -20,6 +20,7 @@ from django.views.generic.edit import FormView
 from inventory.models import Instance, Request, Item, Disbursement, Tag
 # from inventory.models import Instance, Request, Item, Disbursement
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from inventory.forms import FilterTagForm
 from custom_admin.forms import UserPermissionEditForm
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 
@@ -28,6 +29,8 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
     context_object_name = 'instance_list'
+    form_class = FilterTagForm
+    model = Tag
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
         cursor = connection.cursor()
@@ -39,9 +42,7 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
             for request_ID in raw_request_ids:
                 raw_request[1][counter] = Request.objects.get(request_id=request_ID)
                 counter += 1
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
-#         context['request_list'] = raw_request_list
+        context['form'] = self.form_class
         context['request_list'] = Request.objects.all()
         context['approved_request_list'] = Request.objects.filter(status="Approved")
         context['pending_request_list'] = Request.objects.filter(status="Pending")
@@ -54,7 +55,42 @@ class AdminIndexView(LoginRequiredMixin, generic.ListView):  ## ListView to disp
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
- 
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            # <process form cleaned data>
+            Tag2Include = form.cleaned_data.get('Tag2Include')
+            Tag2Exclude = form.cleaned_data.get('Tag2Exclude')
+            keyword_list = []
+            for item in Item.objects.all():
+                if  (item.description is not None) or (item.model_number is not None)  or (item.location is not None) or (item.model_number is not None): 
+                    keyword_list.append(item)
+             
+            excluded_list = []
+            for excludedTag in Tag2Exclude:
+                tagQSEx = Tag.objects.filter(tag = excludedTag)
+                for oneTag in tagQSEx:
+                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+#              have list of all excluded items
+            included_list = []
+            for pickedTag in Tag2Include:
+                tagQSIn = Tag.objects.filter(tag = pickedTag)
+                for oneTag in tagQSIn:
+                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
+            # have list of all included items
+            search_list = []
+            item_list = Item.objects.all()
+            if not Tag2Include:
+                if Tag2Exclude:
+                    search_list = [x for x in item_list if x not in excluded_list]
+            else:
+                search_list = [x for x in included_list if x not in excluded_list]
+            
+            request_list = Request.objects.all()
+            return render(request,'inventory/filter_result.html', {'form': form, 'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+        else: 
+            return render(request, self.template_name, {'form': form})
+        
 class DetailView(LoginRequiredMixin, generic.DetailView): ## DetailView to display detail for the object
     login_url = "/login/"
     model = Instance
