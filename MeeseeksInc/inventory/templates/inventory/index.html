@@ -260,11 +260,21 @@
 	    } );
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-all').dataTable();
-	    $('#inventory-request-approved').dataTable();
-	    $('#inventory-request-pending').dataTable();
-	    $('#inventory-request-denied').dataTable();
-	    $('#inventory-disbursed').dataTable();
+	    $('#inventory-request-all').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+	    $('#inventory-request-approved').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+	    $('#inventory-request-pending').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+	    $('#inventory-request-denied').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+	    $('#inventory-request-disbursed').dataTable({
+	        "order": [[ 4, "desc" ]]
+	    });
 	});
 	</script>
 {% else %}

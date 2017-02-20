@@ -49,7 +49,10 @@
  
  <script>
 	$(document).ready(function(){
-	    $('#log-table').dataTable();
+	    $('#log-table').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+
 	});
 	</script>
 

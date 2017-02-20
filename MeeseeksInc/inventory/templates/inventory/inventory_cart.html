@@ -30,8 +30,13 @@
 			{% endfor %}
         </tbody>
     </table>
-    <input type="submit" value="Submit requests">
+    <input class="btn btn-info" type="submit" value="Submit requests">
 	</form>
+	
+	<script>
+		var input = $(':input');
+		input.attr( 'min', '1' );
+	</script>
 {% else %}
 <h2>Nothing in your cart!</h2>
 {% endif %}

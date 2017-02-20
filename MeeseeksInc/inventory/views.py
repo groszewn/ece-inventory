@@ -160,7 +160,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
-        formset = EditCartAddRequestFormSet(queryset=ShoppingCartInstance.objects.filter(user_id=self.request.user.username))
+        formset = EditCartAddRequestFormSet(queryset=self.get_queryset())
         return self.render_to_response(
             self.get_context_data(formset=formset))
         
@@ -168,7 +168,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         return self.request.user.is_active
         
     def get_queryset(self):
-        return ShoppingCartInstance.objects.filter(user_id=self.request.user.username)
+        return ShoppingCartInstance.objects.filter(user_id=self.request.user.username).order_by('quantity')
     
     def get_context_data(self, **kwargs):
         context = super(CartListView, self).get_context_data(**kwargs)
@@ -336,8 +336,8 @@ def edit_request(request, pk):
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
-            post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
@@ -434,11 +434,6 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
             
     def test_func(self):
         return self.request.user.is_active
- 
-@login_required(login_url='/login/')       
-def cancel_request(self, request, pk):
-    Request.objects.get(request_id=pk).delete()
-    return redirect('/')
 
 def approve_request(self, request, pk):
     indiv_request = Request.objects.get(request_id=pk)
@@ -452,7 +447,7 @@ def approve_request(self, request, pk):
         indiv_request.status = "Approved"
         indiv_request.save()
 
-         # add new disbursement item to table
+        # add new disbursement item to table
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
