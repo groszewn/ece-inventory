@@ -101,8 +101,12 @@ class Log(models.Model):
         ('Delete', 'Delete'),
         ('Request', 'Request'),
         ('Disburse', 'Disburse'), 
+        ('Deny', 'Deny'), 
         ('Edit', 'Edit'),
-        ('Override', 'Override')
+        ('Override', 'Override'), 
+        ('Acquire', 'Acquire'), 
+        ('Lost', 'Lost'), 
+        ('Broken', 'Broken'),
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)
