@@ -55,10 +55,17 @@
 
 {% if item_list %}
 
-	<h2>All available items</h2>
-	<form method="POST" class="post-form">{% csrf_token %}
-	 {{ form.Tag2Include.label }} {{ form.Tag2Include }}
-	 {{ form.Tag2Exclude.label }} {{ form.Tag2Exclude }}
+	<h2>All Inventory Items</h2>
+	<form method="POST" class="post-form">
+	{% csrf_token %}
+	<h4>{{ form.Tag2Include.label }} Scroll for more tags</h4>
+	<div id="" style="overflow-y: scroll; height:50px;">
+		{{ form.Tag2Include }}
+	</div>
+	<h4>{{ form.Tag2Exclude.label }} Scroll for more tags</h4>
+	<div id="" style="overflow-y: scroll; height:50px;">
+		 {{ form.Tag2Exclude }}
+	</div>
 	<button type="submit" class="save btn btn-default">Tag Filter</button>
 	<a class="btn btn-default" href="{% url 'inventory:index' %}" role="button">Cancel Filter</a>
 	</form>
