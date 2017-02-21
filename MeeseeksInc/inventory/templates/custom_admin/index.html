@@ -287,6 +287,8 @@
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 
+	<a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request An Item</a>
+	
 {########################## DISBURSEMENTS #####################}
 	{% if disbursed_list %}
 		<h2>Disbursed by you</h2>
