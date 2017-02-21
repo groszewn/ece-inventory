@@ -31,7 +31,7 @@
 					{% if instance.item_id in item_list %}
 						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>
 					{% else %}
-						<td>{{ instance.item_name }}</td>
+						<td>{{ instance.item_name }} (Deleted)</td>
 					{% endif %}
 					<td>{{ instance.affected_user }}</td>
 					<td>{{ instance.change_occurred }}</td>
