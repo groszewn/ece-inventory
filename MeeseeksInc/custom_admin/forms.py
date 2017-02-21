@@ -77,6 +77,12 @@ class UserPermissionEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active')
+        
+    def clean(self):
+        cleaned_data = super(UserPermissionEditForm, self).clean()
+        if cleaned_data['is_superuser']:
+            cleaned_data['is_staff'] = True
+        return cleaned_data
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
