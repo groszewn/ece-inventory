@@ -26,8 +26,8 @@ urlpatterns = [
     url(r'^inventory_cart/delete/(?P<pk>[\w\-\ ]+)/$', views.delete_cart_instance, name='delete_cart_instance'),
     
     ################################### API URLS #######################################
-    url(r'^api/items/$', views.APIItemList.as_view()),
-    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view()),
+    url(r'^api/items/$', views.APIItemList.as_view(), name='api_item_list'),
+    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view(), name='api_item_detail'),
     url(r'^api/requests/$', views.APIRequestList.as_view()),
     url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', views.APIRequestThroughItem.as_view()),
     url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', views.APIRequestDetail.as_view()),

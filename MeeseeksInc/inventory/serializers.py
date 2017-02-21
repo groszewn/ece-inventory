@@ -56,7 +56,7 @@ class GetItemSerializer(serializers.ModelSerializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description')
     
     def validate_quantity(self, value):
         """

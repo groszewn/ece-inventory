@@ -26,9 +26,11 @@ from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
+import django_filters
 import requests, json, urllib, subprocess
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
 from rest_framework.authtoken.models import Token
+from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -511,16 +513,26 @@ def get_api_token(request):
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
 ###########################################################################################
-
 ########################################## Item ###########################################
-class APIItemList(APIView):
+class ItemFilter(django_filters.rest_framework.FilterSet):
+    class Meta:
+        model = Item
+        fields = ['item_name', 'model_number', 'quantity', 'description']
+
+
+class APIItemList(ListCreateAPIView):
     """
     List all Items, or create a new item (for admin only)
     """
     permission_classes = (IsAdminOrUser,)
-    
+    model = Item
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filter_class = ItemFilter
+
     def get(self, request, format=None):
-        items = Item.objects.all()
+        items = self.filter_queryset(self.get_queryset())
         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -747,5 +759,4 @@ class APICreateNewUser(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+

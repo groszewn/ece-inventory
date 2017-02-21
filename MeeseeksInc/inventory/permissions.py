@@ -33,4 +33,7 @@ class IsAdminOrUser(permissions.BasePermission):
             return False
 
         # Write permissions are only allowed to admin 
-        return User.objects.get(username=request.user).is_staff
+        try:   
+            return User.objects.get(username=request.user).is_staff
+        except User.DoesNotExist:
+            return False
