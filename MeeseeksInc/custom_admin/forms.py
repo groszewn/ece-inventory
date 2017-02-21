@@ -68,7 +68,7 @@ class ItemEditForm(forms.ModelForm):
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description')
@@ -118,7 +118,7 @@ class CreateItemForm(forms.ModelForm):
     new_tags = forms.CharField(required=False)
     location = forms.CharField(required=False)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
     class Meta:
         model = Item

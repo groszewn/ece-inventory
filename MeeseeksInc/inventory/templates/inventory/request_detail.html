@@ -51,7 +51,7 @@
 		{{form.reason.label}}:{{ form.reason}}
 		<br/>
 		<br/>
-		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
+		<button type="submit" class="btn btn-primary btn-md" value="Edit" onclick="return confirm('Are you sure you want to edit this tag?')" name="edit">Submit Request Edits</button>
 		<br/>
 		<br/>
 		{% if user.is_staff %}

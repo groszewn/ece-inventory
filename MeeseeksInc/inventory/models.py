@@ -10,7 +10,7 @@ class Item(models.Model):
     item_name = models.CharField(unique=True, max_length=200)
     quantity = models.SmallIntegerField(null=False)
     model_number = models.CharField(max_length=200, null=True)
-    description = models.CharField(max_length=400, null=True)
+    description = models.TextField(max_length=1000,null=True)
     def __str__(self):
         return self.item_name
     
