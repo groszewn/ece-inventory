@@ -188,8 +188,8 @@ def add_comment_to_request_accept(request, pk):
                 disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                 disbursement.save()
-                Log.objects.create(reference_id=disbursement.disburse_id, item_name = item.item_name, initiating_user=indiv_request.admin_name, 
-                                   nature_of_event="Disburse", affected_user=indiv_request.user_name, change_occurred="Disbursed " + str(indiv_request.total_quantity))
+                Log.objects.create(reference_id=disbursement.disburse_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Disburse", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))

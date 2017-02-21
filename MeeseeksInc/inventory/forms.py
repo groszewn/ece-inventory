@@ -28,11 +28,11 @@ class RequestEditForm(forms.ModelForm):
 class AddToCartForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(AddToCartForm, self).__init__(*args, **kwargs)
-        self.fields['quantity'] = forms.IntegerField(required=True)
+        self.fields['quantity'] = forms.IntegerField(required=True, min_value=1)
     fields =('quantity')
 
 class EditCartAndAddRequestForm(forms.ModelForm):
-    quantity = forms.IntegerField(required=True)
+    quantity = forms.IntegerField(required=True, min_value=1)
     reason = forms.CharField(required=True)
     class Meta:
         model = ShoppingCartInstance

@@ -143,6 +143,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -154,6 +155,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -178,6 +180,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -189,6 +192,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -213,6 +217,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -225,6 +230,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 							<td>
 								{% block comment_accept %}
 								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
@@ -259,6 +265,7 @@
 					<th>Request by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -270,6 +277,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -436,11 +444,21 @@
 	    } );
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-all').dataTable();
-	    $('#inventory-request-approved').dataTable();
-	    $('#inventory-request-pending').dataTable();
-	    $('#inventory-request-denied').dataTable();
-	    $('#inventory-disbursed').dataTable();
+	    $('#inventory-request-all').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-approved').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-pending').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-denied').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-disbursed').dataTable({
+	        "order": [[ 4, "desc" ]]
+	    });
 	    $('#user-table').dataTable();
 	});
 	</script>
