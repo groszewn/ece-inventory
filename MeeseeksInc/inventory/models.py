@@ -93,7 +93,8 @@ class Custom_Field_Value(models.Model):
        unique_together = (("item", "field"),)
 
 class Log(models.Model):
-    reference_id = models.CharField(max_length=200, null=True, default=None)
+    request_id = models.CharField(max_length=200, null=True, default=None)
+    item_id = models.CharField(max_length=200, null=True, default=None)
     item_name = models.CharField(max_length=200, null=True)
     initiating_user = models.CharField(max_length=200, null=False)
     CHOICES = (
