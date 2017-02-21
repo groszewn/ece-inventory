@@ -188,19 +188,12 @@
 									{% endblock comment_accept %}
 									{% block comment_deny %}
 									<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
-									{% endblock comment_deny %}
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-								{% else %}
-									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-									<script>
-										function clickEvent2() {
-										window.location='{%url 'inventory:request_edit' request.request_id %}';
-									}
-									</script>
-	
-									<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
+									{% endblock comment_deny %}	
 								{% endif %}
+									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-primary">Edit</a>
+									{% if request.user_id == current_user%}
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									{% endif %}
 							</td>
 						</tr>
 					{% endfor %}

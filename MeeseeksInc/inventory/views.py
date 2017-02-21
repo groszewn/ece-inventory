@@ -95,8 +95,10 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
     context_object_name = 'request_list'
     context_object_name = 'custom_fields'
     context_object_name = 'custom_vals'
+    context_object_name = 'current_user'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
+    
         
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
@@ -114,6 +116,7 @@ class DetailView(FormMixin, LoginRequiredMixin, generic.DetailView): ## DetailVi
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, *args, **kwargs):
@@ -320,8 +323,8 @@ def edit_request(request, pk):
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
-            post.item_id = form['item_field'].value()
-            post.item_name = Item.objects.get(item_id = post.item_id)
+            #post.item_id = form['item_field'].value()
+            post.item_name = instance.item_name
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
@@ -361,11 +364,13 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, generic.DetailView):
     form_class = AdminRequestEditForm
     context_object_name = 'form'
     context_object_name = 'request'
+    context_object_name = 'current_user'
     
     def get_context_data(self, **kwargs):
         context = super(request_detail, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['request'] = self.get_object()
+        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, pk):

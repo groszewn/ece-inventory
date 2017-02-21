@@ -38,11 +38,10 @@ class AdminRequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'reason','comment')
 
 class RequestEditForm(forms.ModelForm):
-    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason','comment')
+        fields = ('request_quantity', 'reason')
          
 class ItemEditForm(forms.ModelForm):
     def __init__(self, custom_fields, custom_values, *args, **kwargs):

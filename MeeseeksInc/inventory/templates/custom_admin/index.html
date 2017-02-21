@@ -233,7 +233,9 @@
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
 								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								{% if request.user_id == current_user%}
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+								{% endif %}
 							</td>
 						</tr>
 					{% endfor %}

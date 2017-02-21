@@ -65,7 +65,9 @@
 		<button type="submit" class="btn btn-success btn-md" onclick="return confirm('Are you sure you want to APPROVE this request?')" value="Approve" name="approve">Approve Request</button>
 		<button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to DENY this request?')" value="Deny" name="deny">Deny Request</button>
 		{%endif%}
+		{% if request.user_id == current_user%}
 		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
+		{% endif %}
 	</form>
 	
 	{%endif%}
