@@ -2,6 +2,7 @@
 ############################# IMPORTS FOR ORIGINAL DJANGO ####################
 from datetime import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib import messages
 from django.contrib.auth import login
@@ -10,6 +11,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
+from django.db.models.signals import post_save
+from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
 from django.forms.models import inlineformset_factory, modelformset_factory
 from django.http import HttpResponseRedirect
@@ -25,6 +28,7 @@ from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
 import requests, json, urllib, subprocess
 from rest_framework import status, permissions
+from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -42,7 +46,6 @@ from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
 from .models import Tag
-
 
 
 def active_check(user):
@@ -489,6 +492,22 @@ def request_specific_item(request, pk):
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
 
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        
+def get_api_token(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    messages.success(request, ('Successfully generated API access token: ' + token.key))
+    if user.is_staff:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    elif user.is_superuser:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    else:
+        return  HttpResponseRedirect(reverse('inventory:index'))
+    
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
 ###########################################################################################

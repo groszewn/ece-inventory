@@ -1,16 +1,33 @@
-from django import forms
-from inventory.models import Request
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field
-from inventory.models import Tag
 import re
+
+from dal import autocomplete
+import dal_queryset_sequence
+import dal_select2_queryset_sequence
+from django import forms
+from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.contrib.admindocs.tests.test_fields import CustomField
- 
+
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field
+from inventory.models import Request
+from inventory.models import Tag
+
+
 class DisburseForm(forms.ModelForm):
-    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+#     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    user_field = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_staff="False"),
+        widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
+    )
+#     user_field = dal_queryset_sequence.fields.QuerySetSequenceModelField(
+#         queryset=autocomplete.QuerySetSequence(
+#             User.objects.filter(is_staff="False"),
+#         ),
+#         required=False,
+#         widget=dal_select2_queryset_sequence.widgets.QuerySetSequenceSelect2('custom_admin:userfield-autocomplete'),
+#     )
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
-    total_quantity = forms.IntegerField(min_value=1)
+    total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
     class Meta:
         model = Disbursement

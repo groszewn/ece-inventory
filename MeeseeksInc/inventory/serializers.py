@@ -51,12 +51,12 @@ class GetItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'requests_outstanding')
+        fields = ('item_name', 'quantity', 'model_number', 'description', 'requests_outstanding')
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_name', 'quantity', 'model_number', 'description')
     
     def validate_quantity(self, value):
         """

@@ -7,6 +7,7 @@ from . import views
 # and we need to differentiate
 app_name = 'inventory'  
 urlpatterns = [
+    url(r'^api/token/$', views.get_api_token, name='api_token'),
     # the argument 'name' at the end of url() is IMPORTANT 
     # b/c we use it to load these urls later in the html files
     # this allows us to change the url of a page without changing it in the HTML files
@@ -15,7 +16,6 @@ urlpatterns = [
     url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
-#     url(r'^(?P<pk>[0-9]+)/results/$', views.ResultsView.as_view(), name='results'),
     url(r'^search_setup/$', views.search_form, name='search_setup'),
     url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.request_specific_item, name='request_specific_item'),
     url(r'^post/request/$', views.post_new_request, name='post_new_request'),
@@ -36,4 +36,5 @@ urlpatterns = [
     url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
     url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', views.APIDirectDisbursement.as_view()),
     url(r'^api/users/create/$', views.APICreateNewUser.as_view()),
+    
 ]

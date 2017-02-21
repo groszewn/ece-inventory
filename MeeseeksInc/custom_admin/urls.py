@@ -1,8 +1,11 @@
+from dal import autocomplete
 from django.conf.urls import url
- 
+
+
 from . import views
-from django.contrib.auth.decorators import permission_required
- 
+from custom_admin.views import UserAutocomplete
+
+
 #this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'custom_admin'  
@@ -36,4 +39,5 @@ urlpatterns = [
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
+    url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete')
 ]

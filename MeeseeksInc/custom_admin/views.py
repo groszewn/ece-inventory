@@ -1,3 +1,4 @@
+from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
@@ -20,6 +21,10 @@ from custom_admin.forms import UserPermissionEditForm
 from inventory.forms import SearchForm
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+
+
 def staff_check(user):
     return user.is_staff
 
@@ -27,8 +32,6 @@ def admin_check(user):
     return user.is_superuser
     
 
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 
 
 # from inventory.models import Instance, Request, Item, Disbursement
@@ -617,11 +620,24 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         post.save()
         disbursement = Disbursement.objects.get(item_name = post.item_name)
         Log.objects.create(reference_id = str(disbursement.disburse_id), item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Disburse', 
-                                         affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
+                                         affected_user=disbursement.user_name, change_occurred="Directly disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         return super(DisburseFormView, self).form_valid(form)
 
+class UserAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Don't forget to filter out results depending on the visitor !
+        if not self.request.user.is_authenticated():
+            return User.objects.none()
+
+        qs = User.objects.filter(is_staff="False")
+
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+
+        return qs
+    
 def search_form(request):
     if request.method == "POST":
         tags = Tag.objects.all()

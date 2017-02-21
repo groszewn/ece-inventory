@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.models import User
 from rest_framework import routers, serializers, viewsets
+from rest_framework.authtoken import views
 
 from inventory import views as inventory_views
 from inventory.models import Item, Request, Disbursement
@@ -67,5 +68,6 @@ urlpatterns = [
     url(r'^get_access_token/$', inventory_views.getAccessToken, name='get_access_token'), 
     # API URLS 
     url(r'^api-viewer/', include(router.urls)),
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework'))
+    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'^api-token-auth/', views.obtain_auth_token)
 ]
