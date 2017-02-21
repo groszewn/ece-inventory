@@ -67,7 +67,7 @@
 	        </a>
         </li>
       	<li><a href="{% url 'inventory:search_setup' %}"> Search Parameters </a></li>
-        <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
+        <li><a href="{% url 'logout' %}?next=/">Log out, {{user.username}}</a></li>
         
         
       </ul>
