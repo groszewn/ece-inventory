@@ -547,8 +547,8 @@ class APIItemList(ListCreateAPIView):
     serializer_class = ItemSerializer
     filter_class = ItemFilter
     
-    renderer_classes = [TemplateHTMLRenderer]
-    template_name = 'inventory/search.html'
+#     renderer_classes = [TemplateHTMLRenderer]
+#     template_name = 'inventory/search.html'
     
     def get_queryset(self):
         """ allow rest api to filter by submissions """

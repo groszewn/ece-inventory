@@ -537,13 +537,17 @@ def create_new_item(request):
                        affected_user=None, change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
-                    t = Tag(item_name=item, tag=oneTag)
+                    t = Tag(tag=oneTag)
                     t.save(force_insert=True)
+                    item.tags.add(t)
+                    item.save()
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
-                    t = Tag(item_name=item, tag=oneTag)
+                    t = Tag(tag=oneTag)
                     t.save()
+                    item.tags.add(t)
+                    item.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
                 custom_val = Custom_Field_Value(item=item, field=field)
