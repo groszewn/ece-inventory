@@ -3,9 +3,15 @@
 {#put this at the top so that the base template is "base.html"#}
 
 
-{% block content %}
 
+
+{% block content %}
+<body>
 <h2>Log</h2>
+<p id="date_filter">
+    <span id="date-label-from" class="date-label">From: </span><input class="date_range_filter date" type="text" id="datepicker_from" />
+    <span id="date-label-to" class="date-label">To:<input class="date_range_filter date" type="text" id="datepicker_to" />
+</p>
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
@@ -44,7 +50,9 @@
 {% else %}
 	<h3>There are no log events to display!</h3>
 {% endif %}
+</body>
 
+ 
 
 {########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
 <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">

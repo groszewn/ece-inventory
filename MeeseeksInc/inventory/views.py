@@ -341,6 +341,7 @@ def edit_request(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
+            print("IM HERE")
             Log.objects.create(request_id=instance.request_id, item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             return redirect('/')
@@ -460,7 +461,7 @@ def approve_request(self, request, pk):
 @user_passes_test(active_check, login_url='login/')  
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
-    Log.objects.create(request = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
+    Log.objects.create(request_id = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
                                          affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
