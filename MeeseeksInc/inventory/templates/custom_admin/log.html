@@ -3,16 +3,18 @@
 {#put this at the top so that the base template is "base.html"#}
 
 
-
 {% block content %}
-<body>
+
+<h2>Log</h2>
+
 Shown Field : <input id="thedate" type="text" /><br />
 Hidden Field : <input id="thealtdate" type="text" /><br />
 <input id="thesubmit" type="button" value="Submit" />
 
-  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+{% block js %}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script>
 $(function(){
     
@@ -24,11 +26,9 @@ $(function(){
     
 });
 </script>
-
-<h2>Log</h2>
+{% endblock js %}
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        </tr>
         <thead>
             <tr>
             <th>Nature of event</th>
@@ -43,17 +43,13 @@ $(function(){
         <tbody>
             {% for instance in log_list %}
 				<tr>
-					{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
-						<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
+					{% if instance.reference_id in request_list and instance.nature_of_event == "Request" %}
+						<td><a href="{% url 'inventory:request_detail' instance.reference_id %}">Request</a></td>
 					{% else %}
 						<td>{{ instance.nature_of_event }}</td>
 					{% endif %}
 					<td>{{ instance.initiating_user }}</td>
-					{% if instance.item_id in item_list %}
-						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>
-					{% else %}
-						<td>{{ instance.item_name }} (Deleted)</td>
-					{% endif %}
+					<td>{{ instance.item_name }}</td>
 					<td>{{ instance.affected_user }}</td>
 					<td>{{ instance.change_occurred }}</td>
 					<td>{{ instance.time_occurred }}</td>
@@ -65,31 +61,18 @@ $(function(){
 {% else %}
 	<h3>There are no log events to display!</h3>
 {% endif %}
-</body>
 
- 
 
 {########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
 <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
 <script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
-
  
- 
+ <script>
 	$(document).ready(function(){
-	$(function() {
-            $( "#min" ).Datepicker();
-        });
-
-        $(function() {
-            $( "#max" ).Datepicker();
-        });
-        
-	    var table = $('#log-table').dataTable({
+	    $('#log-table').dataTable({
 	        "order": [[ 5, "desc" ]]
 	    });
-	    
-
 	});
 	</script>
 
