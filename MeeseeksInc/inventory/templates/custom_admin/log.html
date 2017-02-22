@@ -7,10 +7,8 @@
 
 <h2>Log</h2>
 
-Shown Field : <input id="thedate" type="text" /><br />
-Hidden Field : <input id="thealtdate" type="text" /><br />
-<input id="thesubmit" type="button" value="Submit" />
-
+<div>Start Date : <input id="startdate" type="text" /></div>
+<div>End Date   : <input id='enddate' type='text' /><br></div>
 {% block js %}
 <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
@@ -18,14 +16,16 @@ Hidden Field : <input id="thealtdate" type="text" /><br />
 <script>
 $(function(){
     
-    $('#thedate').datepicker({
-        dateFormat: 'dd-mm-yy',
-        altField: '#thealtdate',
-        altFormat: 'yy-mm-dd'
+    $('#startdate').datepicker({
+        dateFormat: 'yy-mm-dd'
+    });
+    $('#enddate').datepicker({
+        dateFormat: 'yy-mm-dd'
     });
     
 });
 </script>
+<br>
 {% endblock js %}
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
