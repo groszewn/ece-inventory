@@ -45,8 +45,11 @@ class RequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'reason','comment')
          
 class ItemEditForm(forms.ModelForm):
-    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
         super(ItemEditForm, self).__init__(*args, **kwargs)
+        if not user.is_superuser and user.is_staff:
+            self.fields['quantity'].widget.attrs['readonly'] = True
+            #quantity=forms.IntegerField(min_value=0, disabled=True, required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -66,7 +69,7 @@ class ItemEditForm(forms.ModelForm):
                         self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
-    quantity = forms.IntegerField(min_value=0)
+    #quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False)
     class Meta:

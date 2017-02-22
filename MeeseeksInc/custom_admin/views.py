@@ -355,7 +355,7 @@ def edit_item(request, pk):
     custom_vals = Custom_Field_Value.objects.filter(item = item)
     original_quantity = item.quantity
     if request.method == "POST":
-        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -387,7 +387,7 @@ def edit_item(request, pk):
                 custom_val.save()
             return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(custom_fields, custom_vals, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
