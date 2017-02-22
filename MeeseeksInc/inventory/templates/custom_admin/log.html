@@ -4,16 +4,31 @@
 
 
 
-
 {% block content %}
 <body>
+Shown Field : <input id="thedate" type="text" /><br />
+Hidden Field : <input id="thealtdate" type="text" /><br />
+<input id="thesubmit" type="button" value="Submit" />
+
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+$(function(){
+    
+    $('#thedate').datepicker({
+        dateFormat: 'dd-mm-yy',
+        altField: '#thealtdate',
+        altFormat: 'yy-mm-dd'
+    });
+    
+});
+</script>
+
 <h2>Log</h2>
-<p id="date_filter">
-    <span id="date-label-from" class="date-label">From: </span><input class="date_range_filter date" type="text" id="datepicker_from" />
-    <span id="date-label-to" class="date-label">To:<input class="date_range_filter date" type="text" id="datepicker_to" />
-</p>
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        </tr>
         <thead>
             <tr>
             <th>Nature of event</th>
@@ -58,12 +73,22 @@
 <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
 <script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+
  
- <script>
+ 
 	$(document).ready(function(){
-	    $('#log-table').dataTable({
+	$(function() {
+            $( "#min" ).Datepicker();
+        });
+
+        $(function() {
+            $( "#max" ).Datepicker();
+        });
+        
+	    var table = $('#log-table').dataTable({
 	        "order": [[ 5, "desc" ]]
 	    });
+	    
 
 	});
 	</script>
