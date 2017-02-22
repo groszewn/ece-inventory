@@ -408,7 +408,8 @@ def add_tags(request, pk):
     if request.method == "POST":
         item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        item_tags = Tag.objects.filter(item_name = item)
+#         item_tags = Tag.objects.filter(item_name = item)
+        item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
@@ -416,15 +417,20 @@ def add_tags(request, pk):
             item = Item.objects.get(item_id=pk)
             if pickedTags:
                 for oneTag in pickedTags:
-                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                        t = Tag(item_name=item, tag=oneTag) 
+#                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag) 
                         t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
-                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                        t = Tag(item_name=item, tag=oneTag)
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag)
                         t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             for ittag in item_tags:
                 ittag.tag = form[ittag.tag].value()
                 ittag.save()
@@ -434,7 +440,7 @@ def add_tags(request, pk):
     else:
         item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        item_tags = Tag.objects.filter(item_name = item)
+        item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags)
     return render(request, 'inventory/add_tags.html', {'form': form})
 
@@ -480,15 +486,16 @@ def log_item(request):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def edit_tag(request, pk):
+def edit_tag(request, pk, item):
     tag = Tag.objects.get(id=pk)
+    item = Item.objects.get(item_id=item)
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
-            Log.objects.create(reference_id=None, item_name=tag.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                               affected_user=None, change_occurred="Edited tag on item " + str(tag.item_name))
+            Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                               affected_user=None, change_occurred="Edited tag on item " + str(item.item_name))
             form.save()
-            return redirect('/item/' + tag.item_name.item_id)
+            return redirect('/item/' + item.item_id)
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
@@ -504,12 +511,13 @@ def delete_item(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def delete_tag(request, pk):
+def delete_tag(request, pk, item):
+    item = Item.objects.get(item_id=item)
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    Log.objects.create(item_name = tag.item_name, initiating_user=request.user, nature_of_event="Delete", 
+    Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
                        affected_user=None, change_occurred="Deleted tag " + str(tag.tag))
-    return redirect('/item/' + tag.item_name.item_id)
+    return redirect('/item/' + item.item_id)
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')

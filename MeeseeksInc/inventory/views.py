@@ -14,7 +14,8 @@ from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory
+from django.forms.models import inlineformset_factory, modelformset_factory, \
+    ModelMultipleChoiceField
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
@@ -27,10 +28,13 @@ from django.views.generic.edit import FormMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
 import django_filters
+from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
 from rest_framework import status, permissions, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -113,7 +117,8 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context = super(DetailView, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name=self.get_object())
+#         tags = Tag.objects.filter(item_name=self.get_object())
+        tags = self.get_object().tags.all()
         if tags:
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
@@ -514,11 +519,23 @@ def get_api_token(request):
 ###########################################################################################
 ###########################################################################################
 ########################################## Item ###########################################
-class ItemFilter(django_filters.rest_framework.FilterSet):
+class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    def filter(self, qs, value): # way to pass through data
+        return qs
+
+class ItemFilter(FilterSet):
+    included_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
+    excluded_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
     class Meta:
         model = Item
-        fields = ['item_name', 'model_number', 'quantity', 'description']
-
+        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags']
+        
 
 class APIItemList(ListCreateAPIView):
     """
@@ -528,9 +545,25 @@ class APIItemList(ListCreateAPIView):
     model = Item
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
     filter_class = ItemFilter
-
+    
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'inventory/search.html'
+    
+    def get_queryset(self):
+        """ allow rest api to filter by submissions """
+        queryset = Item.objects.all()
+        included = self.request.query_params.getlist('included_tags')
+        excluded = self.request.query_params.getlist('excluded_tags')
+        if not included and excluded:
+            queryset = queryset.exclude(tags__in=excluded)
+        elif not excluded and included:
+            queryset = queryset.filter(tags__in=included)
+        elif excluded and included:    
+            tags = [x for x in included if x not in excluded]
+            queryset=queryset.filter(tags__in=tags)
+        return queryset
+    
     def get(self, request, format=None):
         items = self.filter_queryset(self.get_queryset())
         serializer = ItemSerializer(items, many=True)

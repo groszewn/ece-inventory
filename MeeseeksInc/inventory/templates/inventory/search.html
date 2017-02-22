@@ -4,14 +4,20 @@
 {% block content %}
 
  <h2>Searching...</h2>
- <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.keyword.label }}:{{ form.keyword }}
-	{{ form.model_number.label }}:{{ form.model_number }}
-	{{ form.item_name.label }}:{{ form.item_name }}
-	 <h3>Filter by tags...</h3>
-	 {{ form.tags1.label }} {{ form.tags1 }}
-	 {{ form.tags2.label }} {{ form.tags2 }}
-	<button type="submit" class="save btn btn-default">Search</button>
- </form>
+{# <form method="POST" class="post-form">{% csrf_token %}#}
+{#	{{ form.keyword.label }}:{{ form.keyword }}#}
+{#	{{ form.model_number.label }}:{{ form.model_number }}#}
+{#	{{ form.item_name.label }}:{{ form.item_name }}#}
+{#	 <h3>Filter by tags...</h3>#}
+{#	 {{ form.tags1.label }} {{ form.tags1 }}#}
+{#	 {{ form.tags2.label }} {{ form.tags2 }}#}
+{#	<button type="submit" class="save btn btn-default">Search</button>#}
+{# </form>#}
+ 
+<form action="{% url 'api-item-list' %}" method="POST">
+    {% csrf_token %}
+    {% render_form serializer %}
+    <input type="submit" value="Save">
+</form>
 
 {% endblock %}
