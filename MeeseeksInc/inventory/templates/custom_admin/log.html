@@ -69,6 +69,36 @@ $(function(){
 <script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
  
  <script>
+ 
+ $.fn.dataTableExt.afnFiltering.push(
+    function( oSettings, aData, iDataIndex ) {
+        var start = document.getElementById('startdate').value;
+        var finish = document.getElementById('enddate').value; 
+ 
+        var datofini=aData[5].split()[0];
+        var datoffin=aData[iEndDateCol].substring(6,10) + aData[iEndDateCol].substring(3,5)+ aData[iEndDateCol].substring(0,2);
+ 
+        if ( iFini === "" && iFfin === "" )
+        {
+            return true;
+        }
+        else if ( iFini <= datofini && iFfin === "")
+        {
+            return true;
+        }
+        else if ( iFfin >= datoffin && iFini === "")
+        {
+            return true;
+        }
+        else if (iFini <= datofini && iFfin >= datoffin)
+        {
+            return true;
+        }
+        return false;
+    }
+);
+
+
 	$(document).ready(function(){
 	    $('#log-table').dataTable({
 	        "order": [[ 5, "desc" ]]
