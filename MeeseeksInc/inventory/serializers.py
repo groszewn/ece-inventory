@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import serializers
 
-from inventory.models import Item, Tag, Request, Disbursement
+from inventory.models import Item, Tag, Request, Disbursement, Custom_Field
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -65,6 +65,11 @@ class ItemSerializer(serializers.ModelSerializer):
         if value<0:
             raise serializers.ValidationError("Item quantity needs to be greater than 0")
         return value
+
+class CustomFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field
+        fields = ('id','field_name','is_private','field_type')
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:

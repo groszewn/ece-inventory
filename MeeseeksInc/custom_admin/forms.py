@@ -22,9 +22,9 @@ class AddCommentRequestForm(forms.Form):
 class LogForm(forms.ModelForm):
     item_name = forms.ModelChoiceField(queryset=Item.objects.all())
     item_change_options = [
-        (1, 'lost'),
-        (2, 'acquired'), 
-        (3, 'broken')
+        ('Lost', 'Lost'),
+        ('Broken', 'Broken'), 
+        ('Acquired', 'Acquired')
         ]
     item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
     class Meta:
@@ -75,7 +75,7 @@ class ItemEditForm(forms.ModelForm):
 class UserPermissionEditForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ('username', 'is_staff', 'is_active')
+        fields = ('username', 'is_superuser', 'is_staff', 'is_active')
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
@@ -144,6 +144,8 @@ class RegistrationForm(forms.Form):
     password2 = forms.CharField(label='Confirm Password',
                                 widget=forms.PasswordInput(), required = True )
     admin = forms.BooleanField(label = 'Is new user an Admin?',
+                               widget = forms.CheckboxInput, required=False)
+    staff = forms.BooleanField(label = 'Is new user a Staff?',
                                widget = forms.CheckboxInput, required=False)
     def clean_password2(self):
         if 'password1' in self.cleaned_data:

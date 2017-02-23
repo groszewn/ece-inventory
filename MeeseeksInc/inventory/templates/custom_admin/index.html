@@ -143,6 +143,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -154,6 +155,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -178,6 +180,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -189,6 +192,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -213,6 +217,7 @@
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -225,6 +230,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 							<td>
 								{% block comment_accept %}
 								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
@@ -232,7 +238,7 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
 								{% if request.user_id == current_user%}
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
@@ -261,6 +267,7 @@
 					<th>Request by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -272,6 +279,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -440,11 +448,21 @@
 	    } );
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-all').dataTable();
-	    $('#inventory-request-approved').dataTable();
-	    $('#inventory-request-pending').dataTable();
-	    $('#inventory-request-denied').dataTable();
-	    $('#inventory-disbursed').dataTable();
+	    $('#inventory-request-all').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-approved').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-pending').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-denied').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-disbursed').dataTable({
+	        "order": [[ 4, "desc" ]]
+	    });
 	    $('#user-table').dataTable();
 	});
 	</script>

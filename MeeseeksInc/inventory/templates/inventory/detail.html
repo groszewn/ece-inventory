@@ -103,7 +103,6 @@
 {% endif %} 
 
 <div>
-	{% if user.is_staff %}
 	<script>
 	function clickEvent(){
 	    if (confirm("Delete this item?")) {
@@ -124,12 +123,10 @@
 	}
 	</script>
 	
-		<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
-	   	<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
-	    
-{% block edit_specific_item %}
-<a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
-{% endblock edit_specific_item %}
+{% if user.is_staff %}
+<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
+<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
+{% endif %} 
 
 {% block tag_item %}
 <a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
@@ -138,12 +135,12 @@
 	{% if user.is_superuser %}
 	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
 	{% endif %}
+
 	
 </div>
 
 <br/>
 
-{% endif %}
 
 {% block request_specific_item %}
 <a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
@@ -205,7 +202,9 @@
 	 window.document.location = $(this).parent().data('href');
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-indiv-item').dataTable();
+	    $('#inventory-request-indiv-item').dataTable({
+	        "order": [[ 1, "desc" ]]
+	    });
 	});
 	</script>
 	
@@ -239,11 +238,6 @@
     });
 </script>
 
-{###############DONT DELETE#####################}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
-
 {% endblock js-edit %}
 
 {############################# EDIT TAG LOGIC ##############################}
@@ -272,11 +266,6 @@
         });
     });
 </script>
-
-{###############DONT DELETE#####################}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
 
 {% endblock js-tag %}
 	
@@ -367,8 +356,8 @@
     });
 </script>
 {###############DONT DELETE#####################}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>#}
+{#<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>#}
 {#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
 
 {% endblock js-request %}

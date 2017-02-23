@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 #     'admin_tools.dashboard',
 #     'bootstrap3',
     'rest_framework',
+    'rest_framework.authtoken',
     'crispy_forms',
     'custom_admin.apps.CustomAdminConfig',
     'inventory.apps.InventoryConfig', # added this so Django knows about the app 'inventory'
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -136,8 +138,6 @@ USE_TZ = True
 USE_I18N = True
 
 USE_L10N = True
-
-# USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
