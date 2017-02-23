@@ -45,7 +45,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer
+    GetItemSerializer, TagSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -277,65 +277,70 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
-
+    
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
-def search_form(request):
-    if request.method == "POST":
-        tags = Tag.objects.all()
-        form = SearchForm(tags, request.POST)
-        if form.is_valid():
-            picked = form.cleaned_data.get('tags1')
-            excluded = form.cleaned_data.get('tags2')
-            keyword = form.cleaned_data.get('keyword')
-            modelnum = form.cleaned_data.get('model_number')
-            itemname = form.cleaned_data.get('item_name')
-             
-            keyword_list = []
-            for item in Item.objects.all():
-                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
-                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
-                    and ((itemname is "") or (itemname in item.item_name)) \
-                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
-                    keyword_list.append(item)
-             
-            excluded_list = []
-            for excludedTag in excluded:
-                tagQSEx = Tag.objects.filter(tag = excludedTag)
-                for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-#              have list of all excluded items
-            included_list = []
-            for pickedTag in picked:
-                tagQSIn = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
-            # have list of all included items
-             
-            final_list = []
-            item_list = Item.objects.all()
-            if not picked:
-                if excluded:
-                    final_list = [x for x in item_list if x not in excluded_list]
-            else:
-                final_list = [x for x in included_list if x not in excluded_list]
-             
-            # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
-            # for a less constrained search
-            # search_list = final_list + keyword_list
-            request_list = Request.objects.all()
-            return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
-    else:
-        tags = Tag.objects.all()
-        form = SearchForm(tags)
-    return render(request, 'inventory/search.html', {'form': form})
+def search_view(request):
+    tags = Tag.objects.all()
+    return render(request, 'inventory/search.html', {'tags': tags})
+# @login_required(login_url='/login/')    
+# @user_passes_test(active_check, login_url='/login/')
+# def search_form(request):
+#     if request.method == "POST":
+#         tags = Tag.objects.all()
+#         form = SearchForm(tags, request.POST)
+#         if form.is_valid():
+#             picked = form.cleaned_data.get('tags1')
+#             excluded = form.cleaned_data.get('tags2')
+#             keyword = form.cleaned_data.get('keyword')
+#             modelnum = form.cleaned_data.get('model_number')
+#             itemname = form.cleaned_data.get('item_name')
+#              
+#             keyword_list = []
+#             for item in Item.objects.all():
+#                 if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
+#                     or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
+#                     and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
+#                     and ((itemname is "") or (itemname in item.item_name)) \
+#                     and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
+#                     keyword_list.append(item)
+#              
+#             excluded_list = []
+#             for excludedTag in excluded:
+#                 tagQSEx = Tag.objects.filter(tag = excludedTag)
+#                 for oneTag in tagQSEx:
+#                     excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
+# #              have list of all excluded items
+#             included_list = []
+#             for pickedTag in picked:
+#                 tagQSIn = Tag.objects.filter(tag = pickedTag)
+#                 for oneTag in tagQSIn:
+#                     included_list.append(Item.objects.get(item_name = oneTag.item_name))
+#             # have list of all included items
+#              
+#             final_list = []
+#             item_list = Item.objects.all()
+#             if not picked:
+#                 if excluded:
+#                     final_list = [x for x in item_list if x not in excluded_list]
+#             else:
+#                 final_list = [x for x in included_list if x not in excluded_list]
+#              
+#             # for a more constrained search
+#             if not final_list:
+#                 search_list = keyword_list
+#             elif not keyword_list:
+#                 search_list = final_list
+#             else:
+#                 search_list = [x for x in final_list if x in keyword_list]
+#             # for a less constrained search
+#             # search_list = final_list + keyword_list
+#             request_list = Request.objects.all()
+#             return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
+#     else:
+#         tags = Tag.objects.all()
+#         form = SearchForm(tags)
+#     return render(request, 'inventory/search.html', {'form': form})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -546,9 +551,6 @@ class APIItemList(ListCreateAPIView):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     filter_class = ItemFilter
-    
-#     renderer_classes = [TemplateHTMLRenderer]
-#     template_name = 'inventory/search.html'
     
     def get_queryset(self):
         """ allow rest api to filter by submissions """
@@ -793,3 +795,14 @@ class APICreateNewUser(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+########################################### Tags ##################################################
+class APITagList(APIView):
+    """
+    List all Disbursements (for yourself if user, all if admin)
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        serializer = TagSerializer(Tag.objects.all(), many=True)
+        return Response(serializer.data)
+    

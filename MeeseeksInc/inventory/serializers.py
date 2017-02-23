@@ -69,7 +69,7 @@ class ItemSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('tag')
+        fields = ('tag',)
         
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
