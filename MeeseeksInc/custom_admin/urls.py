@@ -1,9 +1,10 @@
 from dal import autocomplete
 from django.conf.urls import url
 
+from custom_admin.views import UserAutocomplete
+import inventory
 
 from . import views
-from custom_admin.views import UserAutocomplete
 
 
 #this app_name is important b/c Django needs to look through all the apps 
@@ -34,7 +35,7 @@ urlpatterns = [
     url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)$', views.edit_tag, name='edit_tag'),
     url(r'^add/tag/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='add_tags'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
-    url(r'^search_setup/$', views.search_form, name='search_setup'),
+    url(r'^search/$', inventory.views.search_view, name='search_setup'),
     url(r'^add_custom_field/$', views.add_custom_field, name='add_custom_field'),
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
     url(r'^log$', views.LogView.as_view(), name='log'),
