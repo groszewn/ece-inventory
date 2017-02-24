@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import serializers
 
-from inventory.models import Item, Tag, Request, Disbursement, Custom_Field
+from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -51,12 +51,12 @@ class GetItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'requests_outstanding')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding', 'tags')
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags')
     
     def validate_quantity(self, value):
         """
@@ -70,11 +70,16 @@ class CustomFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Custom_Field
         fields = ('id','field_name','is_private','field_type')
+        
+class CustomValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('item_name', 'tag')
+        fields = ('tag',)
         
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(

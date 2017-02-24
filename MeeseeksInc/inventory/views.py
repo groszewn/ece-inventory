@@ -2,6 +2,7 @@
 ############################# IMPORTS FOR ORIGINAL DJANGO ####################
 from datetime import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib import messages
 from django.contrib.auth import login
@@ -10,8 +11,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
+from django.db.models.signals import post_save
+from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory
+from django.forms.models import inlineformset_factory, modelformset_factory, \
+    ModelMultipleChoiceField
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
@@ -23,8 +27,14 @@ from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
+import django_filters
+from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -35,14 +45,13 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, CustomFieldSerializer
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
 from .models import Tag
-
 
 
 def active_check(user):
@@ -101,16 +110,15 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
     context_object_name = 'request_list'
     context_object_name = 'custom_fields'
     context_object_name = 'custom_vals'
-    context_object_name = 'current_user'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
-    
         
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name=self.get_object())
+#         tags = Tag.objects.filter(item_name=self.get_object())
+        tags = self.get_object().tags.all()
         if tags:
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
@@ -122,7 +130,6 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
-        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, *args, **kwargs):
@@ -270,65 +277,12 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
-
+    
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
-def search_form(request):
-    if request.method == "POST":
-        tags = Tag.objects.all()
-        form = SearchForm(tags, request.POST)
-        if form.is_valid():
-            picked = form.cleaned_data.get('tags1')
-            excluded = form.cleaned_data.get('tags2')
-            keyword = form.cleaned_data.get('keyword')
-            modelnum = form.cleaned_data.get('model_number')
-            itemname = form.cleaned_data.get('item_name')
-             
-            keyword_list = []
-            for item in Item.objects.all():
-                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
-                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
-                    and ((itemname is "") or (itemname in item.item_name)) \
-                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
-                    keyword_list.append(item)
-             
-            excluded_list = []
-            for excludedTag in excluded:
-                tagQSEx = Tag.objects.filter(tag = excludedTag)
-                for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-#              have list of all excluded items
-            included_list = []
-            for pickedTag in picked:
-                tagQSIn = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
-            # have list of all included items
-             
-            final_list = []
-            item_list = Item.objects.all()
-            if not picked:
-                if excluded:
-                    final_list = [x for x in item_list if x not in excluded_list]
-            else:
-                final_list = [x for x in included_list if x not in excluded_list]
-             
-            # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
-            # for a less constrained search
-            # search_list = final_list + keyword_list
-            request_list = Request.objects.all()
-            return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
-    else:
-        tags = Tag.objects.all()
-        form = SearchForm(tags)
-    return render(request, 'inventory/search.html', {'form': form})
+def search_view(request):
+    tags = Tag.objects.all()
+    return render(request, 'inventory/search.html', {'tags': tags})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -346,34 +300,10 @@ def edit_request(request, pk):
             post.save()
             Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
-            return redirect('/item/' + item.item_id)
-    else:
-        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
-    return render(request, 'inventory/request_edit.html', {'form': form})
-  
-@login_required(login_url='/login/')
-@user_passes_test(active_check, login_url='/login/')
-def edit_request_main_page(request, pk):
-    instance = Request.objects.get(request_id=pk)
-    if request.method == "POST":
-        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
-        if form.is_valid():
-            messages.success(request, 'You just edited the request successfully.')
-            post = form.save(commit=False)
-#             post.item_id = form['item_field'].value()
-#             post.item_name = Item.objects.get(item_id = post.item_id)
-            post.status = "Pending"
-            post.time_requested = timezone.now()
-            post.save()
-            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
             return redirect('/')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
-  
   
 # class ResultsView(LoginRequiredMixin, generic.DetailView):
 #     login_url = "/login/"
@@ -407,13 +337,11 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
     form_class = AdminRequestEditForm
     context_object_name = 'form'
     context_object_name = 'request'
-    context_object_name = 'current_user'
     
     def get_context_data(self, **kwargs):
         context = super(request_detail, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['request'] = self.get_object()
-        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, pk):
@@ -518,19 +446,93 @@ def request_specific_item(request, pk):
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
 
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        
+def get_api_token(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    messages.success(request, ('Successfully generated API access token: ' + token.key))
+    if user.is_staff:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    elif user.is_superuser:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    else:
+        return  HttpResponseRedirect(reverse('inventory:index'))
+    
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def edit_request_main_page(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
+            post = form.save(commit=False)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+            item = instance.item_name
+            return redirect('/')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
+    
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
 ###########################################################################################
-
 ########################################## Item ###########################################
-class APIItemList(APIView):
+class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    def filter(self, qs, value): # way to pass through data
+        return qs
+
+class ItemFilter(FilterSet):
+    included_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
+    excluded_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
+    class Meta:
+        model = Item
+        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags']
+        
+
+class APIItemList(ListCreateAPIView):
     """
     List all Items, or create a new item (for admin only)
     """
     permission_classes = (IsAdminOrUser,)
+    model = Item
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+    custom_value_serializer = CustomValueSerializer
+    filter_class = ItemFilter
+    
+    def get_queryset(self):
+        """ allow rest api to filter by submissions """
+        queryset = Item.objects.all()
+        included = self.request.query_params.getlist('included_tags')
+        excluded = self.request.query_params.getlist('excluded_tags')
+        if not included and excluded:
+            queryset = queryset.exclude(tags__in=excluded)
+        elif not excluded and included:
+            queryset = queryset.filter(tags__in=included)
+        elif excluded and included:    
+            tags = [x for x in included if x not in excluded]
+            queryset=queryset.filter(tags__in=tags)
+        return queryset
     
     def get(self, request, format=None):
-        items = Item.objects.all()
+        items = self.filter_queryset(self.get_queryset())
         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -538,10 +540,11 @@ class APIItemList(APIView):
         serializer = ItemSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            name = request.query_params.get('item_name')
+            name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
+           
             for field in Custom_Field.objects.all():
-                value = request.query_params.get(field,None)
+                value = request.data.get(field.field_name,None)
                 if value is not None:
                     custom_val = Custom_Field_Value(item=item, field=field)
                     if field.field_type == 'Short':    
@@ -559,9 +562,9 @@ class APIItemList(APIView):
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
-            
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class APIItemDetail(APIView):
     """
@@ -589,8 +592,9 @@ class APIItemDetail(APIView):
         serializer = ItemSerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            
             for field in Custom_Field.objects.all():
-                value = request.query_params.get(field,None)
+                value = request.data.get(field.field_name,None)
                 if value is not None:
                     if Custom_Field_Value.objects.filter(item = item, field = field).exists():
                         custom_val = Custom_Field_Value.objects.get(item = item, field = field)
@@ -601,16 +605,17 @@ class APIItemDetail(APIView):
                     if field.field_type == 'Long':
                         custom_val.field_value_long_text = value
                     if field.field_type == 'Int':
-                        if field_value != '':
+                        if value != '':
                             custom_val.field_value_integer = value
                         else:
                             custom_val.field_value_integer = None
                     if field.field_type == 'Float':
-                        if field_value != '':
+                        if value != '':
                             custom_val.field_value_floating = value 
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
+                    
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -802,11 +807,21 @@ class APICreateNewUser(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+########################################### Tags ##################################################
+class APITagList(APIView):
+    """
+    List all Disbursements (for yourself if user, all if admin)
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        serializer = TagSerializer(Tag.objects.all(), many=True)
+        return Response(serializer.data)
+
+
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
-    """
-    Retrieve, update or delete a snippet instance.
-    """
+
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
@@ -820,13 +835,15 @@ class APICustomField(APIView):
             return Response(serializer.data)   
         
     def post(self, request, format=None):
-        serializer = Custom_Field_Serializer(data=request.data)
+        serializer = CustomFieldSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 class APICustomFieldModify(APIView):
+
+    permission_classes = (IsAdminOrUser,)
 
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)

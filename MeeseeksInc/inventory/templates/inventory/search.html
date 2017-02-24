@@ -1,17 +1,139 @@
 {% extends 'inventory/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
+{% load rest_framework %}
 
 {% block content %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
 
- <h2>Searching...</h2>
- <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.keyword.label }}:{{ form.keyword }}
-	{{ form.model_number.label }}:{{ form.model_number }}
-	{{ form.item_name.label }}:{{ form.item_name }}
-	 <h3>Filter by tags...</h3>
-	 {{ form.tags1.label }} {{ form.tags1 }}
-	 {{ form.tags2.label }} {{ form.tags2 }}
-	<button type="submit" class="save btn btn-default">Search</button>
- </form>
+<h2>Search Form</h2>
+ 
+<form id="search-form">
+    <label>Included Tags:</label>
+    <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+	<label>Excluded Tags:</label>
+	<select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+    <input type="submit"/>
+</form>
 
+<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+	<th>Item Name</th>
+	<th>Quantity</th>
+	<th>Item Model Number</th>
+	<th>Item Description</th>
+{#	{% for field in custom_fields%}#}
+{#		<th>{{field.field_name}}</th>#}
+{#	{% endfor %}#}
+</tr>
+</thead>
+<tbody>
+{#		<tr>#}
+{#			<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>#}
+{#			<td>{{ item.quantity }}</td>#}
+{#			<td>{{ item.model_number }}</td>#}
+{#			<td>{{ item.description }}</td>#}
+{#			{% for field in custom_fields%}#}
+{#				<td default = "">#}
+{#				{% for value in custom_vals%}#}
+{#					{% if value.item == item and value.field == field %}#}
+{#							{% if field.field_type == "Short"%}#}
+{#								{{value.field_value_short_text}}#}
+{#							{% endif %}#}
+{#							{% if field.field_type == "Long"%}#}
+{#								{{value.field_value_long_text}}#}
+{#							{% endif %}#}
+{#							{% if field.field_type == "Int"%}#}
+{#								{% if value.field_value_integer != None%}#}
+{#									{{value.field_value_integer}}#}
+{#								{% else %}#}
+{#									{{""}}#}
+{#								{% endif %}#}
+{#							{% endif %}#}
+{#							{% if field.field_type == "Float"%}#}
+{#								{% if value.field_value_floating != None%}#}
+{#									{{value.field_value_floating}}#}
+{#								{% else %}#}
+{#									{{""}}#}
+{#								{% endif %}#}
+{#							{% endif %}#}
+{#					{% endif %}#}
+{#				{% endfor %}#}
+{#				</td>#}
+{#			{% endfor %}#}
+{#		</tr>#}
+</tbody>
+</table>
+
+
+<script>
+$('#included-tags').select2(); // making multiple select
+$('#excluded-tags').select2(); // making multiple select
+get_search_data(); // initialize item data
+$('#search-form').on('submit', function(event){
+    event.preventDefault();
+    console.log("form submitted!")  // sanity check
+    get_search_data();
+});
+
+function get_search_data() {
+	var data = '';
+	var included_tags = $('#included-tags').select2('val');
+	var excluded_tags = $('#excluded-tags').select2('val')
+	if (included_tags && !excluded_tags) {
+		console.log("included!");
+		for(i in included_tags) {
+			data += 'included_tags=' + included_tags[i]+'&';
+		}
+	} else if (!included_tags && excluded_tags) { 
+		console.log("excluded!");
+		for(i in excluded_tags) {
+			data += 'excluded_tags=' + excluded_tags[i] + '&';
+		}
+	} else if (included_tags && excluded_tags) { 
+		console.log("both!");
+		for(i in included_tags) {
+			data += 'included_tags=' + included_tags[i] + '&';
+		}
+		for(i in excluded_tags) {
+			data += 'excluded_tags=' + excluded_tags[i] + '&';
+		}
+	}
+	console.log(data);
+    $.ajax({
+        url : '{% url 'inventory:api_item_list' %}',
+        type : "GET", // http method
+        data : data,
+        success : function(json) {
+            $('#item_name').val(''); // remove the value from the input
+            console.log(json); // log the returned json to the console
+        	$('#inventory-search').dataTable().fnClearTable();
+         	for(i in json) {
+         		$('#inventory-search').dataTable().fnAddData( [
+			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
+			        json[i].quantity,
+			        json[i].model_number,
+			        json[i].description ] );
+        	}
+        },
+        error : function(xhr,errmsg,err) {
+            //$('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
+            //    " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
+            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+        }
+    });
+};
+$(document).ready(function(){
+	    $('#inventory-search').dataTable();
+	});
+</script>
 {% endblock %}

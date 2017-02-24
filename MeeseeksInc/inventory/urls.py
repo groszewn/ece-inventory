@@ -7,6 +7,7 @@ from . import views
 # and we need to differentiate
 app_name = 'inventory'  
 urlpatterns = [
+    url(r'^api/token/$', views.get_api_token, name='api_token'),
     # the argument 'name' at the end of url() is IMPORTANT 
     # b/c we use it to load these urls later in the html files
     # this allows us to change the url of a page without changing it in the HTML files
@@ -15,8 +16,7 @@ urlpatterns = [
     url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
-#     url(r'^(?P<pk>[0-9]+)/results/$', views.ResultsView.as_view(), name='results'),
-    url(r'^search_setup/$', views.search_form, name='search_setup'),
+    url(r'^search/$', views.search_view, name='search_setup'),
     url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.request_specific_item, name='request_specific_item'),
     url(r'^post/request/$', views.post_new_request, name='post_new_request'),
     url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_detail'),
@@ -27,8 +27,8 @@ urlpatterns = [
     url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
     
     ################################### API URLS #######################################
-    url(r'^api/items/$', views.APIItemList.as_view()),
-    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view()),
+    url(r'^api/items/$', views.APIItemList.as_view(), name='api_item_list'),
+    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view(), name='api_item_detail'),
     url(r'^api/requests/$', views.APIRequestList.as_view()),
     url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', views.APIRequestThroughItem.as_view()),
     url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', views.APIRequestDetail.as_view()),
@@ -39,4 +39,6 @@ urlpatterns = [
     url(r'^api/users/create/$', views.APICreateNewUser.as_view()),
     url(r'^api/custom/field/$', views.APICustomField.as_view()),
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
+    url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
+    
 ]

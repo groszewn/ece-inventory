@@ -1,9 +1,15 @@
+from datetime import datetime
 import uuid
 
 from django.db import models
 from django.utils import timezone
-from datetime import datetime
 
+
+class Tag(models.Model):
+    tag = models.CharField(max_length=200)
+    def __str__(self):
+        return self.tag
+    
 
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -11,14 +17,9 @@ class Item(models.Model):
     quantity = models.SmallIntegerField(null=False)
     model_number = models.CharField(max_length=200, null=True)
     description = models.TextField(max_length=1000,null=True)
+    tags = models.ManyToManyField(Tag, related_name='items', blank=True)
     def __str__(self):
         return self.item_name
-    
-class Tag(models.Model):
-    item_name = models.ForeignKey(Item, null = True, on_delete=models.CASCADE) 
-    tag = models.CharField(max_length=200)
-    def __str__(self):
-        return self.tag
  
 class Instance(models.Model):
     item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
