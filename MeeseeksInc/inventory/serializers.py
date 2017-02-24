@@ -49,23 +49,7 @@ class GetItemSerializer(serializers.ModelSerializer):
             outstanding_requests = Request.objects.filter(item_name=item_id, user_id=user.username, status="Pending")
         serializer = RequestSerializer(outstanding_requests, many=True)
         return serializer.data
-    
-    def get_custom_field_with_values(self, obj):
-        item_id = self.context['pk']
-        item = Item.objects.get(item_id = item_id)
-        user = self.context['request'].user
-        custom_fields = []
-        if User.objects.get(username=user).is_staff:
-            custom_fields = Custom_Field.objects.filter(item = item)
-        else:
-            all_fields = Custom_Field.objects.filter(item = item)
-            for field in all_fields:
-                if field.is_private:
-                    all_fields.remove(field)
-            custom_fields = all_fields
-        serializer = CustomValueSerializerWithDetail(custom_values, many=True, context=custom_values.field)
-        return serializer.data
-    
+     
     def get_custom_field_values(self, obj):
         item_id = self.context['pk']
         item = Item.objects.get(item_id = item_id)
@@ -110,19 +94,6 @@ class CustomValueSerializer(serializers.ModelSerializer):
         fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
         depth = 1
 
-class CustomValueSerializerWithDetail(serializers.ModelSerializer):
-    values_field = serializers.SerializerMethodField('get_field')
-    
-    def get_field(self, obj):
-        field_id = self.context['request'].field
-        custom_field = Custom_Field.objects.get(id = field_id)
-        serializer = CustomFieldSerializer(custom_field)
-        return serializer.data
-    
-    class Meta:
-        model = Custom_Field_Value
-        fields = ('item','field','values_field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
-    
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
