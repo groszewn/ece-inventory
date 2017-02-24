@@ -93,7 +93,7 @@ class RequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
+        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -113,7 +113,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive

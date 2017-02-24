@@ -561,7 +561,7 @@ class APIItemList(ListCreateAPIView):
             item_id=data['item_id']
             item_name=data['item_name']
             Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(name))
+                       affected_user=None, change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             for field in Custom_Field.objects.all():
@@ -621,7 +621,7 @@ class APIItemDetail(APIView):
                                          affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
             else:
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(name))
+                                         affected_user=None, change_occurred="Edited " + str(item.item_name))
             for field in Custom_Field.objects.all():
                 value = request.data.get(field.field_name,None)
                 if value is not None:
@@ -696,7 +696,7 @@ class APIRequestDetail(APIView):
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
-                Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user_id), nature_of_event='Edit', 
+                Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
@@ -724,11 +724,11 @@ class APIRequestThroughItem(APIView):
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
+            item = Item.objects.get(item_id=pk)
             data=serializer.data
             id=data['request_id']
-            name=data['item_name']
             quantity=data['request_quantity']
-            Log.objects.create(request_id=id, item_id=pk, item_name = name, initiating_user=request.user, nature_of_event="Request", 
+            Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
                        affected_user=None, change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
