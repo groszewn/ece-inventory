@@ -553,7 +553,11 @@ class APIItemList(ListCreateAPIView):
     
     def get(self, request, format=None):
         items = self.filter_queryset(self.get_queryset())
-        serializer = ItemSerializer(items, many=True)
+        context = {
+            "request": self.request,
+        }
+        serializer = ItemSerializer(items, many=True, context=context)
+#         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):

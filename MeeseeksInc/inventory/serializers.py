@@ -72,9 +72,26 @@ class GetItemSerializer(serializers.ModelSerializer):
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding','values_custom_field','tags')
 
 class ItemSerializer(serializers.ModelSerializer):
+    values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
+    
     class Meta:
         model = Item
-        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
+    
+    def get_custom_field_values(self, obj):
+        item = Item.objects.get(item_name = obj)
+        user = self.context['request'].user
+        custom_values = []
+        if User.objects.get(username=user).is_staff:
+            custom_values = Custom_Field_Value.objects.filter(item = item)
+        else:
+            all_vals = Custom_Field_Value.objects.filter(item = item)
+            for val in all_vals:
+                if val.field.is_private:
+                    all_vals.remove(val)
+            custom_values = all_vals
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
+        return serializer.data
     
     def validate_quantity(self, value):
         """
