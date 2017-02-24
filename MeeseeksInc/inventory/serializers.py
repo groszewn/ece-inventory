@@ -63,7 +63,7 @@ class GetItemSerializer(serializers.ModelSerializer):
                 if val.field.is_private:
                     all_vals.remove(val)
             custom_values = all_vals
-        serializer = CustomValueSerializer(custom_values, many=True)
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
         return serializer.data
 
     class Meta:
@@ -92,6 +92,12 @@ class CustomValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Custom_Field_Value
         fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        depth = 1
+        
+class CustomValueSerializerNoItem(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
         depth = 1
 
 class TagSerializer(serializers.ModelSerializer):
