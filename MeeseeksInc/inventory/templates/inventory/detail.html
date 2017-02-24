@@ -368,6 +368,7 @@
 {#################### Log table #####################}
 <br><br><br>
 <button id='togglebutton'>Show/hide log</button>
+<br>
 <div id='logtable_toggle'>
 	<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
 	{% block js %}
@@ -447,6 +448,7 @@ function (settings, data, dataIndex) {
 		$('#startdate').change(function () {
 	    	table.fnDraw();
 		});
+		document.getElementById('logtable_toggle').style.display='none';
 	});
 	
 	var button = document.getElementById('togglebutton');
