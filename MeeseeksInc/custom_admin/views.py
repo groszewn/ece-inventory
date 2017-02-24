@@ -31,9 +31,6 @@ def staff_check(user):
 def admin_check(user):
     return user.is_superuser
     
-
-
-
 # from inventory.models import Instance, Request, Item, Disbursement
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -399,8 +396,7 @@ def edit_permission(request, pk):
     user = User.objects.get(username = pk)
     if request.method == "POST":
         form = UserPermissionEditForm(request.POST or None, instance=user)
-        if form.is_valid():
-            
+        if form.is_valid():       
             form.save()
             Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))

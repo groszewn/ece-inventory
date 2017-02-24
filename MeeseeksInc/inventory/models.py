@@ -17,7 +17,7 @@ class Item(models.Model):
     quantity = models.SmallIntegerField(null=False)
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=400, null=True)
-    tags = models.ManyToManyField(Tag, related_name='items')
+    tags = models.ManyToManyField(Tag, related_name='items', null=True)
     def __str__(self):
         return self.item_name
  

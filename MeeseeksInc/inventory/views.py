@@ -211,6 +211,9 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
                 item = cart_instance.item
                 item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
+                Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
+                        affected_user=None, change_occurred="Requested " + str(item_request.request_quantity))
+
          
         # DELETE ALL CART INSTANCES
         for cart_instance in self.get_queryset():
@@ -298,7 +301,6 @@ def edit_request(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            print("IM HERE")
             Log.objects.create(request_id=instance.request_id, item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             return redirect('/')
@@ -358,6 +360,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     post.time_requested = timezone.localtime(timezone.now())
                     post.save()
                     messages.success(request, ('Successfully edited ' + indiv_request.item_name.item_name + '.'))
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(indiv_request.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(item.item_name))
                     return redirect('/request_detail/' + pk)
                 if 'approve' in request.POST:
                     if item.quantity >= indiv_request.request_quantity:
@@ -373,15 +377,21 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
                         disbursement.save()
+                        Log.objects.create(request_id=disbursement.disburse_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(dibursement.admin_name), nature_of_event='Disburse', 
+                                         affected_user=str(disbursement.user_name), change_occurred="Disbursed " + str(disbursement.total_quantity))
                         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     else:
                         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 if 'deny' in request.POST:
                     indiv_request.status = "Denied"
                     indiv_request.save()
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(item.item_name))
                     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 if 'cancel' in request.POST:
                     instance = Request.objects.get(request_id=pk)
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Delete', 
+                             affected_user=None, change_occurred="Cancelled request for " + str(item.item_name))
                     Request.objects.get(request_id=pk).delete()
                     messages.success(request, ('Canceled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     return redirect('/')
@@ -393,6 +403,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
     def test_func(self):
         return self.request.user.is_active
 
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
 def approve_request(self, request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     item = Item.objects.get(item_id=indiv_request.item_name_id)
@@ -409,6 +421,8 @@ def approve_request(self, request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
+        Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Disburse', 
+                                     affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -419,7 +433,7 @@ def approve_request(self, request, pk):
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     Log.objects.create(request_id = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
-                                         affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
+                                         affected_user=None, change_occurred="Cancelled request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
     return redirect('/')
@@ -518,6 +532,11 @@ class APIItemList(ListCreateAPIView):
         serializer = ItemSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            item=serializer.data
+            id=item['item_id']
+            name=item['item_name']
+            Log.objects.create(request_id=None, item_id=id, item_name = name, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user=None, change_occurred="Created item " + str(name))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
