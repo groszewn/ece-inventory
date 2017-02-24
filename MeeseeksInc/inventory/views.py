@@ -45,7 +45,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -110,10 +110,8 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
     context_object_name = 'request_list'
     context_object_name = 'custom_fields'
     context_object_name = 'custom_vals'
-    context_object_name = 'current_user'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
-    
         
     def get_context_data(self, **kwargs):
         context = super(DetailView, self).get_context_data(**kwargs)
@@ -132,7 +130,6 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
-        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, *args, **kwargs):
@@ -306,34 +303,10 @@ def edit_request(request, pk):
             post.save()
             Log.objects.create(request_id=instance.request_id, item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
-            return redirect('/item/' + item.item_id)
-    else:
-        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
-    return render(request, 'inventory/request_edit.html', {'form': form})
-  
-@login_required(login_url='/login/')
-@user_passes_test(active_check, login_url='/login/')
-def edit_request_main_page(request, pk):
-    instance = Request.objects.get(request_id=pk)
-    if request.method == "POST":
-        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
-        if form.is_valid():
-            messages.success(request, 'You just edited the request successfully.')
-            post = form.save(commit=False)
-#             post.item_id = form['item_field'].value()
-#             post.item_name = Item.objects.get(item_id = post.item_id)
-            post.status = "Pending"
-            post.time_requested = timezone.now()
-            post.save()
-            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
             return redirect('/')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
     return render(request, 'inventory/request_edit.html', {'form': form})
-  
   
 # class ResultsView(LoginRequiredMixin, generic.DetailView):
 #     login_url = "/login/"
@@ -367,13 +340,11 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
     form_class = AdminRequestEditForm
     context_object_name = 'form'
     context_object_name = 'request'
-    context_object_name = 'current_user'
     
     def get_context_data(self, **kwargs):
         context = super(request_detail, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['request'] = self.get_object()
-        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, pk):
@@ -506,6 +477,28 @@ def get_api_token(request):
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
     
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def edit_request_main_page(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
+            post = form.save(commit=False)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+            item = instance.item_name
+            return redirect('/')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
+    
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
 ###########################################################################################
@@ -536,6 +529,7 @@ class APIItemList(ListCreateAPIView):
     model = Item
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
+    custom_value_serializer = CustomValueSerializer
     filter_class = ItemFilter
     
     def get_queryset(self):
@@ -566,10 +560,11 @@ class APIItemList(ListCreateAPIView):
             item_name=data['item_name']
             Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
                        affected_user=None, change_occurred="Created item " + str(name))
-            name = request.query_params.get('item_name')
+            name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
+           
             for field in Custom_Field.objects.all():
-                value = request.query_params.get(field,None)
+                value = request.data.get(field.field_name,None)
                 if value is not None:
                     custom_val = Custom_Field_Value(item=item, field=field)
                     if field.field_type == 'Short':    
@@ -587,9 +582,9 @@ class APIItemList(ListCreateAPIView):
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
-            
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class APIItemDetail(APIView):
     """
@@ -627,7 +622,7 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(name))
             for field in Custom_Field.objects.all():
-                value = request.query_params.get(field,None)
+                value = request.data.get(field.field_name,None)
                 if value is not None:
                     if Custom_Field_Value.objects.filter(item = item, field = field).exists():
                         custom_val = Custom_Field_Value.objects.get(item = item, field = field)
@@ -638,16 +633,17 @@ class APIItemDetail(APIView):
                     if field.field_type == 'Long':
                         custom_val.field_value_long_text = value
                     if field.field_type == 'Int':
-                        if field_value != '':
+                        if value != '':
                             custom_val.field_value_integer = value
                         else:
                             custom_val.field_value_integer = None
                     if field.field_type == 'Float':
-                        if field_value != '':
+                        if value != '':
                             custom_val.field_value_floating = value 
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
+                    
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -866,18 +862,31 @@ class APITagList(APIView):
     pass
 '''
     List all Disbursements (for yourself if user, all if admin)
+<<<<<<< HEAD
 =======
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
     """
+=======
+>>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
     """
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
         serializer = TagSerializer(Tag.objects.all(), many=True)
         return Response(serializer.data)
-=======
+
+
+########################################## Custom Field ###########################################    
+class APICustomField(APIView):
+
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
         if self.request.user.is_staff:
             fields = Custom_Field.objects.all()
             serializer = CustomFieldSerializer(fields, many=True)
@@ -888,17 +897,24 @@ class APICustomField(APIView):
             return Response(serializer.data)   
         
     def post(self, request, format=None):
-        serializer = Custom_Field_Serializer(data=request.data)
+        serializer = CustomFieldSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
 >>>>>>> a8d6e7518efad3d049a65198e1966e519d9dfeef
     
+=======
+
+>>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
 class APICustomFieldModify(APIView):
+
+    permission_classes = (IsAdminOrUser,)
 
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+<<<<<<< HEAD
 ''' 

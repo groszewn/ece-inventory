@@ -37,7 +37,7 @@ urlpatterns = [
     url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
     url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', views.APIDirectDisbursement.as_view()),
     url(r'^api/users/create/$', views.APICreateNewUser.as_view()),
+    url(r'^api/custom/field/$', views.APICustomField.as_view()),
+    url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
-    #url(r'^api/custom/field/$', views.APICustomField.as_view()),
-    #url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
 ]
