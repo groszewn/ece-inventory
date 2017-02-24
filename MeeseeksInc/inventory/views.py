@@ -46,7 +46,8 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, LogSerializer
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
+    LogSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -111,6 +112,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
     context_object_name = 'request_list'
     context_object_name = 'custom_fields'
     context_object_name = 'custom_vals'
+    context_object_name = 'log_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
         
@@ -131,6 +133,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         return context
     
     def post(self, request, *args, **kwargs):
@@ -212,6 +215,9 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
                 item = cart_instance.item
                 item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
+                Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
+                        affected_user=None, change_occurred="Requested " + str(item_request.request_quantity))
+
          
         # DELETE ALL CART INSTANCES
         for cart_instance in self.get_queryset():
@@ -300,7 +306,7 @@ def edit_request(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+            Log.objects.create(request_id=instance.request_id, item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             return redirect('/')
     else:
@@ -325,7 +331,7 @@ def post_new_request(request):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
+            Log.objects.create(request_id = post.request_id,item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
                                          affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
             return redirect('/')
     else:
@@ -359,6 +365,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     post.time_requested = timezone.localtime(timezone.now())
                     post.save()
                     messages.success(request, ('Successfully edited ' + indiv_request.item_name.item_name + '.'))
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(indiv_request.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(item.item_name))
                     return redirect('/request_detail/' + pk)
                 if 'approve' in request.POST:
                     if item.quantity >= indiv_request.request_quantity:
@@ -374,15 +382,21 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
                         disbursement.save()
+                        Log.objects.create(request_id=disbursement.disburse_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(disbursement.admin_name), nature_of_event='Disburse', 
+                                         affected_user=str(disbursement.user_name), change_occurred="Disbursed " + str(disbursement.total_quantity))
                         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     else:
                         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 if 'deny' in request.POST:
                     indiv_request.status = "Denied"
                     indiv_request.save()
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(item.item_name))
                     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 if 'cancel' in request.POST:
                     instance = Request.objects.get(request_id=pk)
+                    Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Delete', 
+                             affected_user=None, change_occurred="Cancelled request for " + str(item.item_name))
                     Request.objects.get(request_id=pk).delete()
                     messages.success(request, ('Canceled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     return redirect('/')
@@ -394,6 +408,8 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
     def test_func(self):
         return self.request.user.is_active
 
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
 def approve_request(self, request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     item = Item.objects.get(item_id=indiv_request.item_name_id)
@@ -410,6 +426,8 @@ def approve_request(self, request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
+        Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Disburse', 
+                                     affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -419,8 +437,8 @@ def approve_request(self, request, pk):
 @user_passes_test(active_check, login_url='login/')  
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
-    Log.objects.create(reference_id = str(instance.request_id), item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
-                                         affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
+    Log.objects.create(request_id = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
+                                         affected_user=None, change_occurred="Cancelled request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
     return redirect('/')
@@ -440,7 +458,7 @@ def request_specific_item(request, pk):
             
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
             request_id = specific_request.request_id
-            Log.objects.create(reference_id=request_id,item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
+            Log.objects.create(request_id=request_id,item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
                                          affected_user=None, change_occurred="Requested " + str(quantity))
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
@@ -463,6 +481,28 @@ def get_api_token(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
+    
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def edit_request_main_page(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
+            post = form.save(commit=False)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+            item = instance.item_name
+            return redirect('/')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
     
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
@@ -494,6 +534,7 @@ class APIItemList(ListCreateAPIView):
     model = Item
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
+    custom_value_serializer = CustomValueSerializer
     filter_class = ItemFilter
     
     def get_queryset(self):
@@ -519,8 +560,35 @@ class APIItemList(ListCreateAPIView):
         serializer = ItemSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data=serializer.data
+            item_id=data['item_id']
+            item_name=data['item_name']
+            Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user=None, change_occurred="Created item " + str(item_name))
+            name = request.data.get('item_name',None)
+            item = Item.objects.get(item_name = name)
+            for field in Custom_Field.objects.all():
+                value = request.data.get(field.field_name,None)
+                if value is not None:
+                    custom_val = Custom_Field_Value(item=item, field=field)
+                    if field.field_type == 'Short':    
+                        custom_val.field_value_short_text = value
+                    if field.field_type == 'Long':
+                        custom_val.field_value_long_text = value
+                    if field.field_type == 'Int':
+                        if value != '':
+                            custom_val.field_value_integer = value
+                        else:
+                            custom_val.field_value_integer = None
+                    if field.field_type == 'Float':
+                        if value != '':
+                            custom_val.field_value_floating = value 
+                        else:
+                            custom_val.field_value_floating = None
+                    custom_val.save()
+                    
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class APIItemDetail(APIView):
     """
@@ -545,14 +613,48 @@ class APIItemDetail(APIView):
 
     def put(self, request, pk, format=None):
         item = self.get_object(pk)
+        starting_quantity = item.quantity
         serializer = ItemSerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            data = serializer.data
+            quantity=data['quantity']
+            if quantity!=starting_quantity:    
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+            else:
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited " + str(item.item_name))
+            for field in Custom_Field.objects.all():
+                value = request.data.get(field.field_name,None)
+                if value is not None:
+                    if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                        custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                    else:
+                        custom_val = Custom_Field_Value(item=item, field=field)
+                    if field.field_type == 'Short':    
+                        custom_val.field_value_short_text = value
+                    if field.field_type == 'Long':
+                        custom_val.field_value_long_text = value
+                    if field.field_type == 'Int':
+                        if value != '':
+                            custom_val.field_value_integer = value
+                        else:
+                            custom_val.field_value_integer = None
+                    if field.field_type == 'Float':
+                        if value != '':
+                            custom_val.field_value_floating = value 
+                        else:
+                            custom_val.field_value_floating = None
+                    custom_val.save()
+                    
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         item = self.get_object(pk)
+        Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -597,14 +699,17 @@ class APIRequestDetail(APIView):
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
+                Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
                 return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
+            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Cancelled request for " + str(indiv_request.item_name))
             indiv_request.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
@@ -622,6 +727,12 @@ class APIRequestThroughItem(APIView):
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
+            item = Item.objects.get(item_id=pk)
+            data=serializer.data
+            id=data['request_id']
+            quantity=data['request_quantity']
+            Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
+                       affected_user=None, change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -650,9 +761,10 @@ class APIApproveRequest(APIView):
             disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
-            
             if serializer.is_valid():
                 serializer.save(status="Approved")
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -677,6 +789,8 @@ class APIDenyRequest(APIView):
         serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(status="Denied")
+            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
+                       affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -720,6 +834,11 @@ class APIDirectDisbursement(APIView):
                 item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
                 serializer.save(item_name=item_to_disburse)
+                data = serializer.data
+                recipient=data['user_name']
+                quantity = data['total_quantity']
+                Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=recipient, change_occurred="Disbursed " + str(quantity))
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -736,6 +855,9 @@ class APICreateNewUser(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            username=serializer.data['username']
+            Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -795,3 +917,40 @@ class APILogList(APIView):
         """
         assert self.paginator is not None
         return self.paginator.get_paginated_response(data)
+
+########################################## Custom Field ###########################################    
+class APICustomField(APIView):
+
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        if self.request.user.is_staff:
+            fields = Custom_Field.objects.all()
+            serializer = CustomFieldSerializer(fields, many=True)
+            return Response(serializer.data)
+        else:
+            fields = Custom_Field.objects.filter(is_private = False)
+            serializer = CustomFieldSerializer(fields, many=True)
+            return Response(serializer.data)   
+        
+    def post(self, request, format=None):
+        serializer = CustomFieldSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            data=serializer.data
+            field=data['field_name']
+            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user=None, change_occurred='Added custom field ' + str(field))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class APICustomFieldModify(APIView):
+
+    permission_classes = (IsAdminOrUser,)
+
+    def delete(self, request, pk, format=None):
+        field = Custom_Field.objects.get(id = pk)
+        Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
+        field.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

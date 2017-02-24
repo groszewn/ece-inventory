@@ -31,9 +31,6 @@ def staff_check(user):
 def admin_check(user):
     return user.is_superuser
     
-
-
-
 # from inventory.models import Instance, Request, Item, Disbursement
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -64,6 +61,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['custom_fields'] = Custom_Field.objects.all()
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['user_list'] = User.objects.all()
+        context['current_user'] = self.request.user.username
         # And so on for more models
         return context
     def get_queryset(self):
@@ -78,14 +76,19 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     template_name = 'custom_admin/log.html'
     context_object_name = 'log_list'
     context_object_name = 'request_list'
+    context_object_name = 'item_list'
     def get_context_data(self, **kwargs):
         context = super(LogView, self).get_context_data(**kwargs)
         context['log_list'] = Log.objects.all()
-        lst = []
+        request_lst = []
+        item_lst = []
         for log in Log.objects.all():
-            if log.nature_of_event == "Request" and Request.objects.filter(request_id=log.reference_id).exists():
-                lst.append(log.reference_id)
-        context['request_list'] = lst
+            if log.nature_of_event == "Request" and Request.objects.filter(request_id=log.request_id).exists():
+                request_lst.append(log.request_id)
+            if Item.objects.filter(item_id=log.item_id).exists():
+                item_lst.append(log.item_id)
+        context['request_list'] = request_lst
+        context['item_list'] = item_lst
         return context
         
     def get_queryset(self):
@@ -119,7 +122,7 @@ def add_custom_field(request):
         form = CustomFieldForm(request.POST)
         if form.is_valid():
             form.save()
-            Log.objects.create(reference_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
+            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
                                affected_user=None, change_occurred='Added custom field ' + str(form['field_name'].value()))
             return redirect(reverse('custom_admin:index'))
     else:
@@ -136,9 +139,9 @@ def delete_custom_field(request):
             if pickedFields:
                 for field in pickedFields:
                     delField = Custom_Field.objects.get(field_name = field)
-                    delField.delete()
-                    Log.objects.create(reference_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
+                    Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
                                        affected_user=None, change_occurred='Deleted custom field ' + str(field))
+                    delField.delete()
             return redirect(reverse('custom_admin:index'))
     else:
         form = DeleteFieldForm(fields)
@@ -156,7 +159,7 @@ def register_page(request):
             else:
                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
-            Log.objects.create(reference_id = None, item_name=None, initiating_user=request.user, nature_of_event='Create', 
+            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Create', 
                                      affected_user=user.username, change_occurred="Created user")
             return HttpResponseRedirect('/customadmin')
         
@@ -167,6 +170,21 @@ def register_page(request):
     else:
         form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})
+
+class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'custom_admin/user_list.html'
+    context_object_name = 'user_list'
+    def get_context_data(self, **kwargs):
+        context = super(UserListView, self).get_context_data(**kwargs)
+        context['user_list'] = User.objects.all()
+        # And so on for more models
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
+    def test_func(self):
+        return self.request.user.is_staff
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -191,7 +209,7 @@ def add_comment_to_request_accept(request, pk):
                 disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                 disbursement.save()
-                Log.objects.create(reference_id=disbursement.disburse_id, item_name = item.item_name, initiating_user=request.user.username, 
+                Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
@@ -218,10 +236,10 @@ def edit_item_module(request, pk):
             item.save()
             messages.success(request, ('Successfully Saved Item Changes.'))
             if int(quantity)!=starting_quantity:    
-                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
                                          affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
             else:
-                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(name))
             return redirect(reverse('custom_admin:index'))
             #form.save()
@@ -241,7 +259,8 @@ def add_comment_to_request_deny(request, pk):
             indiv_request.status = "Denied"
             indiv_request.comment = comment
             indiv_request.save()
-            Log.objects.create(reference_id = str(indiv_request.request_id), item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+            id = indiv_request.item_name.item_id
+            Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
@@ -268,7 +287,7 @@ def post_new_disburse(request):
                 quant_change = int(form['total_quantity'].value())
                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
                 item.save()
-                Log.objects.create(item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
@@ -305,7 +324,7 @@ def approve_all_requests(request):
             disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
-            Log.objects.create(reference_id = str(item.item_id), item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+            Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
                        affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -335,7 +354,7 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
-        Log.objects.create(reference_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+        Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
@@ -352,13 +371,13 @@ def edit_item(request, pk):
     custom_vals = Custom_Field_Value.objects.filter(item = item)
     original_quantity = item.quantity
     if request.method == "POST":
-        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
-                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
                                          affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
-                Log.objects.create(reference_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
@@ -384,7 +403,7 @@ def edit_item(request, pk):
                 custom_val.save()
             return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(custom_fields, custom_vals, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -393,9 +412,9 @@ def edit_permission(request, pk):
     user = User.objects.get(username = pk)
     if request.method == "POST":
         form = UserPermissionEditForm(request.POST or None, instance=user)
-        if form.is_valid():
+        if form.is_valid():       
             form.save()
-            Log.objects.create(reference_id = None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
+            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
             return redirect('/customadmin')
     else:
@@ -434,8 +453,6 @@ def add_tags(request, pk):
             for ittag in item_tags:
                 ittag.tag = form[ittag.tag].value()
                 ittag.save()
-            Log.objects.create(reference_id=None, item_name = item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                               affected_user=None, change_occurred="Added tags to " + str(item.item_name))
             return redirect('/item/' + pk)
     else:
         item = Item.objects.get(item_id = pk)
@@ -456,7 +473,7 @@ def log_item(request):
             amount = int(form['item_amount'].value())
             if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
-                Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
                                    affected_user=None, change_occurred="Acquired " + str(amount))
                 item.save()
                 messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
@@ -464,7 +481,7 @@ def log_item(request):
                 if item.quantity >= amount:
                     item.quantity = F('quantity')-amount
                     item.save()
-                    Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
                                        affected_user=None, change_occurred="Broke " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
@@ -474,7 +491,7 @@ def log_item(request):
                 if item.quantity >= amount:
                     item.quantity = F('quantity')-amount
                     item.save()
-                    Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
                                        affected_user=None, change_occurred="Lost " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
@@ -492,8 +509,6 @@ def edit_tag(request, pk, item):
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
-            Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                               affected_user=None, change_occurred="Edited tag on item " + str(item.item_name))
             form.save()
             return redirect('/item/' + item.item_id)
     else:
@@ -504,9 +519,9 @@ def edit_tag(request, pk, item):
 @user_passes_test(admin_check, login_url='/login/')
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
-    item.delete()
-    Log.objects.create(reference_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+    Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
                        affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+    item.delete()
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -515,9 +530,7 @@ def delete_tag(request, pk, item):
     item = Item.objects.get(item_id=item)
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    Log.objects.create(item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted tag " + str(tag.tag))
-    return redirect('/item/' + item.item_id)
+    return redirect('/item/' + tag.item_name.item_id)
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -533,7 +546,7 @@ def create_new_item(request):
             post.save()
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
-            Log.objects.create(reference_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
+            Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
                        affected_user=None, change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
@@ -579,7 +592,8 @@ def deny_request(request, pk):
     indiv_request = Request.objects.get(request_id=pk)
     indiv_request.status = "Denied"
     indiv_request.save()
-    Log.objects.create(reference_id = str(indiv_request.request_id), item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+    id = indiv_request.item_name.item_id
+    Log.objects.create(request_id=indiv_request.request_id, item_id=id,  item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
@@ -593,7 +607,8 @@ def deny_all_request(request):
         return redirect(reverse('custom_admin:index'))
     for indiv_request in pending_requests:
         indiv_request.status = "Denied"
-        Log.objects.create(reference_id = str(indiv_request.request_id), item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+        id = indiv_request.item_name.item_id
+        Log.objects.create(request_id =indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
         indiv_request.save()
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -631,8 +646,8 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         post.time_disbursed = timezone.localtime(timezone.now())
         post.save()
         disbursement = Disbursement.objects.get(item_name = post.item_name)
-        Log.objects.create(reference_id = str(disbursement.disburse_id), item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Disburse', 
-                                         affected_user=disbursement.user_name, change_occurred="Directly disbursed " + str(disbursement.total_quantity))
+        Log.objects.create(request_id=None, item_id=post.item_name.item_id, item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Disburse', 
+                                         affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         return super(DisburseFormView, self).form_valid(form)

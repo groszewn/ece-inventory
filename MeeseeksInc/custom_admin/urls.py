@@ -40,5 +40,6 @@ urlpatterns = [
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
+    url(r'^users/$', views.UserListView.as_view(), name='user_page'),
     url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete')
 ]

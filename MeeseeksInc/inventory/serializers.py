@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import serializers
 
-from inventory.models import Item, Tag, Request, Disbursement, Log
+from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
+    Log
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -66,6 +67,16 @@ class ItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Item quantity needs to be greater than 0")
         return value
 
+class CustomFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field
+        fields = ('id','field_name','is_private','field_type')
+        
+class CustomValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -88,7 +99,7 @@ class RequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
+        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -108,7 +119,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive

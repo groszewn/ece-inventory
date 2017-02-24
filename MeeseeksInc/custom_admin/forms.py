@@ -55,15 +55,17 @@ class AdminRequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'reason','comment')
 
 class RequestEditForm(forms.ModelForm):
-    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason','comment')
+        fields = ('request_quantity', 'reason')
          
 class ItemEditForm(forms.ModelForm):
-    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
         super(ItemEditForm, self).__init__(*args, **kwargs)
+        if not user.is_superuser and user.is_staff:
+            self.fields['quantity'].widget.attrs['readonly'] = True
+            #quantity=forms.IntegerField(min_value=0, disabled=True, required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -83,9 +85,9 @@ class ItemEditForm(forms.ModelForm):
                         self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
-    quantity = forms.IntegerField(min_value=0)
+    #quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description')
@@ -94,6 +96,12 @@ class UserPermissionEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active')
+        
+    def clean(self):
+        cleaned_data = super(UserPermissionEditForm, self).clean()
+        if cleaned_data['is_superuser']:
+            cleaned_data['is_staff'] = True
+        return cleaned_data
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
@@ -135,7 +143,7 @@ class CreateItemForm(forms.ModelForm):
     new_tags = forms.CharField(required=False)
     location = forms.CharField(required=False)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
     class Meta:
         model = Item

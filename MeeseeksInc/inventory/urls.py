@@ -24,6 +24,7 @@ urlpatterns = [
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel'),
     url(r'^(?P<pk>[\w\-\ ]+)/approve/$', views.approve_request, name='request_approve'),
     url(r'^inventory_cart/delete/(?P<pk>[\w\-\ ]+)/$', views.delete_cart_instance, name='delete_cart_instance'),
+    url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
     
     ################################### API URLS #######################################
     url(r'^api/items/$', views.APIItemList.as_view(), name='api_item_list'),
@@ -36,6 +37,8 @@ urlpatterns = [
     url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
     url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', views.APIDirectDisbursement.as_view()),
     url(r'^api/users/create/$', views.APICreateNewUser.as_view()),
+    url(r'^api/custom/field/$', views.APICustomField.as_view()),
+    url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
 ]

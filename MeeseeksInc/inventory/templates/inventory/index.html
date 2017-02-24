@@ -166,7 +166,7 @@
 							<td>{{ request.comment }}</td>
 							<td>{{ request.time_requested }}</td>
 							<td>
-								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 							</td>
 						</tr>
@@ -211,7 +211,7 @@
 		</div>
 	{% endif %}
 	
-	<a class="btn btn-default" href="{% url 'inventory:post_new_request' %}" role="button">Request an Item</a>
+	<a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request an Item</a>
 	
 	{% if disbursed_list %}
 		<h2>Disbursed to you</h2>
