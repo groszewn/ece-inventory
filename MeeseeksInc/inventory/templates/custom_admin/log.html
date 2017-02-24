@@ -87,7 +87,8 @@ function (settings, data, dataIndex) {
 
 	$(document).ready(function(){
 	    var table = $('#log-table').dataTable({
-	        "order": [[ 5, "desc" ]],
+	        	"order": [[ 5, "desc" ]]
+	        });
 	        //"serverSide": true,
 		    //"processing": true,
 		    //"paging": true,
@@ -106,7 +107,7 @@ function (settings, data, dataIndex) {
 		        //    console.log(json);
        			//}
        		//}
-	    });
+	    	//);
 		$('#startdate').change(function () {
 	    	table.fnDraw();
 		});
