@@ -139,9 +139,9 @@ def delete_custom_field(request):
             if pickedFields:
                 for field in pickedFields:
                     delField = Custom_Field.objects.get(field_name = field)
-                    delField.delete()
                     Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
                                        affected_user=None, change_occurred='Deleted custom field ' + str(field))
+                    delField.delete()
             return redirect(reverse('custom_admin:index'))
     else:
         form = DeleteFieldForm(fields)

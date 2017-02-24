@@ -889,6 +889,10 @@ class APICustomField(APIView):
         serializer = CustomFieldSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            data=serializer.data
+            field=data['field_name']
+            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user=None, change_occurred='Added custom field ' + str(field))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -898,5 +902,7 @@ class APICustomFieldModify(APIView):
 
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
+        Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

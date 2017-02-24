@@ -48,7 +48,7 @@ $(function(){
 					<td>{{ instance.initiating_user }}</td>
 					{% if instance.item_id in item_list %}
 						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>
-					{% elif instance.item_name == None%}
+					{% elif instance.item_name == None or instance.item_name == "ALL"%}
 						<td>{{instance.item_name}}</td>
 					{% else %}
 						<td>{{ instance.item_name }} (Deleted)</td>
