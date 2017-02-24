@@ -51,7 +51,7 @@
 		{{form.reason.label}}:{{ form.reason}}
 		<br/>
 		<br/>
-		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
+		<button type="submit" class="btn btn-primary btn-md" value="Edit" onclick="return confirm('Are you sure you want to edit this tag?')" name="edit">Submit Request Edits</button>
 		<br/>
 		<br/>
 		{% if user.is_staff %}
@@ -64,8 +64,8 @@
 		<br/>
 		<button type="submit" class="btn btn-success btn-md" onclick="return confirm('Are you sure you want to APPROVE this request?')" value="Approve" name="approve">Approve Request</button>
 		<button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to DENY this request?')" value="Deny" name="deny">Deny Request</button>
-		{%endif%} 
-		{% if user.is_superuser or user.username == request.user_id%}
+		{%endif%}
+		{% if request.user_id == current_user%}
 		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
 		{% endif %}
 	</form>

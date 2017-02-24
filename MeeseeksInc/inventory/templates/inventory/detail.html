@@ -89,8 +89,8 @@
 					<td>{{ oneTag.id }}</td>
 					{% if user.is_staff %}
 					<td>						
-		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>
-		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
+		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' oneTag.id %}" class="btn btn-primary btn-sm">Edit Tag</a>
+		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' oneTag.id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-danger btn-sm">Delete Tag</a>
 		 			</td> 
 		 			{% endif %}
 				</tr>
@@ -128,10 +128,15 @@
 <button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
 {% endif %} 
 
-{% if user.is_superuser %} 
-<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-primary btn-md">Delete Item</button>
+{% block tag_item %}
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
+{% endblock tag_item %}
 	
-{% endif %}
+	{% if user.is_superuser %}
+	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+	{% endif %}
+
+	
 </div>
 
 <br/>
@@ -180,19 +185,12 @@
 									{% endblock comment_accept %}
 									{% block comment_deny %}
 									<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
-									{% endblock comment_deny %}
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-								{% else %}
-									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-									<script>
-										function clickEvent2() {
-										window.location='{%url 'inventory:request_edit' request.request_id %}';
-									}
-									</script>
-	
-									<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
+									{% endblock comment_deny %}	
 								{% endif %}
+									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-primary">Edit</a>
+									{% if request.user_id == current_user%}
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									{% endif %}
 							</td>
 						</tr>
 					{% endfor %}

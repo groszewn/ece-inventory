@@ -238,8 +238,10 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
+								{% if request.user_id == current_user%}
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+								{% endif %}
 							</td>
 						</tr>
 					{% endfor %}
@@ -293,6 +295,8 @@
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 
+	<a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request An Item</a>
+	
 {########################## DISBURSEMENTS #####################}
 	{% if disbursed_list %}
 		<h2>Disbursed by you</h2>

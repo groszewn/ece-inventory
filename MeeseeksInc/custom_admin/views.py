@@ -61,6 +61,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['custom_fields'] = Custom_Field.objects.all()
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['user_list'] = User.objects.all()
+        context['current_user'] = self.request.user.username
         # And so on for more models
         return context
     def get_queryset(self):
