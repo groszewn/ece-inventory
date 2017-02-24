@@ -863,11 +863,14 @@ class APICreateNewUser(APIView):
 
 ########################################### Tags ##################################################
 class APITagList(APIView):
-    """
+    pass
+'''
     List all Disbursements (for yourself if user, all if admin)
 =======
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
+    """
+    """
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
@@ -898,4 +901,4 @@ class APICustomFieldModify(APIView):
         field = Custom_Field.objects.get(id = pk)
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+''' 

@@ -171,6 +171,21 @@ def register_page(request):
         form = RegistrationForm()
     return render(request, 'custom_admin/register_user.html', {'form': form})
 
+class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
+    login_url = "/login/"
+    template_name = 'custom_admin/user_list.html'
+    context_object_name = 'user_list'
+    def get_context_data(self, **kwargs):
+        context = super(UserListView, self).get_context_data(**kwargs)
+        context['user_list'] = User.objects.all()
+        # And so on for more models
+        return context
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Instance.objects.order_by('item')[:5]
+    def test_func(self):
+        return self.request.user.is_staff
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_request_accept(request, pk):
