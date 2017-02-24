@@ -110,6 +110,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
     context_object_name = 'request_list'
     context_object_name = 'custom_fields'
     context_object_name = 'custom_vals'
+    context_object_name = 'log_list'
     template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
     form_class = AddToCartForm
         
@@ -130,6 +131,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         return context
     
     def post(self, request, *args, **kwargs):
@@ -562,7 +564,6 @@ class APIItemList(ListCreateAPIView):
                        affected_user=None, change_occurred="Created item " + str(name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
-           
             for field in Custom_Field.objects.all():
                 value = request.data.get(field.field_name,None)
                 if value is not None:
@@ -859,24 +860,12 @@ class APICreateNewUser(APIView):
 
 ########################################### Tags ##################################################
 class APITagList(APIView):
-    pass
-'''
-    List all Disbursements (for yourself if user, all if admin)
-<<<<<<< HEAD
-=======
-########################################## Custom Field ###########################################    
-class APICustomField(APIView):
     """
-=======
->>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
+    List all Disbursements (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
         serializer = TagSerializer(Tag.objects.all(), many=True)
         return Response(serializer.data)
 
@@ -902,12 +891,7 @@ class APICustomField(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-<<<<<<< HEAD
->>>>>>> a8d6e7518efad3d049a65198e1966e519d9dfeef
-    
-=======
 
->>>>>>> 51108c4383e9418ad21d03c5b0931757728ee65a
 class APICustomFieldModify(APIView):
 
     permission_classes = (IsAdminOrUser,)
@@ -916,5 +900,3 @@ class APICustomFieldModify(APIView):
         field = Custom_Field.objects.get(id = pk)
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-<<<<<<< HEAD
-''' 
