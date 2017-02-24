@@ -38,6 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
     
 class GetItemSerializer(serializers.ModelSerializer):
     requests_outstanding = serializers.SerializerMethodField('get_outstanding_requests')
+    values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
     def get_outstanding_requests(self, obj):
         user = self.context['request'].user
         item_id = self.context['pk']
@@ -48,10 +49,26 @@ class GetItemSerializer(serializers.ModelSerializer):
             outstanding_requests = Request.objects.filter(item_name=item_id, user_id=user.username, status="Pending")
         serializer = RequestSerializer(outstanding_requests, many=True)
         return serializer.data
+    
+    def get_custom_field_values(self, obj):
+        item_id = self.context['pk']
+        item = Item.objects.get(item_id = item_id)
+        user = self.context['request'].user
+        custom_values = []
+        if User.objects.get(username=user).is_staff:
+            custom_values = Custom_Field_Value.objects.filter(item = item)
+        else:
+            all_vals = Custom_Field_Value.objects.filter(item = item)
+            for val in all_vals:
+                if val.field.is_private:
+                    all_vals.remove(val)
+            custom_values = all_vals
+        serializer = CustomValueSerializer(custom_values, many=True)
+        return serializer.data
 
     class Meta:
         model = Item
-        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding', 'tags')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding','values_custom_field','tags')
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
