@@ -563,14 +563,25 @@ class APIItemDetail(APIView):
 
     def put(self, request, pk, format=None):
         item = self.get_object(pk)
+        starting_quantity = item.quantity
         serializer = ItemSerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            data = serializer.data
+            quantity=data['quantity']
+            if quantity!=starting_quantity:    
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+            else:
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited " + str(name))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         item = self.get_object(pk)
+        Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -615,14 +626,17 @@ class APIRequestDetail(APIView):
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
+                Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
                 return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
+            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user=None, change_occurred="Cancelled request for " + str(indiv_request.item_name))
             indiv_request.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
@@ -640,6 +654,12 @@ class APIRequestThroughItem(APIView):
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
+            data=serializer.data
+            id=data['request_id']
+            name=data['item_name']
+            quantity=data['request_quantity']
+            Log.objects.create(request_id=id, item_id=pk, item_name = name, initiating_user=request.user, nature_of_event="Request", 
+                       affected_user=None, change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -668,9 +688,10 @@ class APIApproveRequest(APIView):
             disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
-            
             if serializer.is_valid():
                 serializer.save(status="Approved")
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -695,6 +716,8 @@ class APIDenyRequest(APIView):
         serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(status="Denied")
+            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
+                       affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -738,6 +761,11 @@ class APIDirectDisbursement(APIView):
                 item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
                 serializer.save(item_name=item_to_disburse)
+                data = serializer.data
+                recipient=data['user_name']
+                quantity = data['total_quantity']
+                Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=recipient, change_occurred="Disbursed " + str(quantity))
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -754,6 +782,9 @@ class APICreateNewUser(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            username=serializer.data['username']
+            Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
