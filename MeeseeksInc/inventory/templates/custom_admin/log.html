@@ -49,8 +49,26 @@
  
  <script>
 	$(document).ready(function(){
-	    $('#log-table').dataTable({
-	        "order": [[ 5, "desc" ]]
+	    $('#log-table').DataTable({
+	        "order": [[ 5, "desc" ]],
+	        //"serverSide": true,
+		    //"processing": true,
+		    //"paging": true,
+		    //"searching": { "regex": true },
+		    //"ajax": {
+		    //    "type": "GET",
+		    //    "url": '{% url 'inventory:api_log_list' %}',
+		     //   "dataType": "json",
+		     //   "contentType": 'application/json; charset=utf-8',
+		        //"data": function() { 
+		        //			var info = $('#log-table').DataTable().page.info();
+		        //			return {'limit': 10,
+		        //		 			'offset': info*10};
+		        //		},
+		        //"success": function(json) {
+		        //    console.log(json);
+       			//}
+       		//}
 	    });
 
 	});

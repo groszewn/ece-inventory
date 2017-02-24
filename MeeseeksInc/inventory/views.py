@@ -32,6 +32,7 @@ from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
 from rest_framework import status, permissions, viewsets
+import rest_framework
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -45,7 +46,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer
+    GetItemSerializer, TagSerializer, LogSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -282,7 +283,8 @@ def check_login(request):
 @user_passes_test(active_check, login_url='/login/')
 def search_view(request):
     tags = Tag.objects.all()
-    return render(request, 'inventory/search.html', {'tags': tags})
+    custom_fields = Custom_Field.objects.filter(is_private=False)
+    return render(request, 'inventory/search.html', {'tags': tags, 'custom_fields': custom_fields})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -740,11 +742,56 @@ class APICreateNewUser(APIView):
 ########################################### Tags ##################################################
 class APITagList(APIView):
     """
-    List all Disbursements (for yourself if user, all if admin)
+    List all Tag (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
     
     def get(self, request, format=None):
         serializer = TagSerializer(Tag.objects.all(), many=True)
         return Response(serializer.data)
+
+########################################### Tags ##################################################
+class APILogList(APIView):
+    """
+    List all Logs (for admin -- add this!)
+    """
+    permission_classes = (IsAdminOrUser,)
+#     pagination_class = rest_framework.pagination.PageNumberPagination
+    pagination_class = rest_framework.pagination.LimitOffsetPagination
     
+    def get(self, request, format=None):
+#         if(User.objects.get(username=request.user).is_staff) 
+        page = self.paginate_queryset(Log.objects.all())
+        if page is not None:
+            serializer = LogSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = LogSerializer(Log.objects.all(), many=True)
+        return Response(serializer.data)
+    
+    @property
+    def paginator(self):
+        """
+        The paginator instance associated with the view, or `None`.
+        """
+        if not hasattr(self, '_paginator'):
+            if self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        return self._paginator
+
+    def paginate_queryset(self, queryset):
+        """
+        Return a single page of results, or `None` if pagination is disabled.
+        """
+        if self.paginator is None:
+            return None
+        return self.paginator.paginate_queryset(queryset, self.request, view=self)
+
+    def get_paginated_response(self, data):
+        """
+        Return a paginated style `Response` object for the given output data.
+        """
+        assert self.paginator is not None
+        return self.paginator.get_paginated_response(data)

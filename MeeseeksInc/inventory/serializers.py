@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import serializers
 
-from inventory.models import Item, Tag, Request, Disbursement
+from inventory.models import Item, Tag, Request, Disbursement, Log
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -70,7 +70,12 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ('tag',)
-        
+
+class LogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Log
+        fields = ('item_name', 'initiating_user', 'nature_of_event', 'time_occurred', 'affected_user', 'change_occurred',)
+    
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
         default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
