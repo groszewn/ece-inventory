@@ -2,6 +2,7 @@
 ############################# IMPORTS FOR ORIGINAL DJANGO ####################
 from datetime import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib import messages
 from django.contrib.auth import login
@@ -10,8 +11,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import User
 from django.db.models.expressions import F
+from django.db.models.signals import post_save
+from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory
+from django.forms.models import inlineformset_factory, modelformset_factory, \
+    ModelMultipleChoiceField
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
@@ -23,8 +27,14 @@ from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
+import django_filters
+from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -35,14 +45,13 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer
+    GetItemSerializer, TagSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
 from .models import Tag
-
 
 
 def active_check(user):
@@ -108,7 +117,8 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context = super(DetailView, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['item'] = self.get_object()
-        tags = Tag.objects.filter(item_name=self.get_object())
+#         tags = Tag.objects.filter(item_name=self.get_object())
+        tags = self.get_object().tags.all()
         if tags:
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
@@ -267,65 +277,12 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
-
+    
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
-def search_form(request):
-    if request.method == "POST":
-        tags = Tag.objects.all()
-        form = SearchForm(tags, request.POST)
-        if form.is_valid():
-            picked = form.cleaned_data.get('tags1')
-            excluded = form.cleaned_data.get('tags2')
-            keyword = form.cleaned_data.get('keyword')
-            modelnum = form.cleaned_data.get('model_number')
-            itemname = form.cleaned_data.get('item_name')
-             
-            keyword_list = []
-            for item in Item.objects.all():
-                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
-                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
-                    and ((itemname is "") or (itemname in item.item_name)) \
-                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
-                    keyword_list.append(item)
-             
-            excluded_list = []
-            for excludedTag in excluded:
-                tagQSEx = Tag.objects.filter(tag = excludedTag)
-                for oneTag in tagQSEx:
-                    excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-#              have list of all excluded items
-            included_list = []
-            for pickedTag in picked:
-                tagQSIn = Tag.objects.filter(tag = pickedTag)
-                for oneTag in tagQSIn:
-                    included_list.append(Item.objects.get(item_name = oneTag.item_name))
-            # have list of all included items
-             
-            final_list = []
-            item_list = Item.objects.all()
-            if not picked:
-                if excluded:
-                    final_list = [x for x in item_list if x not in excluded_list]
-            else:
-                final_list = [x for x in included_list if x not in excluded_list]
-             
-            # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
-            # for a less constrained search
-            # search_list = final_list + keyword_list
-            request_list = Request.objects.all()
-            return render(request,'inventory/search_result.html', {'item_list': item_list,'request_list': request_list,'search_list': set(search_list)})
-    else:
-        tags = Tag.objects.all()
-        form = SearchForm(tags)
-    return render(request, 'inventory/search.html', {'form': form})
+def search_view(request):
+    tags = Tag.objects.all()
+    return render(request, 'inventory/search.html', {'tags': tags})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -490,19 +447,70 @@ def request_specific_item(request, pk):
     return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
 
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        
+def get_api_token(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    messages.success(request, ('Successfully generated API access token: ' + token.key))
+    if user.is_staff:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    elif user.is_superuser:
+        return  HttpResponseRedirect(reverse('custom_admin:index'))
+    else:
+        return  HttpResponseRedirect(reverse('inventory:index'))
+    
 #################################### API VIEW CLASSES #####################################
 ###########################################################################################
 ###########################################################################################
-
 ########################################## Item ###########################################
-class APIItemList(APIView):
+class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    def filter(self, qs, value): # way to pass through data
+        return qs
+
+class ItemFilter(FilterSet):
+    included_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
+    excluded_tags = TagsMultipleChoiceFilter(
+        queryset = Tag.objects.all(),
+        name="tags", 
+    )
+    class Meta:
+        model = Item
+        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags']
+        
+
+class APIItemList(ListCreateAPIView):
     """
     List all Items, or create a new item (for admin only)
     """
     permission_classes = (IsAdminOrUser,)
+    model = Item
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+    filter_class = ItemFilter
+    
+    def get_queryset(self):
+        """ allow rest api to filter by submissions """
+        queryset = Item.objects.all()
+        included = self.request.query_params.getlist('included_tags')
+        excluded = self.request.query_params.getlist('excluded_tags')
+        if not included and excluded:
+            queryset = queryset.exclude(tags__in=excluded)
+        elif not excluded and included:
+            queryset = queryset.filter(tags__in=included)
+        elif excluded and included:    
+            tags = [x for x in included if x not in excluded]
+            queryset=queryset.filter(tags__in=tags)
+        return queryset
     
     def get(self, request, format=None):
-        items = Item.objects.all()
+        items = self.filter_queryset(self.get_queryset())
         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -729,5 +737,15 @@ class APICreateNewUser(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+########################################### Tags ##################################################
+class APITagList(APIView):
+    """
+    List all Disbursements (for yourself if user, all if admin)
+    """
+    permission_classes = (IsAdminOrUser,)
     
+    def get(self, request, format=None):
+        serializer = TagSerializer(Tag.objects.all(), many=True)
+        return Response(serializer.data)
     

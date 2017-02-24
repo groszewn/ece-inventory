@@ -1,3 +1,4 @@
+from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
@@ -20,6 +21,10 @@ from custom_admin.forms import UserPermissionEditForm
 from inventory.forms import SearchForm
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
+from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+
+
 def staff_check(user):
     return user.is_staff
 
@@ -27,8 +32,6 @@ def admin_check(user):
     return user.is_superuser
     
 
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 
 
 # from inventory.models import Instance, Request, Item, Disbursement
@@ -412,7 +415,8 @@ def add_tags(request, pk):
     if request.method == "POST":
         item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        item_tags = Tag.objects.filter(item_name = item)
+#         item_tags = Tag.objects.filter(item_name = item)
+        item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
@@ -420,15 +424,20 @@ def add_tags(request, pk):
             item = Item.objects.get(item_id=pk)
             if pickedTags:
                 for oneTag in pickedTags:
-                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                        t = Tag(item_name=item, tag=oneTag) 
+#                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag) 
                         t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
-                    if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
-                        t = Tag(item_name=item, tag=oneTag)
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag)
                         t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             for ittag in item_tags:
                 ittag.tag = form[ittag.tag].value()
                 ittag.save()
@@ -436,7 +445,7 @@ def add_tags(request, pk):
     else:
         item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
-        item_tags = Tag.objects.filter(item_name = item)
+        item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags)
     return render(request, 'inventory/add_tags.html', {'form': form})
 
@@ -482,13 +491,14 @@ def log_item(request):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def edit_tag(request, pk):
+def edit_tag(request, pk, item):
     tag = Tag.objects.get(id=pk)
+    item = Item.objects.get(item_id=item)
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
             form.save()
-            return redirect('/item/' + tag.item_name.item_id)
+            return redirect('/item/' + item.item_id)
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
@@ -504,7 +514,8 @@ def delete_item(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def delete_tag(request, pk):
+def delete_tag(request, pk, item):
+    item = Item.objects.get(item_id=item)
     tag = Tag.objects.get(id=pk)
     tag.delete()
     return redirect('/item/' + tag.item_name.item_id)
@@ -527,13 +538,17 @@ def create_new_item(request):
                        affected_user=None, change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
-                    t = Tag(item_name=item, tag=oneTag)
+                    t = Tag(tag=oneTag)
                     t.save(force_insert=True)
+                    item.tags.add(t)
+                    item.save()
             if createdTags is not "":
                 tag_list = [x.strip() for x in createdTags.split(',')]
                 for oneTag in tag_list:
-                    t = Tag(item_name=item, tag=oneTag)
+                    t = Tag(tag=oneTag)
                     t.save()
+                    item.tags.add(t)
+                    item.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
                 custom_val = Custom_Field_Value(item=item, field=field)
@@ -625,70 +640,16 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
         return super(DisburseFormView, self).form_valid(form)
 
-def search_form(request):
-    if request.method == "POST":
-        tags = Tag.objects.all()
-        form = SearchForm(tags, request.POST)
-        if form.is_valid():
-            picked = form.cleaned_data.get('tags1')
-            excluded = form.cleaned_data.get('tags2')
-            keyword = form.cleaned_data.get('keyword')
-            modelnum = form.cleaned_data.get('model_number')
-            itemname = form.cleaned_data.get('item_name')
-            
-            keyword_list = []
-            for item in Item.objects.all():
-                if ((keyword is "") or ((keyword in item.item_name) or ((item.description is not None) and (keyword in item.description)) \
-                    or ((item.model_number is not None) and (keyword in item.model_number)) or ((item.location is not None) and (keyword in item.location)))) \
-                    and ((modelnum is "") or ((item.model_number is not None) and (modelnum in item.model_number))) \
-                    and ((itemname is "") or (itemname in item.item_name)) \
-                    and ((itemname is not "") or (modelnum is not "") or (keyword is not "")): 
-                    keyword_list.append(item)
-            
-            excluded_list = []
-            if excluded:
-                for excludedTag in excluded:
-                    tagQSEx = Tag.objects.filter(tag = excludedTag)
-                    for oneTag in tagQSEx:
-                        excluded_list.append(Item.objects.get(item_name = oneTag.item_name))
-             # have list of all excluded items
-            included_list = []
-            if picked:
-                for pickedTag in picked:
-                    tagQSIn = Tag.objects.filter(tag = pickedTag)
-                    for oneTag in tagQSIn:
-                        included_list.append(Item.objects.get(item_name = oneTag.item_name))
-            # have list of all included items
-            
-            final_list = []
-            item_list = Item.objects.all()
-            if not picked:
-                if excluded:
-                    final_list = [x for x in item_list if x not in excluded_list]
-            else:
-                final_list = [x for x in included_list if x not in excluded_list]
-            
-            # for a more constrained search
-            if not final_list:
-                search_list = keyword_list
-            elif not keyword_list:
-                search_list = final_list
-            else:
-                search_list = [x for x in final_list if x in keyword_list]
-            # for a less constrained search
-            # search_list = final_list + keyword_list
-            cursor = connection.cursor()
-            cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
-            raw_request_list = cursor.fetchall()
-            for raw_request in raw_request_list:
-                raw_request_ids = raw_request[1] # all the ids in this item
-                counter = 0
-                for request_ID in raw_request_ids:
-                    raw_request[1][counter] = Request.objects.get(request_id=request_ID)
-                    counter += 1
-            return render(request,'custom_admin/search_result.html', {'item_list': item_list,'request_list': raw_request_list,'search_list': set(search_list)})
-    else:
-        tags = Tag.objects.all()
-        form = SearchForm(tags)
-    return render(request, 'custom_admin/search.html', {'form': form})    
+class UserAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Don't forget to filter out results depending on the visitor !
+        if not self.request.user.is_authenticated():
+            return User.objects.none()
+
+        qs = User.objects.filter(is_staff="False")
+
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+
+        return qs  
 ################################################################

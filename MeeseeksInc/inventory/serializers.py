@@ -51,12 +51,12 @@ class GetItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'requests_outstanding')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding', 'tags')
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags')
     
     def validate_quantity(self, value):
         """
@@ -69,7 +69,7 @@ class ItemSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('item_name', 'tag')
+        fields = ('tag',)
         
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(

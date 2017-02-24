@@ -1,8 +1,12 @@
+from dal import autocomplete
 from django.conf.urls import url
- 
+
+from custom_admin.views import UserAutocomplete
+import inventory
+
 from . import views
-from django.contrib.auth.decorators import permission_required
- 
+
+
 #this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'custom_admin'  
@@ -28,12 +32,13 @@ urlpatterns = [
     url(r'^$', views.AdminIndexView.as_view(), name='index'),
     url(r'^log_item$', views.log_item, name='log_item'),
     url(r'^edit/item/tags/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='tags_module'),
-    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)$', views.edit_tag, name='edit_tag'),
+    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)$', views.edit_tag, name='edit_tag'),
     url(r'^add/tag/(?P<pk>[\w\-\ ]+)$', views.add_tags, name='add_tags'),
-    url(r'^delete/tag/(?P<pk>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
-    url(r'^search_setup/$', views.search_form, name='search_setup'),
+    url(r'^delete/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)$', views.delete_tag, name='delete_tag'),
+    url(r'^search/$', inventory.views.search_view, name='search_setup'),
     url(r'^add_custom_field/$', views.add_custom_field, name='add_custom_field'),
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
+    url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete')
 ]
