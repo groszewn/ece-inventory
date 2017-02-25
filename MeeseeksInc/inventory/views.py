@@ -593,7 +593,7 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
-        serializer = GetItemSerializer(item, context=context)
+        serializer = GetItemSerializerWithCustomValue(item, context=context)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
