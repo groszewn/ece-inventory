@@ -45,7 +45,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, GetItemSerializerWithCustomValue
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -533,7 +533,10 @@ class APIItemList(ListCreateAPIView):
     
     def get(self, request, format=None):
         items = self.filter_queryset(self.get_queryset())
-        serializer = ItemSerializer(items, many=True)
+        context = {
+            "request": self.request,
+            }
+        serializer = ItemSerializer(items, many=True, context=context)
         return Response(serializer.data)
 
     def post(self, request, format=None):
@@ -567,7 +570,7 @@ class APIItemList(ListCreateAPIView):
             "request": self.request,
             "pk": item.item_id,
             }        
-            serializer = GetItemSerializerWithCustomValue(item, data=request.data, partial=True, context=context)
+            serializer =  ItemSerializer(item, data=request.data, partial=True, context=context)
             if serializer.is_valid():
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
@@ -593,7 +596,7 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
-        serializer = GetItemSerializerWithCustomValue(item, context=context)
+        serializer = ItemSerializer(item, context=context)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
@@ -628,7 +631,7 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
             }        
-            serializer = GetItemSerializerWithCustomValue(item, data=request.data, partial=True, context=context)
+            serializer = ItemSerializer(item, data=request.data, partial=True, context=context)
             
             if serializer.is_valid():
                 return Response(serializer.data)
