@@ -23,7 +23,7 @@ from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Cu
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
-
+from inventory.forms import RequestForm, RequestEditForm
 
 def staff_check(user):
     return user.is_staff
@@ -31,8 +31,8 @@ def staff_check(user):
 def admin_check(user):
     return user.is_superuser
     
-
-
+def active_check(user):
+    return user.is_active
 
 # from inventory.models import Instance, Request, Item, Disbursement
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
@@ -249,6 +249,49 @@ def add_comment_to_request_deny(request, pk):
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def post_new_request(request):
+    if request.method == "POST":
+        form = RequestForm(request.POST) # create request-form with the data from the request 
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.item_id = form['item_field'].value()
+            post.item_name = Item.objects.get(item_id = post.item_id)
+            post.user_id = request.user.username
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
+                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+            messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
+            return redirect('/customadmin')
+    else:
+        form = RequestForm() # blank request form with no data yet
+    return render(request, 'inventory/request_create.html', {'form': form})
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def edit_request_main_page(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
+            post = form.save(commit=False)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+            item = instance.item_name
+            return redirect('/customadmin')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')

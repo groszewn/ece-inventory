@@ -133,10 +133,14 @@
 {% block tag_item %}
 <a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
 {% endblock tag_item %}
+
+{% block edit_specific_item %}
+<a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
+{% endblock edit_specific_item %}
 	
-	{% if user.is_superuser %}
+{% if user.is_superuser %}
 	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
-	{% endif %}
+{% endif %}
 
 	
 </div>
@@ -210,68 +214,7 @@
 	});
 	</script>
 	
-	
-	
-
-{############################# EDIT ITEM LOGIC ##############################}
-<div id="form-modal-edit" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-edit %}
-<script>
-    $('.edit').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
-            $('#form-modal-edit').modal('toggle');
-        });
-    });
-</script>
-
-{% endblock js-edit %}
-
-{############################# EDIT TAG LOGIC ##############################}
-<div id="form-modal-tag" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-tag %}
-<script>
-    $('.tag').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
-            $('#form-modal-tag').modal('toggle');
-        });
-    });
-</script>
-
-{% endblock js-tag %}
-	
-	
+		
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
     <div class="modal-dialog">
@@ -329,7 +272,64 @@
     });
 </script>
 {% endblock js-deny %}
-{% endif %} 
+{% endif %}
+
+{############################# EDIT TAG LOGIC ##############################}
+<div id="form-modal-tag" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-tag %}
+<script>
+    $('.tag').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
+            $('#form-modal-tag').modal('toggle');
+        });
+    });
+</script>
+
+{% endblock js-tag %} 
+
+{############################# EDIT ITEM LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-edit %}
+<script>
+    $('.edit').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-edit %}
 
 {############################# ITEM REQUEST QUANTITY AND COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-request" class="modal fade">

@@ -12,46 +12,6 @@
 {#</ul>#}
 {#{% endif %}#}
 
-{########################## ALL USERS ##########################}
-
-<h2>All Users</h2>
-
-{% if user %}
-	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-            <th>Username</th>
-			<th>First Name</th>
-			<th>Last Name</th>
-			<th>Email</th>
-			<th>Admin Status</th>
-			<th>Staff Status</th>
-			<th>Active User</th>
-			<th>Actions</th>
-		</tr>
-        </thead>
-        
-        <tbody>
-            {% for user in user_list %}
-				<tr>
-					<td>{{ user.username }}</a></td>
-					<td>{{ user.first_name }}</td>
-					<td>{{ user.last_name }}</td>
-					<td>{{ user.email }}</td>
-					<td>{{ user.is_superuser }}</td>
-					<td>{{ user.is_staff }}</td>
-					<td>{{ user.is_active }}</td>
-					<td>
-						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
-					</td>	
-				</tr>
-			{% endfor %}
-        </tbody>
-    </table>
-{% endif %}
-
-
-
 {########################## ALL ITEMS ##########################}
 
 
@@ -111,6 +71,8 @@
 			{% endfor %}
         </tbody>
     </table>
+
+<a class="btn btn-info" href="{% url 'custom_admin:post_new_request' %}" role="button">Request An Item</a>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 
@@ -238,7 +200,7 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-								<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
+								<a href="{% url 'custom_admin:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
 								{% if request.user_id == current_user%}
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
@@ -294,11 +256,9 @@
 
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
-
-	<a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request An Item</a>
 	
 {########################## DISBURSEMENTS #####################}
-	{% if disbursed_list %}
+{% if disbursed_list %}
 		<h2>Disbursed by you</h2>
 		<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -330,6 +290,44 @@
 		{% endblock modal %}
 
 
+{% endif %}
+
+{########################## ALL USERS ##########################}
+
+<h2>All Users</h2>
+
+{% if user %}
+	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+            <th>Username</th>
+			<th>First Name</th>
+			<th>Last Name</th>
+			<th>Email</th>
+			<th>Admin Status</th>
+			<th>Staff Status</th>
+			<th>Active User</th>
+			<th>Actions</th>
+		</tr>
+        </thead>
+        
+        <tbody>
+            {% for user in user_list %}
+				<tr>
+					<td>{{ user.username }}</a></td>
+					<td>{{ user.first_name }}</td>
+					<td>{{ user.last_name }}</td>
+					<td>{{ user.email }}</td>
+					<td>{{ user.is_superuser }}</td>
+					<td>{{ user.is_staff }}</td>
+					<td>{{ user.is_active }}</td>
+					<td>
+						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
+					</td>	
+				</tr>
+			{% endfor %}
+        </tbody>
+    </table>
 {% endif %}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}

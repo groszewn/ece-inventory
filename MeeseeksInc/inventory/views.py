@@ -47,7 +47,6 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
 
-from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
@@ -130,6 +129,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['current_user'] = self.request.user.username
         return context
     
     def post(self, request, *args, **kwargs):
@@ -325,6 +325,7 @@ def post_new_request(request):
             post.save()
             Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
                                          affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+            messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
             return redirect('/')
     else:
         form = RequestForm() # blank request form with no data yet

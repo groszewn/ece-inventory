@@ -24,6 +24,7 @@ urlpatterns = [
     url(r'^approve/request/all$', views.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)$', views.deny_request, name='deny_request'),
     url(r'^approve/request/(?P<pk>[\w\-\ ]+)$', views.approve_request, name='approve_request'),
+    url(r'^post/request/$', views.post_new_request, name='post_new_request'),
     url(r'^edit/item/(?P<pk>[\w\-\ ]+)$', views.edit_item, name='edit_item'),
     url(r'^edit/item/module/(?P<pk>[\w\-\ ]+)$', views.edit_item, name='edit_item_module'),
     url(r'^create/item$', views.create_new_item, name='create_new_item'),
@@ -40,5 +41,6 @@ urlpatterns = [
     url(r'^delete_custom_field/$', views.delete_custom_field, name='delete_custom_field'),
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)$', views.edit_permission, name='edit_permission'),
-    url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete')
+    url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete'),
+    url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
 ]
