@@ -45,7 +45,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, GetItemSerializerWithCustomValue
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -563,7 +563,16 @@ class APIItemList(ListCreateAPIView):
                             custom_val.field_value_floating = None
                     custom_val.save()
                     
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
+            context = {
+            "request": self.request,
+            "pk": item.item_id,
+            }        
+            serializer = GetItemSerializerWithCustomValue(item, data=request.data, partial=True, context=context)
+            if serializer.is_valid():
+                return Response(serializer.data,status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
+            
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class APIItemDetail(APIView):
@@ -615,8 +624,17 @@ class APIItemDetail(APIView):
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
-                    
-            return Response(serializer.data)
+            context = {
+            "request": self.request,
+            "pk": pk,
+            }        
+            serializer = GetItemSerializerWithCustomValue(item, data=request.data, partial=True, context=context)
+            
+            if serializer.is_valid():
+                return Response(serializer.data)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
