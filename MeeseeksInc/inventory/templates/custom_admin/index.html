@@ -1,77 +1,45 @@
 {% extends 'custom_admin/base.html' %} 
-{% load static %}
 
+{% load rest_framework %}
+{% load static %}
+{% load index %}
 {% block content %}
 
-{########################## MESSAGES (SUCCESS / ERRORS) #####################}
-{#{% if messages %}#}
-{#<ul class="messages">#}
-{#    {% for message in messages %}#}
-{#    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>#}
-{#    {% endfor %}#}
-{#</ul>#}
-{#{% endif %}#}
-
-
 {########################## ALL ITEMS ##########################}
-
-
 {% if user_list %}
 
-	<h2>All available items</h2>
-	
-	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-			<th>Item Name</th>
-			<th>Quantity</th>
-			<th>Item Model Number</th>
-			<th>Item Description</th>
-			{% for field in custom_fields%}
-				<th>{{field.field_name}}</th>
-			{% endfor %}
-		</tr>
-        </thead>
-        
-        <tbody>
-            {% for item in item_list %}
-				<tr>
-					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
-					<td>{{ item.quantity }}</td>
-					<td>{{ item.model_number }}</td>
-					<td>{{ item.description }}</td>
-					{% for field in custom_fields%}
-						<td default = "">
-						{% for value in custom_vals%}
-							{% if value.item == item and value.field == field %}
-									{% if field.field_type == "Short"%}
-										{{value.field_value_short_text}}
-									{% endif %}
-									{% if field.field_type == "Long"%}
-										{{value.field_value_long_text}}
-									{% endif %}
-									{% if field.field_type == "Int"%}
-										{% if value.field_value_integer != None%}
-											{{value.field_value_integer}}
-										{% else %}
-											{{""}}
-										{% endif %}
-									{% endif %}
-									{% if field.field_type == "Float"%}
-										{% if value.field_value_floating != None%}
-											{{value.field_value_floating}}
-										{% else %}
-											{{""}}
-										{% endif %}
-									{% endif %}
-							{% endif %}
-						{% endfor %}
-						</td>
-					{% endfor %}
-				</tr>
-			{% endfor %}
-        </tbody>
-    </table>
+<h2>All available items</h2>
+<form id="search-form">
+    <label>Included Tags:</label>
+    <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+	<label>Excluded Tags:</label>
+	<select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+    <input type="submit"/>
+</form>
+
+<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+	<th>Item Name</th>
+	<th>Quantity</th>
+	<th>Item Model Number</th>
+	<th>Item Description</th>
+	{% for field in custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 
@@ -311,8 +279,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.deny').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -342,8 +308,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -373,8 +337,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('#comment-button').click(function() {
         $('#form-modal-body').load('disburse/item', function () {
@@ -383,11 +345,7 @@
     });
 </script>
 {% endblock js %}
-{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
-<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
-<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
- 
+
  <script>
 	$(document).ready(function(){
 		$.fn.dataTable.ext.search.push(
@@ -427,7 +385,105 @@
 	    $('#user-table').dataTable();
 	});
 	</script>
+<script>
+$('#included-tags').select2(); // making multiple select
+$('#excluded-tags').select2(); // making multiple select
+get_search_data(); // initialize item data
+$('#search-form').on('submit', function(event){
+    event.preventDefault();
+    console.log("form submitted!")  // sanity check
+    get_search_data();
+});
 
+function get_search_data() {
+	var data = '';
+	var included_tags = $('#included-tags').select2('val');
+	var excluded_tags = $('#excluded-tags').select2('val')
+	if(included_tags) {
+		for(i in included_tags) {
+			data += 'included_tags=' + included_tags[i]+'&';
+		}
+	}
+	if(excluded_tags) { 
+		for(i in excluded_tags) {
+			data += 'excluded_tags=' + excluded_tags[i] + '&';
+		}
+	}
+	console.log(data);
+    $.ajax({
+        url : '{% url 'inventory:api_item_list' %}',
+        type : "GET", // http method
+        data : data,
+        success : function(json) {
+            $('#item_name').val(''); // remove the value from the input
+            console.log(json); // log the returned json to the console
+        	$('#inventory-search').dataTable().fnClearTable();
+        	var numCustomFields = {{ custom_fields|length }}
+        	var djangoCustomFieldNameList = [];
+			{% for field in custom_fields %} 
+				djangoCustomFieldNameList.push("{{ field.field_name }}");
+			{% endfor %}
+			
+         	for(i in json) {
+         		var dataTableData = [
+			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
+			        json[i].quantity,
+			        json[i].model_number,
+			        json[i].description
+			         ];
+			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+			    if(numCustomFieldsAvailable === 0) {
+			    	for(count = 0; count<numCustomFields; count++) {
+			    		dataTableData.push('');
+			    	}
+			    } else {
+			    	var customFieldArr = Array(numCustomFields).fill('');
+			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+			    		var custom_field_object = json[i].values_custom_field[count];
+			    		var field = custom_field_object.field;
+						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+						if(indexOfField == -1) {
+			    			continue;
+			    		}
+			    		if (field.field_type == "Short") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
+						} else if(field.field_type == "Long") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
+						} else if(field.field_type == "Int") {
+							if(custom_field_object.field_value_integer) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+							}
+						} else if(field.field_type == "Float") {
+							if(custom_field_object.field_value_floating) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
+							}
+						}
+			    	}
+			    	dataTableData.push.apply(dataTableData, customFieldArr);
+			    }
+         		$('#inventory-search').dataTable().fnAddData(dataTableData);
+        	}
+        },
+        error : function(xhr,errmsg,err) {
+            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+        }
+    });
+};
+
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+
+$(document).ready(function(){
+	    $('#inventory-search').dataTable();
+	});
+</script>
 {% endblock %}
 
 

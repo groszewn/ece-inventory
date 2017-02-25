@@ -30,9 +30,7 @@ def staff_check(user):
 
 def admin_check(user):
     return user.is_superuser
-    
-# from inventory.models import Instance, Request, Item, Disbursement
-# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
+
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -40,29 +38,21 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     context_object_name = 'instance_list'
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
-        cursor = connection.cursor()
-        cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
-        raw_request_list = cursor.fetchall()
-        for raw_request in raw_request_list:
-            raw_request_ids = raw_request[1] # all the ids in this item
-            counter = 0
-            for request_ID in raw_request_ids:
-                raw_request[1][counter] = Request.objects.get(request_id=request_ID)
-                counter += 1
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
-#         context['request_list'] = raw_request_list
         context['request_list'] = Request.objects.all()
         context['approved_request_list'] = Request.objects.filter(status="Approved")
         context['pending_request_list'] = Request.objects.filter(status="Pending")
         context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
-        context['custom_fields'] = Custom_Field.objects.all()
-        context['custom_vals'] = Custom_Field_Value.objects.all()
         context['user_list'] = User.objects.all()
         context['current_user'] = self.request.user.username
-        # And so on for more models
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            context['custom_fields'] = Custom_Field.objects.filter() 
+        else:
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['tags'] = Tag.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""

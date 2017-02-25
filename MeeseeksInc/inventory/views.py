@@ -75,10 +75,12 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
         context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
-        context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
-        context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['custom_vals'] = Custom_Field_Value.objects.all()
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            context['custom_fields'] = Custom_Field.objects.filter() 
+        else:
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['tags'] = Tag.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -289,7 +291,11 @@ def check_login(request):
 @user_passes_test(active_check, login_url='/login/')
 def search_view(request):
     tags = Tag.objects.all()
-    custom_fields = Custom_Field.objects.filter(is_private=False)
+    custom_fields = []
+    if request.user.is_staff or request.user.is_superuser:
+        custom_fields = Custom_Field.objects.filter() 
+    else:
+        custom_fields = Custom_Field.objects.filter(is_private=False)
     return render(request, 'inventory/search.html', {'tags': tags, 'custom_fields': custom_fields})
 
 @login_required(login_url='/login/')
