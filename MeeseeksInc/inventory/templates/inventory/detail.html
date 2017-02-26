@@ -93,6 +93,10 @@
 		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>
 		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
 
+					{% block tag_edit_module %}
+					<a id = "specificTagEdit" tag-id="{{ oneTag.id }}" item-id="{{ item.item_id }}" class="specificTagEdit btn btn-primary btn-sm">Edit Tag</a>
+					{% endblock tag_edit_module %}
+
 		 			</td> 
 		 			{% endif %}
 				</tr>
@@ -105,6 +109,7 @@
 {% endif %} 
 
 <div>
+	{% if user.is_staff %}
 	<script>
 	function clickEvent(){
 	    if (confirm("Delete this item?")) {
@@ -125,28 +130,26 @@
 	}
 	</script>
 	
-{% if user.is_staff %}
-<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
-<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
-{% endif %} 
-
-{% block tag_item %}
-<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
-{% endblock tag_item %}
+		<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
+	   	<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
 
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
 {% endblock edit_specific_item %}
+	    
+{% block tag_item %}
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Tags</a>									
+{% endblock tag_item %}
 	
-{% if user.is_superuser %}
+	{% if user.is_superuser %}
 	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
-{% endif %}
-
+	{% endif %}
 	
 </div>
 
 <br/>
 
+{% endif %}
 
 {% block request_specific_item %}
 <a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
@@ -160,7 +163,6 @@
    	{{form.as_p}}
     <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
 </form>
-
 
 {% if request_list%}
 <h2>Outstanding Requests for This Item:  </h2>
@@ -191,12 +193,19 @@
 									{% endblock comment_accept %}
 									{% block comment_deny %}
 									<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
-									{% endblock comment_deny %}	
-								{% endif %}
-									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-primary">Edit</a>
-									{% if request.user_id == current_user%}
+									{% endblock comment_deny %}
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-									{% endif %}
+								{% else %}
+									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									<script>
+										function clickEvent2() {
+										window.location='{%url 'inventory:request_edit' request.request_id %}';
+									}
+									</script>
+	
+									<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
+								{% endif %}
 							</td>
 						</tr>
 					{% endfor %}
@@ -208,13 +217,11 @@
 	 window.document.location = $(this).parent().data('href');
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-indiv-item').dataTable({
-	        "order": [[ 1, "desc" ]]
-	    });
+	    $('#inventory-request-indiv-item').dataTable();
 	});
 	</script>
-	
 		
+	
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
     <div class="modal-dialog">
@@ -272,64 +279,7 @@
     });
 </script>
 {% endblock js-deny %}
-{% endif %}
-
-{############################# EDIT TAG LOGIC ##############################}
-<div id="form-modal-tag" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-tag %}
-<script>
-    $('.tag').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
-            $('#form-modal-tag').modal('toggle');
-        });
-    });
-</script>
-
-{% endblock js-tag %} 
-
-{############################# EDIT ITEM LOGIC ##############################}
-<div id="form-modal-edit" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-edit %}
-<script>
-    $('.edit').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
-            $('#form-modal-edit').modal('toggle');
-        });
-    });
-</script>
-{% endblock js-edit %}
+{% endif %} 
 
 {############################# ITEM REQUEST QUANTITY AND COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-request" class="modal fade">
@@ -358,14 +308,120 @@
     });
 </script>
 {###############DONT DELETE#####################}
-{#<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>#}
-{#<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>#}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 {#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
 
 {% endblock js-request %}
+
+{############################# EDIT TAG LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-tag %}
+<script>
+    $('.tag').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/tags/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-tag %}
+
+
+{############################# EDIT ITEM LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-edit %}
+<script>
+    $('.edit').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-edit %}
+
+{############################# EDIT SPECIFIC TAG LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit This Tag</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-specifictag %}
+<script>
+    $('.specificTagEdit').click(function() {
+    	tag_id = $(this).attr("tag-id");
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/specific/tag/'+tag_id+'/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{###############DONT DELETE#####################}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
+
+{% endblock js-specifictag %}
+
+
+
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
 {% endblock %}
-
 
 

@@ -1,0 +1,32 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+ <h3>Create, Add, and Edit Tags</h3>
+ <div class="row">
+	 <form id="formID-add-tags" request-comment ="" action="{% url 'custom_admin:tags_module' pk %}" method="POST" class="form-horizontal">
+{#        {% crispy form %}#}
+	 {% csrf_token %}
+	 		{{form.create_new_tags.label}}:{{form.create_new_tags}}
+	 		<br/>
+	 		(Enter a comma separated list to create multiple new tags.)
+	 		<br/>
+	 		<br/>
+	 		{{form.tag_field.label}}
+	 		<br/>
+	 		Choose already existing tags to add to this item.
+	 		<br/>
+	 		{{form.tag_field}}
+	 		<br/>
+	 		 (Hold shift to select multiple tags.)
+	 		<br/>
+	 		<br/>
+	 	{% for field in form %}
+	 		{% if field.label != "Create new tags" and field.label != "Add new tags..."%}
+	    	{{field.label}}:{{ field }}
+	    	<br/>
+	    	<br/>
+	    	{% endif %}
+		{% endfor %}
+		<input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+	</form>
+ </div>
