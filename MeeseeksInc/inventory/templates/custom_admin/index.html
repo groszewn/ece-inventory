@@ -229,43 +229,6 @@
 
 {% endif %}
 
-{########################## ALL USERS ##########################}
-
-<h2>All Users</h2>
-
-{% if user %}
-	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-            <th>Username</th>
-			<th>First Name</th>
-			<th>Last Name</th>
-			<th>Email</th>
-			<th>Admin Status</th>
-			<th>Staff Status</th>
-			<th>Active User</th>
-			<th>Actions</th>
-		</tr>
-        </thead>
-        
-        <tbody>
-            {% for user in user_list %}
-				<tr>
-					<td>{{ user.username }}</a></td>
-					<td>{{ user.first_name }}</td>
-					<td>{{ user.last_name }}</td>
-					<td>{{ user.email }}</td>
-					<td>{{ user.is_superuser }}</td>
-					<td>{{ user.is_staff }}</td>
-					<td>{{ user.is_active }}</td>
-					<td>
-						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
-					</td>	
-				</tr>
-			{% endfor %}
-        </tbody>
-    </table>
-{% endif %}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
