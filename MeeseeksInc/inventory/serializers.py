@@ -153,7 +153,6 @@ class RequestPostSerializer(serializers.ModelSerializer):
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
-    
     class Meta:
         model = Request
         fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
@@ -164,6 +163,27 @@ class RequestPostSerializer(serializers.ModelSerializer):
         if value<0:
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
+
+class MultipleRequestPostSerializer(serializers.ModelSerializer):
+    time_requested = serializers.DateTimeField(
+        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+    )
+    user_id = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+
+    class Meta:
+        model = Request
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+    def validate_request_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<0:
+            raise serializers.ValidationError("Request quantity needs to be greater than 0")
+        return value
+
     
 class RequestUpdateSerializer(serializers.ModelSerializer):
     time_requested = serializers.HiddenField(

@@ -47,7 +47,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer
+    LogSerializer, MultipleRequestPostSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
@@ -734,6 +734,7 @@ class APIRequestThroughItem(APIView):
         context = {
             "request": self.request,
         }
+        print(request.data)
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
@@ -743,6 +744,33 @@ class APIRequestThroughItem(APIView):
             quantity=data['request_quantity']
             Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
                        affected_user=None, change_occurred="Requested " + str(quantity))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class APIMultipleRequests(APIView):
+    """
+    Create item requests for multiple items
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def post(self, request, item_list, format=None):
+        context = {
+            "request": self.request,
+        }
+        if item_list:
+            item_id_list = item_list.split(',')
+            for i, item_id in enumerate(item_id_list):
+                request.data[i]['item_name']=item_id
+        serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
+        if serializer.is_valid():
+            serializer.save()
+            dataDict=serializer.data
+            for data in dataDict:
+                id=data['request_id']
+                quantity=data['request_quantity']
+                item = Item.objects.get(item_id=data['item_name'])
+                Log.objects.create(request_id=id, item_id=data['item_name'], item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
+                            affected_user=None, change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
