@@ -43,29 +43,21 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     context_object_name = 'instance_list'
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
-        cursor = connection.cursor()
-        cursor.execute('select inventory_item.item_name, array_agg(inventory_request.request_id order by inventory_request.status desc) from inventory_request join inventory_item on inventory_item.item_id = inventory_request.item_name_id group by inventory_item.item_name')
-        raw_request_list = cursor.fetchall()
-        for raw_request in raw_request_list:
-            raw_request_ids = raw_request[1] # all the ids in this item
-            counter = 0
-            for request_ID in raw_request_ids:
-                raw_request[1][counter] = Request.objects.get(request_id=request_ID)
-                counter += 1
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
-#         context['request_list'] = raw_request_list
         context['request_list'] = Request.objects.all()
         context['approved_request_list'] = Request.objects.filter(status="Approved")
         context['pending_request_list'] = Request.objects.filter(status="Pending")
         context['denied_request_list'] = Request.objects.filter(status="Denied")
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
-        context['custom_fields'] = Custom_Field.objects.all()
-        context['custom_vals'] = Custom_Field_Value.objects.all()
         context['user_list'] = User.objects.all()
         context['current_user'] = self.request.user.username
-        # And so on for more models
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            context['custom_fields'] = Custom_Field.objects.filter() 
+        else:
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['tags'] = Tag.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -230,15 +222,14 @@ def edit_item_module(request, pk):
     custom_vals = Custom_Field_Value.objects.filter(item = item)
     original_quantity = item.quantity
     if request.method == "POST":
-        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
-            name = form['item_name'].value()
-            quantity = form['quantity'].value()
-            location = form['location'].value()
-            model_num = form['model_number'].value()
-            desc = form['description'].value()
-            item.item_name = name
-            item.save()
+            if int(form['quantity'].value())!=original_quantity:    
+                Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+            else:
+                Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
@@ -264,7 +255,7 @@ def edit_item_module(request, pk):
             messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
             return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(custom_fields, custom_vals, instance=item)
+        form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
     return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
@@ -555,8 +546,6 @@ def add_tags_module(request, pk):
             for ittag in item_tags:
                 ittag.tag = form[ittag.tag].value()
                 ittag.save()
-            Log.objects.create(reference_id=None, item_name = item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                               affected_user=None, change_occurred="Added tags to " + str(item.item_name))
             return redirect('/item/' + pk)
     else:
         item = Item.objects.get(item_id = pk)
@@ -627,8 +616,6 @@ def edit_specific_tag(request, pk, item):
     if request.method == "POST":
         form = EditTagForm(request.POST or None, instance=tag)
         if form.is_valid():
-            Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                               affected_user=None, change_occurred="Edited tag on item " + str(item.item_name))
             form.save()
             return redirect('/item/' + item.item_id)
     else:

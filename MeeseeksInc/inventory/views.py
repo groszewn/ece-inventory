@@ -32,6 +32,7 @@ from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
 from rest_framework import status, permissions, viewsets
+import rest_framework
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -41,11 +42,13 @@ from rest_framework.views import APIView
 from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
-from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
+from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
+    IsAdminOrManager
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
+    LogSerializer, MultipleRequestPostSerializer
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
@@ -72,10 +75,12 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
         context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
-        context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
-        context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['custom_vals'] = Custom_Field_Value.objects.all()
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            context['custom_fields'] = Custom_Field.objects.filter() 
+        else:
+            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+        context['tags'] = Tag.objects.all()
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -287,7 +292,12 @@ def check_login(request):
 @user_passes_test(active_check, login_url='/login/')
 def search_view(request):
     tags = Tag.objects.all()
-    return render(request, 'inventory/search.html', {'tags': tags})
+    custom_fields = []
+    if request.user.is_staff or request.user.is_superuser:
+        custom_fields = Custom_Field.objects.filter() 
+    else:
+        custom_fields = Custom_Field.objects.filter(is_private=False)
+    return render(request, 'inventory/search.html', {'tags': tags, 'custom_fields': custom_fields})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -380,7 +390,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
                         disbursement.save()
-                        Log.objects.create(request_id=disbursement.disburse_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(dibursement.admin_name), nature_of_event='Disburse', 
+                        Log.objects.create(request_id=disbursement.disburse_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(disbursement.admin_name), nature_of_event='Disburse', 
                                          affected_user=str(disbursement.user_name), change_occurred="Disbursed " + str(disbursement.total_quantity))
                         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     else:
@@ -553,8 +563,9 @@ class APIItemList(ListCreateAPIView):
         items = self.filter_queryset(self.get_queryset())
         context = {
             "request": self.request,
-            }
+        }
         serializer = ItemSerializer(items, many=True, context=context)
+#         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
@@ -737,12 +748,13 @@ class APIRequestThroughItem(APIView):
     """
     Create an item request
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAtLeastUser,)
     
     def post(self, request, pk, format=None):
         context = {
             "request": self.request,
         }
+        print(request.data)
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
@@ -752,6 +764,33 @@ class APIRequestThroughItem(APIView):
             quantity=data['request_quantity']
             Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
                        affected_user=None, change_occurred="Requested " + str(quantity))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class APIMultipleRequests(APIView):
+    """
+    Create item requests for multiple items
+    """
+    permission_classes = (IsAtLeastUser,)
+    
+    def post(self, request, item_list, format=None):
+        context = {
+            "request": self.request,
+        }
+        if item_list:
+            item_id_list = item_list.split(',')
+            for i, item_id in enumerate(item_id_list):
+                request.data[i]['item_name']=item_id
+        serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
+        if serializer.is_valid():
+            serializer.save()
+            dataDict=serializer.data
+            for data in dataDict:
+                id=data['request_id']
+                quantity=data['request_quantity']
+                item = Item.objects.get(item_id=data['item_name'])
+                Log.objects.create(request_id=id, item_id=data['item_name'], item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
+                            affected_user=None, change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -883,7 +922,7 @@ class APICreateNewUser(APIView):
 ########################################### Tags ##################################################
 class APITagList(APIView):
     """
-    List all Disbursements (for yourself if user, all if admin)
+    List all Tag (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -891,6 +930,51 @@ class APITagList(APIView):
         serializer = TagSerializer(Tag.objects.all(), many=True)
         return Response(serializer.data)
 
+########################################### Tags ##################################################
+class APILogList(APIView):
+    """
+    List all Logs (for admin -- add this!)
+    """
+    permission_classes = (IsAdminOrManager,)
+#     pagination_class = rest_framework.pagination.PageNumberPagination
+    pagination_class = rest_framework.pagination.LimitOffsetPagination
+    
+    def get(self, request, format=None):
+#         if(User.objects.get(username=request.user).is_staff) 
+        page = self.paginate_queryset(Log.objects.all())
+        if page is not None:
+            serializer = LogSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = LogSerializer(Log.objects.all(), many=True)
+        return Response(serializer.data)
+    
+    @property
+    def paginator(self):
+        """
+        The paginator instance associated with the view, or `None`.
+        """
+        if not hasattr(self, '_paginator'):
+            if self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        return self._paginator
+
+    def paginate_queryset(self, queryset):
+        """
+        Return a single page of results, or `None` if pagination is disabled.
+        """
+        if self.paginator is None:
+            return None
+        return self.paginator.paginate_queryset(queryset, self.request, view=self)
+
+    def get_paginated_response(self, data):
+        """
+        Return a paginated style `Response` object for the given output data.
+        """
+        assert self.paginator is not None
+        return self.paginator.get_paginated_response(data)
 
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):

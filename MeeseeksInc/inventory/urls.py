@@ -31,6 +31,7 @@ urlpatterns = [
     url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view(), name='api_item_detail'),
     url(r'^api/requests/$', views.APIRequestList.as_view()),
     url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', views.APIRequestThroughItem.as_view()),
+    url(r'^api/requests/multiple_create/(?P<item_list>[\w\-\ (\,)?]+)$', views.APIMultipleRequests.as_view()),
     url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', views.APIRequestDetail.as_view()),
     url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', views.APIApproveRequest.as_view()),
     url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', views.APIDenyRequest.as_view()),
@@ -40,4 +41,5 @@ urlpatterns = [
     url(r'^api/custom/field/$', views.APICustomField.as_view()),
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
+    url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
 ]

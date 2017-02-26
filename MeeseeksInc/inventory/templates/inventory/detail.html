@@ -97,6 +97,7 @@
 					{% endblock tag_edit_module %}
 		 			
 		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
+
 		 			</td> 
 		 			{% endif %}
 				</tr>
@@ -421,103 +422,5 @@
 
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-
-{% if user.is_staff %}
-{#################### Log table #####################}
-<br><br><br>
-<button id='togglebutton'>Show/hide log</button>
-<br>
-<div id='logtable_toggle'>
-	<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
-	{% block js %}
-	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-	<script>
-	$(function(){ 
-	    $('#startdate').datepicker({
-	        dateFormat: 'yy-mm-dd'
-	    });
-	    
-	});
-	</script>
-	<br>
-	{% endblock js %}
-	
-	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-	        <thead>
-	            <tr>
-	            <th>Nature of event</th>
-				<th>Initiated by</th>
-				<th>Item</th>
-				<th>Affected User</th>
-				<th>Type of Change</th>
-				<th>Time Occurred</th>
-			</tr>
-	        </thead>
-	        
-	        <tbody>
-	            {% for instance in log_list %}
-					<tr>
-						{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
-							<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
-						{% else %}
-							<td>{{ instance.nature_of_event }}</td>
-						{% endif %}
-						<td>{{ instance.initiating_user }}</td>
-						<td>{{instance.item_name}}</td>
-						<td>{{ instance.affected_user }}</td>
-						<td>{{ instance.change_occurred }}</td>
-						<td>{{ instance.time_occurred }}</td>
-					</tr>
-				{% endfor %}
-	        </tbody>
-	    </table>
-</div>
-{% endif %}
-    
-{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
-<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
-<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
- 
- <script>
- 
-$.fn.dataTable.ext.search.push(
-function (settings, data, dataIndex) {
-    var startDate = Date.parse($('#startdate').val(), 10);
-    var convert = data[5].substring(0,14);
-    var columnDate = Date.parse(convert); // use data for the age column
-    if ((isNaN(startDate)) || (startDate <= columnDate)) {
-        return true;
-    }
-    return false;
-});
-
-
-	$(document).ready(function(){
-	    var table = $('#log-table').dataTable({
-	        "order": [[ 5, "desc" ]]
-	    });
-		$('#startdate').change(function () {
-	    	table.fnDraw();
-		});
-		document.getElementById('logtable_toggle').style.display='none';
-	});
-	
-	var button = document.getElementById('togglebutton');
-
-	button.onclick = function() {
-	    var div = document.getElementById('logtable_toggle');
-	    if (div.style.display !== 'none') {
-	        div.style.display = 'none';
-	    }
-	    else {
-	        div.style.display = 'block';
-	    }
-};
-	</script>
 	
 {% endblock %}
-
-

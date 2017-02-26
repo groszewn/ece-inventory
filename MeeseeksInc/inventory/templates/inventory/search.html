@@ -1,10 +1,9 @@
 {% extends 'inventory/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
 {% load rest_framework %}
-
+{% load static %}
+{% load index %}
 {% block content %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
 
 <h2>Search Form</h2>
  
@@ -31,46 +30,12 @@
 	<th>Quantity</th>
 	<th>Item Model Number</th>
 	<th>Item Description</th>
-{#	{% for field in custom_fields%}#}
-{#		<th>{{field.field_name}}</th>#}
-{#	{% endfor %}#}
+	{% for field in custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
 </tr>
 </thead>
 <tbody>
-{#		<tr>#}
-{#			<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>#}
-{#			<td>{{ item.quantity }}</td>#}
-{#			<td>{{ item.model_number }}</td>#}
-{#			<td>{{ item.description }}</td>#}
-{#			{% for field in custom_fields%}#}
-{#				<td default = "">#}
-{#				{% for value in custom_vals%}#}
-{#					{% if value.item == item and value.field == field %}#}
-{#							{% if field.field_type == "Short"%}#}
-{#								{{value.field_value_short_text}}#}
-{#							{% endif %}#}
-{#							{% if field.field_type == "Long"%}#}
-{#								{{value.field_value_long_text}}#}
-{#							{% endif %}#}
-{#							{% if field.field_type == "Int"%}#}
-{#								{% if value.field_value_integer != None%}#}
-{#									{{value.field_value_integer}}#}
-{#								{% else %}#}
-{#									{{""}}#}
-{#								{% endif %}#}
-{#							{% endif %}#}
-{#							{% if field.field_type == "Float"%}#}
-{#								{% if value.field_value_floating != None%}#}
-{#									{{value.field_value_floating}}#}
-{#								{% else %}#}
-{#									{{""}}#}
-{#								{% endif %}#}
-{#							{% endif %}#}
-{#					{% endif %}#}
-{#				{% endfor %}#}
-{#				</td>#}
-{#			{% endfor %}#}
-{#		</tr>#}
 </tbody>
 </table>
 
@@ -89,21 +54,12 @@ function get_search_data() {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
 	var excluded_tags = $('#excluded-tags').select2('val')
-	if (included_tags && !excluded_tags) {
-		console.log("included!");
+	if(included_tags) {
 		for(i in included_tags) {
 			data += 'included_tags=' + included_tags[i]+'&';
 		}
-	} else if (!included_tags && excluded_tags) { 
-		console.log("excluded!");
-		for(i in excluded_tags) {
-			data += 'excluded_tags=' + excluded_tags[i] + '&';
-		}
-	} else if (included_tags && excluded_tags) { 
-		console.log("both!");
-		for(i in included_tags) {
-			data += 'included_tags=' + included_tags[i] + '&';
-		}
+	}
+	if(excluded_tags) { 
 		for(i in excluded_tags) {
 			data += 'excluded_tags=' + excluded_tags[i] + '&';
 		}
@@ -117,21 +73,68 @@ function get_search_data() {
             $('#item_name').val(''); // remove the value from the input
             console.log(json); // log the returned json to the console
         	$('#inventory-search').dataTable().fnClearTable();
+        	var numCustomFields = {{ custom_fields|length }}
+        	var djangoCustomFieldNameList = [];
+			{% for field in custom_fields %} 
+				djangoCustomFieldNameList.push("{{ field.field_name }}");
+			{% endfor %}
+			
          	for(i in json) {
-         		$('#inventory-search').dataTable().fnAddData( [
+         		var dataTableData = [
 			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
 			        json[i].quantity,
 			        json[i].model_number,
-			        json[i].description ] );
+			        json[i].description
+			         ];
+			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+			    if(numCustomFieldsAvailable === 0) {
+			    	for(count = 0; count<numCustomFields; count++) {
+			    		dataTableData.push('');
+			    	}
+			    } else {
+			    	var customFieldArr = Array(numCustomFields).fill('');
+			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+			    		var custom_field_object = json[i].values_custom_field[count];
+			    		var field = custom_field_object.field;
+						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+						if(indexOfField == -1) {
+			    			continue;
+			    		}
+			    		if (field.field_type == "Short") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
+						} else if(field.field_type == "Long") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
+						} else if(field.field_type == "Int") {
+							if(custom_field_object.field_value_integer) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+							}
+						} else if(field.field_type == "Float") {
+							if(custom_field_object.field_value_floating) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
+							}
+						}
+			    	}
+			    	dataTableData.push.apply(dataTableData, customFieldArr);
+			    }
+         		$('#inventory-search').dataTable().fnAddData(dataTableData);
         	}
         },
         error : function(xhr,errmsg,err) {
-            //$('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
-            //    " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
             console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
         }
     });
 };
+
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+
 $(document).ready(function(){
 	    $('#inventory-search').dataTable();
 	});
