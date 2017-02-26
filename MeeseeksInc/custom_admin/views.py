@@ -23,14 +23,17 @@ from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Cu
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
-
+from inventory.forms import RequestForm, RequestEditForm
 
 def staff_check(user):
     return user.is_staff
 
 def admin_check(user):
     return user.is_superuser
-    
+
+def active_check(user):
+    return user.is_active
+
 # from inventory.models import Instance, Request, Item, Disbursement
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
 ################ DEFINE VIEWS AND RESPECTIVE FILES ##################
@@ -223,9 +226,11 @@ def add_comment_to_request_accept(request, pk):
 @user_passes_test(staff_check, login_url='/login/')
 def edit_item_module(request, pk):
     item = Item.objects.get(item_id=pk)
-    starting_quantity=item.quantity
+    custom_fields = Custom_Field.objects.all()
+    custom_vals = Custom_Field_Value.objects.filter(item = item)
+    original_quantity = item.quantity
     if request.method == "POST":
-        form = ItemEditForm(request.POST or None, instance=item)
+        form = ItemEditForm(custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             name = form['item_name'].value()
             quantity = form['quantity'].value()
@@ -234,19 +239,33 @@ def edit_item_module(request, pk):
             desc = form['description'].value()
             item.item_name = name
             item.save()
-            messages.success(request, ('Successfully Saved Item Changes.'))
-            if int(quantity)!=starting_quantity:    
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
-            else:
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(name))
-            return redirect(reverse('custom_admin:index'))
-            #form.save()
-            # return redirect('/item/' + pk)
+            form.save()
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                else:
+                    custom_val = Custom_Field_Value(item=item, field=field)
+                if field.field_type == 'Short':    
+                    custom_val.field_value_short_text = field_value
+                if field.field_type == 'Long':
+                    custom_val.field_value_long_text = field_value
+                if field.field_type == 'Int':
+                    if field_value != '':
+                        custom_val.field_value_integer = field_value
+                    else:
+                        custom_val.field_value_integer = None
+                if field.field_type == 'Float':
+                    if field_value != '':
+                        custom_val.field_value_floating = field_value 
+                    else:
+                        custom_val.field_value_floating = None
+                custom_val.save()
+            messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
+            return redirect('/item/' + pk)
     else:
-        form = ItemEditForm(instance=item, initial = {'item_field': item.item_name})
-    return render(request, 'inventory/item_edit.html', {'form': form})
+        form = ItemEditForm(custom_fields, custom_vals, instance=item)
+    return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -267,6 +286,49 @@ def add_comment_to_request_deny(request, pk):
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def post_new_request(request):
+    if request.method == "POST":
+        form = RequestForm(request.POST) # create request-form with the data from the request 
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.item_id = form['item_field'].value()
+            post.item_name = Item.objects.get(item_id = post.item_id)
+            post.user_id = request.user.username
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
+                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+            messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
+            return redirect('/customadmin')
+    else:
+        form = RequestForm() # blank request form with no data yet
+    return render(request, 'inventory/request_create.html', {'form': form})
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def edit_request_main_page(request, pk):
+    instance = Request.objects.get(request_id=pk)
+    if request.method == "POST":
+        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        if form.is_valid():
+            messages.success(request, 'You just edited the request successfully.')
+            post = form.save(commit=False)
+#             post.item_id = form['item_field'].value()
+#             post.item_name = Item.objects.get(item_id = post.item_id)
+            post.status = "Pending"
+            post.time_requested = timezone.now()
+            post.save()
+            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+            item = instance.item_name
+            return redirect('/customadmin')
+    else:
+        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+    return render(request, 'inventory/request_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -463,6 +525,48 @@ def add_tags(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
+def add_tags_module(request, pk):
+    if request.method == "POST":
+        item = Item.objects.get(item_id = pk)
+        tags = Tag.objects.all()
+#         item_tags = Tag.objects.filter(item_name = item)
+        item_tags = item.tags.all()
+        form = AddTagForm(tags, item_tags, request.POST or None)
+        if form.is_valid():
+            pickedTags = form.cleaned_data.get('tag_field')
+            createdTags = form['create_new_tags'].value()
+            item = Item.objects.get(item_id=pk)
+            if pickedTags:
+                for oneTag in pickedTags:
+#                     if not Tag.objects.filter(item_name=item, tag=oneTag).exists():
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag) 
+                        t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
+            if createdTags is not "":
+                tag_list = [x.strip() for x in createdTags.split(',')]
+                for oneTag in tag_list:
+                    if not item.tags.filter(tag=oneTag).exists():
+                        t = Tag(tag=oneTag)
+                        t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
+            for ittag in item_tags:
+                ittag.tag = form[ittag.tag].value()
+                ittag.save()
+            Log.objects.create(reference_id=None, item_name = item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                               affected_user=None, change_occurred="Added tags to " + str(item.item_name))
+            return redirect('/item/' + pk)
+    else:
+        item = Item.objects.get(item_id = pk)
+        tags = Tag.objects.all()
+        item_tags = item.tags.all()
+        form = AddTagForm(tags, item_tags)
+    return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def log_item(request):
     form = LogForm(request.POST or None)
     if request.method=="POST":
@@ -514,6 +618,22 @@ def edit_tag(request, pk, item):
     else:
         form = EditTagForm(instance=tag)
     return render(request, 'inventory/tag_edit.html', {'form': form})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def edit_specific_tag(request, pk, item):
+    tag = Tag.objects.get(id=pk)
+    item = Item.objects.get(item_id=item)
+    if request.method == "POST":
+        form = EditTagForm(request.POST or None, instance=tag)
+        if form.is_valid():
+            Log.objects.create(reference_id=None, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                               affected_user=None, change_occurred="Edited tag on item " + str(item.item_name))
+            form.save()
+            return redirect('/item/' + item.item_id)
+    else:
+        form = EditTagForm(instance=tag)
+    return render(request, 'custom_admin/edit_tag_module_inner.html', {'form': form,'pk':pk,'item':item.item_id})
 
 @login_required(login_url='/login/')
 @user_passes_test(admin_check, login_url='/login/')

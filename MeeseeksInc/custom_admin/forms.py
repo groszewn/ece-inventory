@@ -85,7 +85,7 @@ class ItemEditForm(forms.ModelForm):
                         self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
-    #quantity = forms.IntegerField(min_value=0)
+    quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     class Meta:

@@ -49,7 +49,7 @@ class GetItemSerializer(serializers.ModelSerializer):
             outstanding_requests = Request.objects.filter(item_name=item_id, user_id=user.username, status="Pending")
         serializer = RequestSerializer(outstanding_requests, many=True)
         return serializer.data
-    
+     
     def get_custom_field_values(self, obj):
         item_id = self.context['pk']
         item = Item.objects.get(item_id = item_id)
@@ -63,7 +63,7 @@ class GetItemSerializer(serializers.ModelSerializer):
                 if val.field.is_private:
                     all_vals.remove(val)
             custom_values = all_vals
-        serializer = CustomValueSerializer(custom_values, many=True)
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
         return serializer.data
 
     class Meta:
@@ -71,9 +71,22 @@ class GetItemSerializer(serializers.ModelSerializer):
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding','values_custom_field','tags')
 
 class ItemSerializer(serializers.ModelSerializer):
+    values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
+    
     class Meta:
         model = Item
-        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
+    
+    def get_custom_field_values(self, obj):
+        item = Item.objects.get(item_name = obj)
+        user = self.context['request'].user
+        custom_values = []
+        if User.objects.get(username=user).is_staff:
+            custom_values = Custom_Field_Value.objects.filter(item = item)
+        else:
+            custom_values = Custom_Field_Value.objects.filter(item = item, field__is_private = False)
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
+        return serializer.data
     
     def validate_quantity(self, value):
         """
@@ -92,6 +105,13 @@ class CustomValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Custom_Field_Value
         fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        depth = 1
+        
+class CustomValueSerializerNoItem(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        depth = 1
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
