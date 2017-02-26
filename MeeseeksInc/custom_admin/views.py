@@ -291,7 +291,7 @@ def post_new_request(request):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(reference_id = str(post.request_id), item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
+            Log.objects.create(request_id = str(post.request_id), item_name=str(post.item_name), initiating_user=post.user_id, nature_of_event='Request', 
                                          affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
             return redirect('/customadmin')
@@ -313,7 +313,7 @@ def edit_request_main_page(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(reference_id = str(instance.request_id), item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+            Log.objects.create(request_id = str(instance.request_id), item_id=post.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
             return redirect('/customadmin')
@@ -637,7 +637,7 @@ def delete_tag(request, pk, item):
     item = Item.objects.get(item_id=item)
     tag = Tag.objects.get(id=pk)
     tag.delete()
-    return redirect('/item/' + tag.item_name.item_id)
+    return redirect('/item/' + item.item_id)
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
