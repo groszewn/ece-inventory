@@ -90,12 +90,13 @@
 					{% if user.is_staff %}
 					<td>						
 
-		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>
-		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
-
-					{% block tag_edit_module %}
+		 			{#<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>#}
+		 			
+		 			{% block tag_edit_module %}
 					<a id = "specificTagEdit" tag-id="{{ oneTag.id }}" item-id="{{ item.item_id }}" class="specificTagEdit btn btn-primary btn-sm">Edit Tag</a>
 					{% endblock tag_edit_module %}
+		 			
+		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
 
 		 			</td> 
 		 			{% endif %}
@@ -130,8 +131,8 @@
 	}
 	</script>
 	
-		<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
-	   	<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
+		{#<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>#}
+	   	{#<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>#}
 
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									

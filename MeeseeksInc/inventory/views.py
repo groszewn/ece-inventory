@@ -422,7 +422,7 @@ def cancel_request(request, pk):
                                          affected_user=None, change_occurred="Deleted request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
-    return redirect('/')
+    return redirect(reverse('inventory:detail', kwargs={'pk':instance.item_name.item_id}))
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
