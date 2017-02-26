@@ -74,13 +74,13 @@
 		<script>
 		function tagEvent(){
     		if (confirm("Delete this tag?")) {
-    			window.location='{% url 'custom_admin:delete_tag' oneTag.id %}';
+    			window.location='{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}';
     		}
 		}
 		</script>
 		<script> 
 		function tagEvent3() {
-			window.location='{% url 'custom_admin:edit_tag' oneTag.id %}';
+			window.location='{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}';
 		}
 		</script>
 		
@@ -89,8 +89,15 @@
 					<td>{{ oneTag.id }}</td>
 					{% if user.is_staff %}
 					<td>						
-		 			<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' oneTag.id %}" class="btn btn-primary btn-sm">Edit Tag</a>
-		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' oneTag.id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
+
+		 			{#<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>#}
+		 			
+		 			{% block tag_edit_module %}
+					<a id = "specificTagEdit" tag-id="{{ oneTag.id }}" item-id="{{ item.item_id }}" class="specificTagEdit btn btn-primary btn-sm">Edit Tag</a>
+					{% endblock tag_edit_module %}
+		 			
+		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
+
 		 			</td> 
 		 			{% endif %}
 				</tr>
@@ -103,6 +110,7 @@
 {% endif %} 
 
 <div>
+	{% if user.is_staff %}
 	<script>
 	function clickEvent(){
 	    if (confirm("Delete this item?")) {
@@ -123,23 +131,37 @@
 	}
 	</script>
 	
-{% if user.is_staff %}
-<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>
-<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>
-{% endif %} 
+		{#<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>#}
+	   	{#<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>#}
 
-{% if user.is_superuser %} 
-<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-primary btn-md">Delete Item</button>
+{% block edit_specific_item %}
+<a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
+{% endblock edit_specific_item %}
+	    
+{% block tag_item %}
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Tags</a>									
+{% endblock tag_item %}
 	
-{% endif %}
+	{% if user.is_superuser %}
+	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+	{% endif %}
+	
 </div>
 
 <br/>
 
+{% endif %}
 
 {% block request_specific_item %}
 <a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
 {% endblock request_specific_item %}
+
+{% if user.is_staff %}
+	{% block disbursement_direct %}
+	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Click Here to Directly Disburse Item to User</a>									
+	{% endblock disbursement_direct %}
+{% endif %}
+
 
 <br/>
 <br/>
@@ -149,7 +171,6 @@
    	{{form.as_p}}
     <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
 </form>
-
 
 {% if request_list%}
 <h2>Outstanding Requests for This Item:  </h2>
@@ -204,73 +225,10 @@
 	 window.document.location = $(this).parent().data('href');
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-indiv-item').dataTable({
-	        "order": [[ 1, "desc" ]]
-	    });
+	    $('#inventory-request-indiv-item').dataTable();
 	});
 	</script>
-	
-	
-	
-
-{############################# EDIT ITEM LOGIC ##############################}
-<div id="form-modal-edit" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-edit %}
-<script>
-    $('.edit').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+ item_id), function () {
-            $('#form-modal-edit').modal('toggle');
-        });
-    });
-</script>
-
-{% endblock js-edit %}
-
-{############################# EDIT TAG LOGIC ##############################}
-<div id="form-modal-tag" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Tags For {{ item.item_name }}</h4>
-            </div>
-            <div id="form-modal-body-edit" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js-tag %}
-<script>
-    $('.tag').click(function() {
-    	item_id = $(this).attr("item-id");
-        $('#form-modal-body-tag').load(('../../customadmin/edit/item/tags/'+ item_id), function () {
-            $('#form-modal-tag').modal('toggle');
-        });
-    });
-</script>
-
-{% endblock js-tag %}
-	
+		
 	
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
@@ -357,15 +315,222 @@
         });
     });
 </script>
-{###############DONT DELETE#####################}
-{#<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>#}
-{#<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>#}
-{#DONT DELETE THE ABOVE JS, IT FIXES THE MODAL BUG#}
 
 {% endblock js-request %}
+
+{############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
+<div id="form-modal-disbursement" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Directly Disburse {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-disbursement" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-disbursement %}
+<script>
+    $('.disbursement').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-disbursement').load(('../../customadmin/disburse/item/'+ item_id), function () {
+            $('#form-modal-disbursement').modal('toggle');
+        });
+    });
+</script>
+
+{% endblock js-disbursement %}
+
+{############################# EDIT TAG LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-tag %}
+<script>
+    $('.tag').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/tags/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{% endblock js-tag %}
+
+
+{############################# EDIT ITEM LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-edit %}
+<script>
+    $('.edit').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/item/module/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{% endblock js-edit %}
+
+{############################# EDIT SPECIFIC TAG LOGIC ##############################}
+<div id="form-modal-edit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit This Tag</h4>
+            </div>
+            <div id="form-modal-body-edit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-specifictag %}
+<script>
+    $('.specificTagEdit').click(function() {
+    	tag_id = $(this).attr("tag-id");
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-edit').load(('../../customadmin/edit/specific/tag/'+tag_id+'/'+item_id), function () {
+            $('#form-modal-edit').modal('toggle');
+        });
+    });
+</script>
+
+{% endblock js-specifictag %}
+
+
+
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+
+
+{% if user.is_staff %}
+{#################### Log table #####################}
+<br><br><br>
+<a id='togglebutton' class="request btn btn-info">Show/hide log</a>
+<br>
+<div id='logtable_toggle'>
+	<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+	{% block js %}
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script>
+	$(function(){ 
+	    $('#startdate').datepicker({
+	        dateFormat: 'yy-mm-dd'
+	    });
+	    
+	});
+	</script>
+	<br>
+	{% endblock js %}
+	
+	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+	            <th>Nature of event</th>
+				<th>Initiated by</th>
+				<th>Item</th>
+				<th>Affected User</th>
+				<th>Type of Change</th>
+				<th>Time Occurred</th>
+			</tr>
+	        </thead>
+	        
+	        <tbody>
+	            {% for instance in log_list %}
+					<tr>
+						{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
+							<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
+						{% else %}
+							<td>{{ instance.nature_of_event }}</td>
+						{% endif %}
+						<td>{{ instance.initiating_user }}</td>
+						<td>{{instance.item_name}}</td>
+						<td>{{ instance.affected_user }}</td>
+						<td>{{ instance.change_occurred }}</td>
+						<td>{{ instance.time_occurred }}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+</div>
+{% endif %}
+    
+{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
+<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+ 
+ <script>
+ 
+$.fn.dataTable.ext.search.push(
+function (settings, data, dataIndex) {
+    var startDate = Date.parse($('#startdate').val(), 10);
+    var convert = data[5].substring(0,14);
+    var columnDate = Date.parse(convert); // use data for the age column
+    if ((isNaN(startDate)) || (startDate <= columnDate)) {
+        return true;
+    }
+    return false;
+});
+	$(document).ready(function(){
+	    var table = $('#log-table').dataTable({
+	        "order": [[ 5, "desc" ]]
+	    });
+		$('#startdate').change(function () {
+	    	table.fnDraw();
+		});
+		document.getElementById('logtable_toggle').style.display='none';
+	});
+	
+	var button = document.getElementById('togglebutton');
+	button.onclick = function() {
+	    var div = document.getElementById('logtable_toggle');
+	    if (div.style.display !== 'none') {
+	        div.style.display = 'none';
+	    }
+	    else {
+	        div.style.display = 'block';
+	    }
+};
+	</script>
 	
 {% endblock %}
-
-
-

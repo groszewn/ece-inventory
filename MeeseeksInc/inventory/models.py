@@ -1,24 +1,25 @@
+from datetime import datetime
 import uuid
 
 from django.db import models
 from django.utils import timezone
-from datetime import datetime
 
+
+class Tag(models.Model):
+    tag = models.CharField(max_length=200)
+    def __str__(self):
+        return self.tag
+    
 
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     item_name = models.CharField(unique=True, max_length=200)
     quantity = models.SmallIntegerField(null=False)
     model_number = models.CharField(max_length=200, null=True)
-    description = models.CharField(max_length=400, null=True)
+    description = models.CharField(max_length=1000, null=True)
+    tags = models.ManyToManyField(Tag, related_name='items', null=True, blank=True)
     def __str__(self):
         return self.item_name
-    
-class Tag(models.Model):
-    item_name = models.ForeignKey(Item, null = True, on_delete=models.CASCADE) 
-    tag = models.CharField(max_length=200)
-    def __str__(self):
-        return self.tag
  
 class Instance(models.Model):
     item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
@@ -93,7 +94,8 @@ class Custom_Field_Value(models.Model):
        unique_together = (("item", "field"),)
 
 class Log(models.Model):
-    reference_id = models.CharField(max_length=200, null=True, default=None)
+    request_id = models.CharField(max_length=200, null=True, default=None)
+    item_id = models.CharField(max_length=200, null=True, default=None)
     item_name = models.CharField(max_length=200, null=True)
     initiating_user = models.CharField(max_length=200, null=False)
     CHOICES = (

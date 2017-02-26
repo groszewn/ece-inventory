@@ -6,6 +6,24 @@
 {% block content %}
 
 <h2>Log</h2>
+
+<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+{% block js %}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+$(function(){ 
+    $('#startdate').datepicker({
+        dateFormat: 'yy-mm-dd'
+    });
+    
+});
+</script>
+<br>
+{% endblock js %}
+
+
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
@@ -22,13 +40,19 @@
         <tbody>
             {% for instance in log_list %}
 				<tr>
-					{% if instance.reference_id in request_list and instance.nature_of_event == "Request" %}
-						<td><a href="{% url 'inventory:request_detail' instance.reference_id %}">Request</a></td>
+					{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
+						<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
 					{% else %}
 						<td>{{ instance.nature_of_event }}</td>
 					{% endif %}
 					<td>{{ instance.initiating_user }}</td>
-					<td>{{ instance.item_name }}</td>
+					{% if instance.item_id in item_list %}
+						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>
+					{% elif instance.item_name == None or instance.item_name == "ALL"%}
+						<td>{{instance.item_name}}</td>
+					{% else %}
+						<td>{{ instance.item_name }} (Deleted)</td>
+					{% endif %}
 					<td>{{ instance.affected_user }}</td>
 					<td>{{ instance.change_occurred }}</td>
 					<td>{{ instance.time_occurred }}</td>
@@ -48,11 +72,45 @@
 <script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
  
  <script>
-	$(document).ready(function(){
-	    $('#log-table').dataTable({
-	        "order": [[ 5, "desc" ]]
-	    });
+ 
+$.fn.dataTable.ext.search.push(
+function (settings, data, dataIndex) {
+    var startDate = Date.parse($('#startdate').val(), 10);
+    var convert = data[5].substring(0,14);
+    var columnDate = Date.parse(convert); // use data for the age column
+    if ((isNaN(startDate)) || (startDate <= columnDate)) {
+        return true;
+    }
+    return false;
+});
 
+
+	$(document).ready(function(){
+	    var table = $('#log-table').dataTable({
+	        	"order": [[ 5, "desc" ]]
+	        });
+	        //"serverSide": true,
+		    //"processing": true,
+		    //"paging": true,
+		    //"searching": { "regex": true },
+		    //"ajax": {
+		    //    "type": "GET",
+		    //    "url": '{% url 'inventory:api_log_list' %}',
+		     //   "dataType": "json",
+		     //   "contentType": 'application/json; charset=utf-8',
+		        //"data": function() { 
+		        //			var info = $('#log-table').DataTable().page.info();
+		        //			return {'limit': 10,
+		        //		 			'offset': info*10};
+		        //		},
+		        //"success": function(json) {
+		        //    console.log(json);
+       			//}
+       		//}
+	    	//);
+		$('#startdate').change(function () {
+	    	table.fnDraw();
+		});
 	});
 	</script>
 

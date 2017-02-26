@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import serializers
 
-from inventory.models import Item, Tag, Request, Disbursement
+from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
+    Log
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -38,6 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
     
 class GetItemSerializer(serializers.ModelSerializer):
     requests_outstanding = serializers.SerializerMethodField('get_outstanding_requests')
+    values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
     def get_outstanding_requests(self, obj):
         user = self.context['request'].user
         item_id = self.context['pk']
@@ -48,15 +50,44 @@ class GetItemSerializer(serializers.ModelSerializer):
             outstanding_requests = Request.objects.filter(item_name=item_id, user_id=user.username, status="Pending")
         serializer = RequestSerializer(outstanding_requests, many=True)
         return serializer.data
+     
+    def get_custom_field_values(self, obj):
+        item_id = self.context['pk']
+        item = Item.objects.get(item_id = item_id)
+        user = self.context['request'].user
+        custom_values = []
+        if User.objects.get(username=user).is_staff:
+            custom_values = Custom_Field_Value.objects.filter(item = item)
+        else:
+            all_vals = Custom_Field_Value.objects.filter(item = item)
+            for val in all_vals:
+                if val.field.is_private:
+                    all_vals.remove(val)
+            custom_values = all_vals
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
+        return serializer.data
 
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description', 'requests_outstanding')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding','values_custom_field','tags')
 
 class ItemSerializer(serializers.ModelSerializer):
+    values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
+    
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'location', 'model_number', 'description')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
+    
+    def get_custom_field_values(self, obj):
+        item = Item.objects.get(item_name = obj)
+        user = self.context['request'].user
+        custom_values = []
+        if User.objects.get(username=user).is_staff:
+            custom_values = Custom_Field_Value.objects.filter(item = item)
+        else:
+            custom_values = Custom_Field_Value.objects.filter(item = item, field__is_private = False)
+        serializer = CustomValueSerializerNoItem(custom_values, many=True)
+        return serializer.data
     
     def validate_quantity(self, value):
         """
@@ -66,11 +97,33 @@ class ItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Item quantity needs to be greater than 0")
         return value
 
+class CustomFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field
+        fields = ('id','field_name','is_private','field_type')
+        
+class CustomValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('item','field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        depth = 1
+        
+class CustomValueSerializerNoItem(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field_Value
+        fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        depth = 1
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('item_name', 'tag')
-        
+        fields = ('tag',)
+
+class LogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Log
+        fields = ('item_name', 'initiating_user', 'nature_of_event', 'time_occurred', 'affected_user', 'change_occurred',)
+    
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
         default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
@@ -83,7 +136,7 @@ class RequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
+        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -100,10 +153,9 @@ class RequestPostSerializer(serializers.ModelSerializer):
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
-    
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -111,6 +163,27 @@ class RequestPostSerializer(serializers.ModelSerializer):
         if value<0:
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
+
+class MultipleRequestPostSerializer(serializers.ModelSerializer):
+    time_requested = serializers.DateTimeField(
+        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+    )
+    user_id = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+
+    class Meta:
+        model = Request
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+    def validate_request_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<0:
+            raise serializers.ValidationError("Request quantity needs to be greater than 0")
+        return value
+
     
 class RequestUpdateSerializer(serializers.ModelSerializer):
     time_requested = serializers.HiddenField(

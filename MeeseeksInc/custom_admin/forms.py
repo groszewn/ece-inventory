@@ -1,20 +1,46 @@
-from django import forms
-from inventory.models import Request
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field
-from inventory.models import Tag
 import re
+
+from dal import autocomplete
+import dal_queryset_sequence
+import dal_select2_queryset_sequence
+from django import forms
+from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.contrib.admindocs.tests.test_fields import CustomField
- 
+
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field
+from inventory.models import Request
+from inventory.models import Tag
+
+
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+#     user_field = forms.ModelChoiceField(
+#         queryset=User.objects.filter(is_staff="False"),
+#         widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
+#     )
+#     user_field = dal_queryset_sequence.fields.QuerySetSequenceModelField(
+#         queryset=autocomplete.QuerySetSequence(
+#             User.objects.filter(is_staff="False"),
+#         ),
+#         required=False,
+#         widget=dal_select2_queryset_sequence.widgets.QuerySetSequenceSelect2('custom_admin:userfield-autocomplete'),
+#     )
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
-    total_quantity = forms.IntegerField(min_value=1)
+    total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
     class Meta:
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
+
+class DisburseSpecificForm(forms.Form):
+    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    total_quantity = forms.IntegerField(min_value=0)
+    comment = forms.CharField(required=False)
+    
+    def __init__(self, *args, **kwargs):
+        super(DisburseSpecificForm, self).__init__(*args, **kwargs)
+
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
@@ -38,15 +64,17 @@ class AdminRequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'reason','comment')
 
 class RequestEditForm(forms.ModelForm):
-    item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason','comment')
+        fields = ('request_quantity', 'reason')
          
 class ItemEditForm(forms.ModelForm):
-    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
         super(ItemEditForm, self).__init__(*args, **kwargs)
+        if not user.is_superuser and user.is_staff:
+            self.fields['quantity'].widget.attrs['readonly'] = True
+            #quantity=forms.IntegerField(min_value=0, disabled=True, required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -68,7 +96,7 @@ class ItemEditForm(forms.ModelForm):
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     class Meta:
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description')
@@ -77,6 +105,12 @@ class UserPermissionEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active')
+        
+    def clean(self):
+        cleaned_data = super(UserPermissionEditForm, self).clean()
+        if cleaned_data['is_superuser']:
+            cleaned_data['is_staff'] = True
+        return cleaned_data
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):
@@ -118,7 +152,7 @@ class CreateItemForm(forms.ModelForm):
     new_tags = forms.CharField(required=False)
     location = forms.CharField(required=False)
     model_number = forms.CharField(required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
     class Meta:
         model = Item
@@ -139,7 +173,7 @@ class DeleteFieldForm(forms.Form):
           
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30, required = True)
-    email = forms.EmailField(label='Email')
+    email = forms.EmailField(label='Email', required = False)
     password1 = forms.CharField(label='Password',
                                 widget=forms.PasswordInput(), required = True )
     password2 = forms.CharField(label='Confirm Password',
