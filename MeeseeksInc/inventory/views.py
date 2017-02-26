@@ -507,7 +507,7 @@ def edit_request_main_page(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(request_id = str(instance.request_id), item_id=item.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+            Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
             return redirect('/')
