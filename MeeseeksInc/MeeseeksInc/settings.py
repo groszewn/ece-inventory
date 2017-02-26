@@ -154,11 +154,14 @@ USE_L10N = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
-
+'''
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "static"),
 )
+'''
+
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 ADMIN_TOOLS_MENU = 'MeeseeksInc.menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'MeeseeksInc.dashboard.CustomIndexDashboard'
