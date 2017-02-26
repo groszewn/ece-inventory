@@ -42,7 +42,7 @@ from rest_framework.views import APIView
 from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
-from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin
+from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
@@ -728,7 +728,7 @@ class APIRequestThroughItem(APIView):
     """
     Create an item request
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAtLeastUser,)
     
     def post(self, request, pk, format=None):
         context = {
@@ -751,7 +751,7 @@ class APIMultipleRequests(APIView):
     """
     Create item requests for multiple items
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAtLeastUser,)
     
     def post(self, request, item_list, format=None):
         context = {
