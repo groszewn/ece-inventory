@@ -313,7 +313,7 @@ def edit_request_main_page(request, pk):
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
-            Log.objects.create(request_id = str(instance.request_id), item_id=post.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+            Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
             return redirect('/customadmin')
@@ -753,7 +753,7 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         post.time_disbursed = timezone.localtime(timezone.now())
         post.save()
         disbursement = Disbursement.objects.get(item_name = post.item_name)
-        Log.objects.create(request_id=None, item_id=post.item_name.item_id, item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Disburse', 
+        Log.objects.create(request_id=None, item_id=post.item_name.item_id, item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Direct Disburse', 
                                          affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
