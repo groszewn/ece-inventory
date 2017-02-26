@@ -55,14 +55,6 @@
 		
 		<div class="tab-content">
 	        <div class="tab-pane" id="all">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
@@ -92,14 +84,6 @@
 	        </div>
 	        
 	        <div class="tab-pane" id="accepted">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
@@ -129,14 +113,6 @@
 	        </div>
 	        
 	        <div class="tab-pane active" id="pending">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
@@ -179,14 +155,6 @@
 	        </div>
 	        
 	        <div class="tab-pane" id="denied">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
@@ -348,25 +316,7 @@
 
  <script>
 	$(document).ready(function(){
-		$.fn.dataTable.ext.search.push(
-		    function( settings, data, dataIndex, originalData ) {
-		    	if (settings.nTable.id !== 'inventory-disbursed' && settings.nTable.id !== 'user-table') { // only do this for all tables but disbursed (no tags)
-		    		var tag = $('#tag').val();
-		    		id = originalData[0].split("\"")[1].split("/")[2]; 
-		        	console.log(id);
-       			}
-		    	// first get tag for this data row
-		       	
-		        return true;
-		    }
-		);
-	    var itemTable = $('#inventory-item').dataTable();
-	     // Event listener to the two range filtering inputs to redraw on input
-	    $('#tag, #min, max').keyup( function() {
-	        itemTable.draw();
-	    } );
-	});
-	$(document).ready(function(){
+		$('#inventory-item').dataTable();
 	    $('#inventory-request-all').dataTable({
 	        "order": [[ 6, "desc" ]]
 	    });
