@@ -14,11 +14,11 @@ from inventory.models import Tag
 
 
 class DisburseForm(forms.ModelForm):
-#     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
-    user_field = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_staff="False"),
-        widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
-    )
+    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+#     user_field = forms.ModelChoiceField(
+#         queryset=User.objects.filter(is_staff="False"),
+#         widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
+#     )
 #     user_field = dal_queryset_sequence.fields.QuerySetSequenceModelField(
 #         queryset=autocomplete.QuerySetSequence(
 #             User.objects.filter(is_staff="False"),
