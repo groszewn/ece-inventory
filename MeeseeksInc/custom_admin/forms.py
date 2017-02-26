@@ -173,7 +173,7 @@ class DeleteFieldForm(forms.Form):
           
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30, required = True)
-    email = forms.EmailField(label='Email')
+    email = forms.EmailField(label='Email', required = False)
     password1 = forms.CharField(label='Password',
                                 widget=forms.PasswordInput(), required = True )
     password2 = forms.CharField(label='Confirm Password',
