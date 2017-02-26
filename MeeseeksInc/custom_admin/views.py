@@ -17,13 +17,14 @@ from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
 
-from custom_admin.forms import UserPermissionEditForm
+from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm
+from inventory.forms import RequestForm, RequestEditForm
 from inventory.forms import SearchForm
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
-from inventory.forms import RequestForm, RequestEditForm
+
 
 def staff_check(user):
     return user.is_staff
@@ -354,6 +355,35 @@ def post_new_disburse(request):
         form = DisburseForm() # blank request form with no data yet
     return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
  
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def post_new_disburse_specific(request, pk):
+    if request.method == "POST":
+        form = DisburseSpecificForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            item = Item.objects.get(item_id=pk)
+            user_name = User.objects.get(id=form['user_field'].value()).username
+            if item.quantity >= int(form['total_quantity'].value()):
+                # decrement quantity in item
+                quant_change = int(form['total_quantity'].value())
+                item.quantity = F('quantity')-int(form['total_quantity'].value()) 
+                item.save()
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=user_name, change_occurred="Disbursed " + str(quant_change))
+            else:
+                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                return redirect(reverse('custom_admin:index'))
+            disbursement = Disbursement(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
+                                        total_quantity=form['total_quantity'].value(), time_disbursed=timezone.localtime(timezone.now()))
+            disbursement.save()
+            messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+            return redirect('/item/'+pk)
+    else:
+        form = DisburseSpecificForm() # blank request form with no data yet
+    return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk})
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def approve_all_requests(request):

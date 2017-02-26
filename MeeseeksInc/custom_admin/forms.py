@@ -33,6 +33,15 @@ class DisburseForm(forms.ModelForm):
         model = Disbursement
         fields = ('user_field', 'item_field', 'total_quantity', 'comment')
 
+class DisburseSpecificForm(forms.Form):
+    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    total_quantity = forms.IntegerField(min_value=0)
+    comment = forms.CharField(required=False)
+    
+    def __init__(self, *args, **kwargs):
+        super(DisburseSpecificForm, self).__init__(*args, **kwargs)
+
+
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
     
