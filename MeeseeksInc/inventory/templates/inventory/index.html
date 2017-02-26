@@ -342,16 +342,6 @@ function get_search_data() {
     });
 };
 
-function getIndexOfFieldName(list, name) {
-	var index = -1;
-	for(i in list) {
-		if(list[i].field_name == name) {
-			index = i;
-		}
-	}
-	return index;
-}
-
 $(document).ready(function(){
 	    $('#inventory-search').dataTable();
 	});
