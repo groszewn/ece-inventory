@@ -42,7 +42,8 @@ from rest_framework.views import APIView
 from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
-from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser
+from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
+    IsAdminOrManager
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
@@ -915,7 +916,7 @@ class APILogList(APIView):
     """
     List all Logs (for admin -- add this!)
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAdminOrManager,)
 #     pagination_class = rest_framework.pagination.PageNumberPagination
     pagination_class = rest_framework.pagination.LimitOffsetPagination
     
