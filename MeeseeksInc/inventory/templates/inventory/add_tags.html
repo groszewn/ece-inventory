@@ -3,9 +3,29 @@
 
 {% block content %}
 
- <h2>Add and Create Tags</h2>
+ <h2>Create, Add, and Edit Tags</h2>
  <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.as_p }}
+ 		{{form.create_new_tags.label}}:{{form.create_new_tags}}
+ 		<br/>
+ 		(Enter a comma separated list to create multiple new tags.)
+ 		<br/>
+ 		<br/>
+ 		{{form.tag_field.label}}
+ 		<br/>
+ 		Choose already existing tags to add to this item.
+ 		<br/>
+ 		{{form.tag_field}}
+ 		<br/>
+ 		 (Hold shift to select multiple tags.)
+ 		<br/>
+ 		<br/>
+ 	{% for field in form %}
+ 		{% if field.label != "Create new tags" and field.label != "Add new tags..."%}
+    	{{field.label}}:{{ field }}
+    	<br/>
+    	<br/>
+    	{% endif %}
+	{% endfor %}
 	<button type="submit" onclick="return confirm('Confirm changes?')" class="save btn btn-default">Save</button>
 </form>
  	

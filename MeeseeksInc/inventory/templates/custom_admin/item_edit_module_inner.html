@@ -1,0 +1,12 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+ 
+<h3>Change the fields to edit this item.</h3>
+<div class="row">
+    <form id="formID-specific-item" request-comment ="" action="{% url 'custom_admin:edit_item_module' pk %}" class="form-horizontal" method="post">
+{#        {% crispy form %}#}
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+    </form>
+</div> 

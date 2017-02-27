@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+  {% load static %}
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -28,15 +29,16 @@
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      <script src="//oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="//oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
-    <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-	<link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
-	<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
-	<script type="text/javascript" src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-  
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+	<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+	<link rel="stylesheet" href="//cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css">
+	<script type="text/javascript" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+	<link href={% static 'css/select2.min.css' %} rel="stylesheet" />
+	<script src={% static 'js/select2.min.js' %}></script>
   </head>
 
   <body>
@@ -59,37 +61,28 @@
         </div>
  
       <ul class="nav navbar-nav navbar-right">
+      <li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
        <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Administration<span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="{% url 'custom_admin:log_item' %}?next=/">Report Loss</a></li>
-            <li><a href="{% url 'custom_admin:create_new_item' %}?next=/">Add New Item</a></li>
-            <li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
-            <li><a href="{% url 'custom_admin:search_setup' %}"> Search Parameters </a></li>
+            <li><a href="{% url 'custom_admin:create_new_item' %}?next=/">Create New Item</a></li>
+            <li><a href="{% url 'custom_admin:log_item' %}?next=/">Report Loss/Acquisition</a></li>
+            <li><a href="{% url 'inventory:search_setup' %}"> Search Parameters </a></li>
+            <li><a href="{% url 'custom_admin:log' %}">View Log</a></li>
+            {% if user.is_superuser %}
+            	<li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
+            	<li><a href="{% url 'custom_admin:user_page' %}">User List</a></li>
+	            <li><a href="{% url 'custom_admin:add_custom_field' %}"> Add Custom Item Field </a></li>
+	            <li><a href="{% url 'custom_admin:delete_custom_field' %}"> Delete Custom Item Field </a></li>
+            {% endif %}
           </ul>
         </li>
-        <li><a href="{% url 'logout' %}?next=/">Log out</a></li>
+        <li><a href="{% url 'logout' %}?next=/">Log out, {{user.username}}</a></li>
         
       </ul>
         </div><!--/.navbar-collapse -->
       </div>
     </nav>
-
-    <!-- Main jumbotron for a primary marketing message or call to action -->
-{#    <div class="jumbotron">#}
-{#      <div class="container">#}
-{#      		{% if user.is_staff %}#}
-{#    			<h1>Welcome, {{ user.username }}</h1>#}
-{#			{% else %}#}
-{#    			<h1>Welcome, Guest {{user.username }}</h1>#}
-{#			{% endif %}#}
-{#        <p>#}
-{#        This is the inventory system of Duke University ECE Department. Please sign up using your Duke email and an admin will approve your request. #}
-{#        For more information about Duke ECE, please press Learn more.#}
-{#        </p>#}
-{#        <p><a class="btn btn-primary btn-lg" href="http://www.ece.duke.edu" role="button">Learn more &raquo;</a></p>#}
-{#      </div>#}
-{#    </div>#}
 
     <div class="container">
     {% if messages %}
@@ -115,7 +108,7 @@
       <footer>
       	<h2>Our team</h2>
           <p>Owen Chung , Bruna Liborio, Kei Yoshikoshi, and Nick Groszewski </p>
-          <p><a class="btn btn-default" href="https://github.com/keikumata/Meeseeks-Inc." role="button">Git Repo &raquo;</a></p>
+          <p><a class="btn btn-default" href="//github.com/keikumata/Meeseeks-Inc." role="button">Git Repo &raquo;</a></p>
         <p>&copy; 2017 Meeseeks, Inc.</p>
       </footer>
     </div> <!-- /container -->

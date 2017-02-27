@@ -1,17 +1,142 @@
 {% extends 'inventory/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
-
+{% load rest_framework %}
+{% load static %}
+{% load index %}
 {% block content %}
 
- <h2>Searching...</h2>
- <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.keyword.label }}:{{ form.keyword }}
-	{{ form.model_number.label }}:{{ form.model_number }}
-	{{ form.item_name.label }}:{{ form.item_name }}
-	 <h3>Filter by tags...</h3>
-	 {{ form.tags1.label }} {{ form.tags1 }}
-	 {{ form.tags2.label }} {{ form.tags2 }}
-	<button type="submit" class="save btn btn-default">Search</button>
- </form>
+<h2>Search Form</h2>
+ 
+<form id="search-form">
+    <label>Included Tags:</label>
+    <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+	<label>Excluded Tags:</label>
+	<select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+    <input type="submit"/>
+</form>
 
+<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+	<th>Item Name</th>
+	<th>Quantity</th>
+	<th>Item Model Number</th>
+	<th>Item Description</th>
+	{% for field in custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+
+
+<script>
+$('#included-tags').select2(); // making multiple select
+$('#excluded-tags').select2(); // making multiple select
+get_search_data(); // initialize item data
+$('#search-form').on('submit', function(event){
+    event.preventDefault();
+    console.log("form submitted!")  // sanity check
+    get_search_data();
+});
+
+function get_search_data() {
+	var data = '';
+	var included_tags = $('#included-tags').select2('val');
+	var excluded_tags = $('#excluded-tags').select2('val')
+	if(included_tags) {
+		for(i in included_tags) {
+			data += 'included_tags=' + included_tags[i]+'&';
+		}
+	}
+	if(excluded_tags) { 
+		for(i in excluded_tags) {
+			data += 'excluded_tags=' + excluded_tags[i] + '&';
+		}
+	}
+	console.log(data);
+    $.ajax({
+        url : '{% url 'inventory:api_item_list' %}',
+        type : "GET", // http method
+        data : data,
+        success : function(json) {
+            $('#item_name').val(''); // remove the value from the input
+            console.log(json); // log the returned json to the console
+        	$('#inventory-search').dataTable().fnClearTable();
+        	var numCustomFields = {{ custom_fields|length }}
+        	var djangoCustomFieldNameList = [];
+			{% for field in custom_fields %} 
+				djangoCustomFieldNameList.push("{{ field.field_name }}");
+			{% endfor %}
+			
+         	for(i in json) {
+         		var dataTableData = [
+			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
+			        json[i].quantity,
+			        json[i].model_number,
+			        json[i].description
+			         ];
+			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+			    if(numCustomFieldsAvailable === 0) {
+			    	for(count = 0; count<numCustomFields; count++) {
+			    		dataTableData.push('');
+			    	}
+			    } else {
+			    	var customFieldArr = Array(numCustomFields).fill('');
+			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+			    		var custom_field_object = json[i].values_custom_field[count];
+			    		var field = custom_field_object.field;
+						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+						if(indexOfField == -1) {
+			    			continue;
+			    		}
+			    		if (field.field_type == "Short") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
+						} else if(field.field_type == "Long") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
+						} else if(field.field_type == "Int") {
+							if(custom_field_object.field_value_integer) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+							}
+						} else if(field.field_type == "Float") {
+							if(custom_field_object.field_value_floating) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
+							}
+						}
+			    	}
+			    	dataTableData.push.apply(dataTableData, customFieldArr);
+			    }
+         		$('#inventory-search').dataTable().fnAddData(dataTableData);
+        	}
+        },
+        error : function(xhr,errmsg,err) {
+            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+        }
+    });
+};
+
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+
+$(document).ready(function(){
+	    $('#inventory-search').dataTable();
+	});
+</script>
 {% endblock %}

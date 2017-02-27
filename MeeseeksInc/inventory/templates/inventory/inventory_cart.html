@@ -1,9 +1,11 @@
 {% extends 'inventory/base.html' %} 
+{% load index %}
 {#put this at the top so that the base template is "base.html"#}
 
 {% block content %}
 {% if cart_list %}
 	<h2>All Items in Cart</h2>
+	<form method="post">{% csrf_token %}
 	<table id="inventory-cart" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
             <tr>
@@ -13,37 +15,30 @@
 		</tr>
         </thead>
         <tbody>
+        	{{ formset.management_form }}
             {% for cart_item in cart_list %}
 				<tr>
 					<td><a href="{% url 'inventory:detail' cart_item.item.item_id %}">{{ cart_item.item.item_name }}</a></td>
 					<td>{{ cart_item.quantity }}</td>
 					<td>
-{#						<form id="addToCart" class="form-horizontal" method="post">#}
-{#							{% csrf_token %}#}
-{#						   	{{form.as_p}}#}
-{#						    <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2" value="Add Item To Cart">#}
-{#						</form>#}
+						{% with formset|index:forloop.counter0 as form %}
+						    {{ form.as_p }}
+						{% endwith %}
+						<a href="{% url 'inventory:delete_cart_instance' cart_item.cart_id %}" class="btn btn-danger">Cancel</a>
 					</td>
 				</tr>
 			{% endfor %}
         </tbody>
     </table>
-{#    <div class="panel-group" id="accordion">#}
-{#    <div class="panel panel-default">#}
-{#        <div class="panel-heading">#}
-{#            <h4 class="panel-title">#}
-{#                <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">#}
-{#                    Collapsible Group Item #1#}
-{#                </a>#}
-{#            </h4>#}
-{#        </div>#}
-{#        <div id="collapseOne" class="panel-collapse collapse in">#}
-{#            <div class="panel-body">#}
-{#                Anim pariatur cliche reprehenderit#}
-{#            </div>#}
-{#        </div>#}
-{#    </div>#}
-{#</div>#}
+    <input class="btn btn-info" type="submit" value="Submit requests">
+	</form>
+	
+	<script>
+		var input = $(':input');
+		input.attr( 'min', '1' );
+	</script>
+{% else %}
+<h2>Nothing in your cart!</h2>
 {% endif %}
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}

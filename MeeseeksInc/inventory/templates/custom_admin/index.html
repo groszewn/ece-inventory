@@ -1,98 +1,48 @@
 {% extends 'custom_admin/base.html' %} 
+
+{% load rest_framework %}
 {% load static %}
-{#put this at the top so that the base template is "base.html"#}
-
+{% load index %}
 {% block content %}
-{########################## MESSAGES (SUCCESS / ERRORS) #####################}
-{#{% if messages %}#}
-{#<ul class="messages">#}
-{#    {% for message in messages %}#}
-{#    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>#}
-{#    {% endfor %}#}
-{#</ul>#}
-{#{% endif %}#}
-
-{########################## ALL USERS ##########################}
-
-<h2>All Users</h2>
-
-{% if user %}
-	<table id="user-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-            <th>Username</th>
-			<th>First Name</th>
-			<th>Last Name</th>
-			<th>Email</th>
-			<th>Staff Status</th>
-			<th>Active User</th>
-			<th>Actions</th>
-		</tr>
-        </thead>
-        
-        <tbody>
-            {% for user in user_list %}
-				<tr>
-					<td>{{ user.username }}</a></td>
-					<td>{{ user.first_name }}</td>
-					<td>{{ user.last_name }}</td>
-					<td>{{ user.email }}</td>
-					<td>{{ user.is_staff }}</td>
-					<td>{{ user.is_active }}</td>
-					<td>
-						<a href="{% url 'custom_admin:edit_permission' user.username %}" class="btn btn-warning">Edit User</a>
-					</td>	
-				</tr>
-			{% endfor %}
-        </tbody>
-    </table>
-{% endif %}
-
-
 
 {########################## ALL ITEMS ##########################}
+{% if user_list %}
+
+<h2>All available items</h2>
+<form id="search-form">
+    <label>Included Tags:</label>
+    <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+	<label>Excluded Tags:</label>
+	<select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
+    {% for tag in tags %} 
+    	<option value={{ tag.id }}>{{ tag.tag }}</option>
+    {% endfor %}
+	</select>
+    <input type="submit"/>
+</form>
 
 
-{% if item_list %}
+<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+	<th>Item Name</th>
+	<th>Quantity</th>
+	<th>Item Model Number</th>
+	<th>Item Description</th>
+	{% for field in custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
 
-	<h2>All Inventory Items</h2>
-	<form method="POST" class="post-form">
-	{% csrf_token %}
-	<h4>{{ form.Tag2Include.label }} Scroll for more tags</h4>
-	<div id="" style="overflow-y: scroll; height:50px;">
-		{{ form.Tag2Include }}
-	</div>
-	<h4>{{ form.Tag2Exclude.label }} Scroll for more tags</h4>
-	<div id="" style="overflow-y: scroll; height:50px;">
-		 {{ form.Tag2Exclude }}
-	</div>
-	<button type="submit" class="save btn btn-default">Tag Filter</button>
-	<a class="btn btn-default" href="{% url 'inventory:index' %}" role="button">Cancel Filter</a>
-	</form>
-	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-			<th>Item Name</th>
-			<th># Item</th>
-			<th>Item Location</th>
-			<th>Item Model Number</th>
-			<th>Item Description</th>
-		</tr>
-        </thead>
-        {% block item_filter_table%}
-        <tbody>
-            {% for item in item_list %}
-				<tr>
-					<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
-					<td>{{ item.quantity }}</td>
-					<td>{{ item.location }}</td>
-					<td>{{ item.model_number }}</td>
-					<td>{{ item.description }}</td>
-				</tr>
-			{% endfor %}
-        </tbody>
-        {% endblock %}
-    </table>
+{# <a class="btn btn-info" href="{% url 'custom_admin:post_new_request' %}" role="button">Request An Item</a> #}
 
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
 
@@ -108,23 +58,16 @@
 		
 		<div class="tab-content">
 	        <div class="tab-pane" id="all">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -136,6 +79,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -143,23 +87,16 @@
 	        </div>
 	        
 	        <div class="tab-pane" id="accepted">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -171,6 +108,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -178,23 +116,16 @@
 	        </div>
 	        
 	        <div class="tab-pane active" id="pending">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -207,6 +138,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 							<td>
 								{% block comment_accept %}
 								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
@@ -214,8 +146,10 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-								<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+								<a href="{% url 'custom_admin:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
+								{% if request.user_id == current_user%}
 								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+								{% endif %}
 							</td>
 						</tr>
 					{% endfor %}
@@ -224,23 +158,16 @@
 	        </div>
 	        
 	        <div class="tab-pane" id="denied">
-	            <table border="0" cellspacing="5" cellpadding="5">
-			        <tbody>
-				        <tr>
-				            <td>Tags:</td>
-				            <td><input type="text" id="tag" name="tag"></td>
-				        </tr>
-		    		</tbody>
-		    	</table>
 				<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
 					<th>Request</th>
-					<th># Item</th>
+					<th>Item Quantity</th>
 					<th>Status</th>
 					<th>Request by</th>
 					<th>Student Reason</th>
 					<th>Admin Comment</th>
+					<th>Time Requested</th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -252,6 +179,7 @@
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
+							<td>{{ request.time_requested }}</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -263,35 +191,18 @@
 		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
 	{% endif %}
 	
-{#{% for request_tuple in request_list %}#}
-{#	<h3>Item Name: {{ request_tuple.0 }}</h3>#}
-{#	<ul>#}
-{#		{% for request in request_tuple.1 %}#}
-{#			<li> <a href="{% url 'inventory:request_detail' request.request_id %}" class="top-menu"><b>({{ request.user_id }})</b> Request for {{ request.item_name }}: </a> Quantity= {{ request.request_quantity }} Status= {{ request.status }}</li>#}
-{#			{% if request.status == "Pending" %}#}
-{#				Reason: {{ request.reason }}#}
-{#				{% block comment_accept %}#}
-{#				<a id = "accept" request-id="{{ request.request_id }}" class="accept">Approve this request<span class="glyphicon glyphicon-plus"></span></a>#}
-{#				{% endblock comment_accept %}#}
-{#				{% block comment_deny %}#}
-{#				<a id = "deny" request-id="{{ request.request_id }}" class="deny">Deny this request<span class="glyphicon glyphicon-plus"></span></a>	#}
-{#				{% endblock comment_deny %}#}
-{#			{% endif %}#}
-{#		{% endfor %}#}
-{#	</ul>#}
-{#{% endfor %}#}
 
-	<a class="btn btn-default" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
-	<a class="btn btn-default" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
-
+	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+	
 {########################## DISBURSEMENTS #####################}
-	{% if disbursed_list %}
+{% if disbursed_list %}
 		<h2>Disbursed by you</h2>
 		<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
 					<th>Item Name</th>
-					<th># Item</th>
+					<th>Item Quantity </th>
 					<th>Disbursed to</th>
 					<th>Admin Comment</th>
 					<th>Time Disbursed</th>
@@ -313,11 +224,12 @@
 
 	{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
 		{% block modal %}
-			<button id="comment-button" class="btn btn-large">Directly disburse Items to Users here</button>
+			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button>
 		{% endblock modal %}
 
 
 {% endif %}
+
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -337,8 +249,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-deny %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.deny').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -368,8 +278,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js-approve %}
-<script src="{% static "js/bootstrap.min.js" %}"></script>
-<script src="{% static "js/jquery.min.js" %}"></script>
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
@@ -399,8 +307,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal --> 
 {% block js %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
     $('#comment-button').click(function() {
         $('#form-modal-body').load('disburse/item', function () {
@@ -409,41 +315,127 @@
     });
 </script>
 {% endblock js %}
-{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
-<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="http://cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
-<script type="text/javascript" src="http://cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
- 
+
  <script>
 	$(document).ready(function(){
-		$.fn.dataTable.ext.search.push(
-		    function( settings, data, dataIndex, originalData ) {
-		    	if (settings.nTable.id !== 'inventory-disbursed' && settings.nTable.id !== 'user-table') { // only do this for all tables but disbursed (no tags)
-		    		var tag = $('#tag').val();
-		    		id = originalData[0].split("\"")[1].split("/")[2]; 
-		        	console.log(id);
-       			}
-		    	// first get tag for this data row
-		       	
-		        return true;
-		    }
-		);
-	    var itemTable = $('#inventory-item').dataTable();
-	     // Event listener to the two range filtering inputs to redraw on input
-	    $('#tag, #min, max').keyup( function() {
-	        itemTable.draw();
-	    } );
-	});
-	$(document).ready(function(){
-	    $('#inventory-request-all').dataTable();
-	    $('#inventory-request-approved').dataTable();
-	    $('#inventory-request-pending').dataTable();
-	    $('#inventory-request-denied').dataTable();
-	    $('#inventory-disbursed').dataTable();
+		$('#inventory-item').dataTable();
+	    $('#inventory-request-all').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-approved').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-pending').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-request-denied').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	    $('#inventory-disbursed').dataTable({
+	        "order": [[ 4, "desc" ]]
+	    });
 	    $('#user-table').dataTable();
 	});
 	</script>
+<script>
+$('#included-tags').select2(); // making multiple select
+$('#excluded-tags').select2(); // making multiple select
+get_search_data(); // initialize item data
+$('#search-form').on('submit', function(event){
+    event.preventDefault();
+    console.log("form submitted!")  // sanity check
+    get_search_data();
+});
 
+function get_search_data() {
+	var data = '';
+	var included_tags = $('#included-tags').select2('val');
+	var excluded_tags = $('#excluded-tags').select2('val')
+	if(included_tags) {
+		for(i in included_tags) {
+			data += 'included_tags=' + included_tags[i]+'&';
+		}
+	}
+	if(excluded_tags) { 
+		for(i in excluded_tags) {
+			data += 'excluded_tags=' + excluded_tags[i] + '&';
+		}
+	}
+	console.log(data);
+    $.ajax({
+        url : '{% url 'inventory:api_item_list' %}',
+        type : "GET", // http method
+        data : data,
+        success : function(json) {
+            $('#item_name').val(''); // remove the value from the input
+            console.log(json); // log the returned json to the console
+        	$('#inventory-search').dataTable().fnClearTable();
+        	var numCustomFields = {{ custom_fields|length }}
+        	var djangoCustomFieldNameList = [];
+			{% for field in custom_fields %} 
+				djangoCustomFieldNameList.push("{{ field.field_name }}");
+			{% endfor %}
+			
+         	for(i in json) {
+         		var dataTableData = [
+			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
+			        json[i].quantity,
+			        json[i].model_number,
+			        json[i].description
+			         ];
+			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+			    if(numCustomFieldsAvailable === 0) {
+			    	for(count = 0; count<numCustomFields; count++) {
+			    		dataTableData.push('');
+			    	}
+			    } else {
+			    	var customFieldArr = Array(numCustomFields).fill('');
+			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+			    		var custom_field_object = json[i].values_custom_field[count];
+			    		var field = custom_field_object.field;
+						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+						if(indexOfField == -1) {
+			    			continue;
+			    		}
+			    		if (field.field_type == "Short") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
+						} else if(field.field_type == "Long") {
+							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
+						} else if(field.field_type == "Int") {
+							if(custom_field_object.field_value_integer) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+							}
+						} else if(field.field_type == "Float") {
+							if(custom_field_object.field_value_floating) {
+								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
+							}
+						}
+			    	}
+			    	dataTableData.push.apply(dataTableData, customFieldArr);
+			    }
+         		$('#inventory-search').dataTable().fnAddData(dataTableData);
+        	}
+        },
+        error : function(xhr,errmsg,err) {
+            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+        }
+    });
+};
+
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+
+$(document).ready(function(){
+	    $('#inventory-search').dataTable();
+	});
+</script>
 {% endblock %}
 
 

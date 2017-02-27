@@ -10,4 +10,39 @@
     <button type="submit" class="btn btn-success">Login</button>
     <input type="hidden" name="next" value="check_login/" />
   </form>
+
+<html>
+<script>
+
+var access_token = null;
+const OAUTH_URL = "//oauth.oit.duke.edu/oauth/authorize.php";
+
+var getAccessToken = function() {
+   var url = window.location.href;
+   var regex = new RegExp("access_token" + "(=([^&#]*)|&|#|$)"),
+   results = regex.exec(url);
+   if (results == null) return 0;
+   return results[2];
+};
+
+var getQueryString = function() {
+   return "?" + $.param({
+       response_type: 'token',
+       redirect_uri: 'http://localhost:8000/login/check_OAuth_login',
+       client_id: 'meeseeks-inc--inventory-system',
+       scope: 'basic',
+       state: 11291
+   });
+};
+
+var checkAccessToken = function() {
+   access_token = getAccessToken();
+   console.log(access_token)
+   if (!access_token) {
+       window.location.replace(OAUTH_URL + getQueryString());
+   }
+};
+</script>
+<input type="button" name='login' value='Login using netid' onclick="location.href='{% url 'request_token' %}'" class="save btn btn-default"></button>
+</html>
 {% endblock %}
