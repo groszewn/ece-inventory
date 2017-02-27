@@ -43,7 +43,7 @@ from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
-    IsAdminOrManager
+    IsAdminOrManager, AdminAllManagerNoDelete
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
@@ -557,9 +557,10 @@ class APIItemList(ListCreateAPIView):
             queryset = queryset.exclude(tags__in=excluded)
         elif not excluded and included:
             queryset = queryset.filter(tags__in=included)
-        elif excluded and included:    
-            tags = [x for x in included if x not in excluded]
-            queryset=queryset.filter(tags__in=tags)
+        elif excluded and included:
+            included_queryset = queryset.filter(tags__in=included)
+            excluded_queryset = queryset.filter(tags__in=excluded)
+            queryset = included_queryset.exclude(item_id__in=excluded_queryset)
         return queryset
     
     def get(self, request, format=None):
@@ -568,11 +569,13 @@ class APIItemList(ListCreateAPIView):
             "request": self.request,
         }
         serializer = ItemSerializer(items, many=True, context=context)
-#         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = ItemSerializer(data=request.data)
+        context = {
+            "request": self.request,
+        }
+        serializer = ItemSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -618,7 +621,7 @@ class APIItemDetail(APIView):
     """
     Retrieve, update or delete a snippet instance.
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (AdminAllManagerNoDelete,)
     
     def get_object(self, pk):
         try:
@@ -638,7 +641,11 @@ class APIItemDetail(APIView):
     def put(self, request, pk, format=None):
         item = self.get_object(pk)
         starting_quantity = item.quantity
-        serializer = ItemSerializer(item, data=request.data, partial=True)
+        context = {
+            "request": self.request,
+            "pk": pk,
+        }
+        serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -782,8 +789,15 @@ class APIMultipleRequests(APIView):
         }
         if item_list:
             item_id_list = item_list.split(',')
+            if len(request.data)>len(item_id_list):
+                del request.data[len(item_id_list):]
             for i, item_id in enumerate(item_id_list):
-                request.data[i]['item_name']=item_id
+                if i>=len(request.data):
+                    item_name_dict = {'item_name':item_id}
+                    request.data.append(dict(item_name_dict))
+                else:
+                    request.data[i]['item_name']=item_id
+        print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
         if serializer.is_valid():
             serializer.save()

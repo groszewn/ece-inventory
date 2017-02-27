@@ -31,7 +31,30 @@ class IsAtLeastUser(permissions.BasePermission):
         except User.DoesNotExist:
             return False
 
+
+class AdminAllManagerNoDelete(permissions.BasePermission):
+    """
+    Custom permission to distinguish admin and user
+    """
+    def has_permission(self, request, view):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        try:
+            if request.method in permissions.SAFE_METHODS:
+                return User.objects.get(username=request.user)
+        except User.DoesNotExist:
+            return False
         
+        
+        # Write permissions are only allowed to admin 
+        try: 
+            if request.method == 'DELETE':  
+                return User.objects.get(username=request.user).is_superuser
+            else:
+                return User.objects.get(username=request.user).is_staff
+        except User.DoesNotExist:
+            return False
+      
 class IsAdminOrUser(permissions.BasePermission):
     """
     Custom permission to distinguish admin and user

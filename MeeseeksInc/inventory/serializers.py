@@ -74,6 +74,8 @@ class GetItemSerializer(serializers.ModelSerializer):
 class ItemSerializer(serializers.ModelSerializer):
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
     
+    item_id = serializers.CharField(read_only=True)
+    
     class Meta:
         model = Item
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
@@ -126,13 +128,12 @@ class LogSerializer(serializers.ModelSerializer):
     
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
-    
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
@@ -147,7 +148,7 @@ class RequestSerializer(serializers.ModelSerializer):
     
 class RequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
@@ -166,7 +167,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
 
 class MultipleRequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
@@ -213,7 +214,7 @@ class DisbursementSerializer(serializers.ModelSerializer):
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     admin_name = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
