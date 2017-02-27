@@ -5,6 +5,8 @@
 {% block content %}
 
 <center> <h1>  Request for: {{ request.item_name }} </h1> </center> 
+<center> <h3>  Quantitiy Remaining: {{ request.item_name.quantity }} </h3> </center> 
+
 {% if request.status == "Pending"%}
 <center> <h1 style="color:gold">  Status: {{ request.status }} </h1> </center> 
 {% endif %}
