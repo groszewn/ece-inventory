@@ -622,6 +622,8 @@ def log_item(request):
                     return redirect(reverse('custom_admin:index'))
             form.save()
             return redirect('/customadmin')
+        else:
+            messages.error(request, ('Please enter a valid value in order to submit this form.'))
     return render(request, 'inventory/log_item.html', {'form': form})
 
 @login_required(login_url='/login/')

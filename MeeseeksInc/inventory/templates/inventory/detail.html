@@ -1,8 +1,7 @@
-{% extends 'inventory/base.html' %} 
+{% extends my_template %}
 
 <link href="/static/css/custom.css" rel="stylesheet">
 
-{#put this at the top so that the base template is "base.html"#}
 {% block content %}
 
 <center> <h1>  Item: {{ item.item_name }} </h1> </center> 
@@ -202,17 +201,15 @@
 									{% block comment_deny %}
 									<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 									{% endblock comment_deny %}
+									
+									{% if request.user_id == current_user%}
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									{% endif %}
+									
 								{% else %}
-									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-info">Edit</a>
+									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-primary">Edit</a>
+									
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-									<script>
-										function clickEvent2() {
-										window.location='{%url 'inventory:request_edit' request.request_id %}';
-									}
-									</script>
-	
-									<button value="Edit Request" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Request</button>
 								{% endif %}
 							</td>
 						</tr>
