@@ -131,9 +131,11 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         if(not user.is_staff):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
+            context['my_template'] = 'inventory/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.all()
-            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")    
+            context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
+            context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         context['current_user'] = self.request.user.username
@@ -190,6 +192,10 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
     def get_context_data(self, **kwargs):
         context = super(CartListView, self).get_context_data(**kwargs)
         context['cart_list'] = self.get_queryset()
+        if self.request.user.is_staff:
+            context['my_template'] = 'custom_admin/base.html'
+        else:
+            context['my_template'] = 'inventory/base.html'
         return context
     
     def post(self, request, *args, **kwargs):
@@ -226,7 +232,10 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         for cart_instance in self.get_queryset():
             cart_instance.delete()
         messages.success(self.request, 'You have successfully requested the items in the cart.')
-        return HttpResponseRedirect('/')
+        if self.request.user.is_staff:
+            return HttpResponseRedirect('/customadmin')
+        else:
+            return HttpResponseRedirect('/')
 
     def form_invalid(self, formset):
         return self.render_to_response(
@@ -304,20 +313,18 @@ def search_view(request):
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
-        form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        form = RequestEditForm(request.POST, instance=instance)
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
-#             post.item_id = form['item_field'].value()
-#             post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id=instance.request_id, item_id=instance.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            return redirect('/')
+            return redirect('/item/' + instance.item_name.item_id )
     else:
-        form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
+        form = RequestEditForm(instance=instance)
     return render(request, 'inventory/request_edit.html', {'form': form})
   
 # class ResultsView(LoginRequiredMixin, generic.DetailView):
@@ -358,6 +365,11 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
         context = super(request_detail, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['request'] = self.get_object()
+        context['current_user'] = self.request.user.username
+        if self.request.user.is_staff:
+            context['my_template'] = 'custom_admin/base.html'
+        else:
+            context['my_template'] = 'inventory/base.html'
         return context
     
     def post(self, request, pk):
@@ -410,6 +422,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     return redirect('/')
                 return redirect(reverse('custom_admin:index'))
             else:
+                messages.error(request, ('Please enter a valid value in order to submit this form.'))
                 form = AdminRequestEditForm(instance=instance)
                 return render(request, 'inventory/request_detail.html', {'form': form}) 
             
