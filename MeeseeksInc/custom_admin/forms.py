@@ -53,6 +53,8 @@ class LogForm(forms.ModelForm):
         ('Acquired', 'Acquired')
         ]
     item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
+    item_amount = forms.IntegerField(min_value=0)
+
     class Meta:
         model = Item_Log
         fields = ('item_name', 'item_change_status', 'item_amount')

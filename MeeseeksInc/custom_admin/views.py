@@ -594,34 +594,39 @@ def log_item(request):
             item = Item.objects.get(item_id=form['item_name'].value())
             change_type = form['item_change_status'].value()
             amount = int(form['item_amount'].value())
-            if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
-                item.quantity = F('quantity')+amount
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
-                                   affected_user=None, change_occurred="Acquired " + str(amount))
-                item.save()
-                messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
-            elif change_type == "Broken":
-                if item.quantity >= amount:
-                    item.quantity = F('quantity')-amount
+            if form.cleaned_data['item_amount'] > 0:
+                if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
+                    item.quantity = F('quantity')+amount
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
+                                       affected_user=None, change_occurred="Acquired " + str(amount))
                     item.save()
-                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
-                                       affected_user=None, change_occurred="Broke " + str(amount))
-                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
-                else:
-                    messages.error(request, ("You can't break more of " + item.item_name + " than you have."))
-                    return redirect(reverse('custom_admin:index'))
-            elif change_type == "Lost":
-                if item.quantity >= amount:
-                    item.quantity = F('quantity')-amount
-                    item.save()
-                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
-                                       affected_user=None, change_occurred="Lost " + str(amount))
-                    messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
-                else:
-                    messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
-                    return redirect(reverse('custom_admin:index'))
-            form.save()
-            return redirect('/customadmin')
+                    messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
+                elif change_type == "Broken":
+                    if item.quantity >= amount:
+                        item.quantity = F('quantity')-amount
+                        item.save()
+                        Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
+                                           affected_user=None, change_occurred="Broke " + str(amount))
+                        messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                    else:
+                        messages.error(request, ("You can't break more of " + item.item_name + " than you have."))
+                        return redirect(reverse('custom_admin:index'))
+                elif change_type == "Lost":
+                    if item.quantity >= amount:
+                        item.quantity = F('quantity')-amount
+                        item.save()
+                        Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
+                                           affected_user=None, change_occurred="Lost " + str(amount))
+                        messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
+                    else:
+                        messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
+                        return redirect(reverse('custom_admin:index'))
+                form.save()
+                return redirect('/customadmin')
+        else:
+            messages.error(request, ("Amount must be greater than 0."))
+            raise forms.ValidationError('Amount must be greater than 0.')
+            return (request, 'inventory/log_item.html', {'form': form})
     return render(request, 'inventory/log_item.html', {'form': form})
 
 @login_required(login_url='/login/')
