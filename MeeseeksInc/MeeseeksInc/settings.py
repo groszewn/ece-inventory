@@ -25,7 +25,7 @@ SECRET_KEY = 'x6s74m_9(u*#)ntmwf0g&1xpwh^7#x4m$07-*xzq4=l^qg!rhw'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
+ALLOWED_HOSTS = ['meeseeksinc.colab.duke.edu', '127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
 
 
 # Application definition
@@ -154,11 +154,14 @@ USE_L10N = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
-
+'''
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "static"),
 )
+'''
+
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 ADMIN_TOOLS_MENU = 'MeeseeksInc.menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'MeeseeksInc.dashboard.CustomIndexDashboard'
