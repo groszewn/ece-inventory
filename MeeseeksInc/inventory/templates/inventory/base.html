@@ -54,7 +54,7 @@
             <span class="icon-bar"></span>
           </button>
 
-          	{% if user.is_staff %}#}
+          	{% if user.is_staff %}
           		<a class="navbar-brand" href="{% url 'custom_admin:index' %}">Duke University ECE Department Inventory</a>
         	{% else %}
         		<a class="navbar-brand" href="{% url 'inventory:index' %}">Duke University ECE Department Inventory</a>

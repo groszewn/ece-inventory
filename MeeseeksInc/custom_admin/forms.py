@@ -46,6 +46,9 @@ class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
     
 class LogForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(LogForm, self).__init__(*args, **kwargs)
+        self.fields['item_amount'] = forms.IntegerField(required=True, min_value=1)
     item_name = forms.ModelChoiceField(queryset=Item.objects.all())
     item_change_options = [
         ('Lost', 'Lost'),
@@ -59,6 +62,7 @@ class LogForm(forms.ModelForm):
     
 class AdminRequestEditForm(forms.ModelForm):    
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
+    request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
         fields = ('request_quantity', 'reason','comment')
@@ -74,7 +78,6 @@ class ItemEditForm(forms.ModelForm):
         super(ItemEditForm, self).__init__(*args, **kwargs)
         if not user.is_superuser and user.is_staff:
             self.fields['quantity'].widget.attrs['readonly'] = True
-            #quantity=forms.IntegerField(min_value=0, disabled=True, required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -134,6 +137,11 @@ class EditTagForm(forms.ModelForm):
 class CreateItemForm(forms.ModelForm):
     def __init__(self, tags, custom_fields, *args, **kwargs):
         super(CreateItemForm, self).__init__(*args, **kwargs)
+        choices = []
+        for myTag in tags:
+            if [myTag.tag,myTag.tag] not in choices:
+                choices.append([myTag.tag,myTag.tag])
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...(Hold command to select multiple tags.)')
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -143,14 +151,8 @@ class CreateItemForm(forms.ModelForm):
                 self.fields["%s" % field.field_name] = forms.IntegerField(required=False) 
             if field.field_type == 'Float':
                 self.fields["%s" % field.field_name] = forms.FloatField(required=False)
-        choices = []
-        for myTag in tags:
-            if [myTag.tag,myTag.tag] not in choices:
-                choices.append([myTag.tag,myTag.tag])
-        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...')
-    
-    new_tags = forms.CharField(required=False)
-    location = forms.CharField(required=False)
+        
+    new_tags = forms.CharField(required=False, label = 'New tags: (Enter multiple new tags in a comma separated list.)')
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
