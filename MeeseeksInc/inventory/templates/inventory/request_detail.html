@@ -1,4 +1,4 @@
-{% extends 'custom_admin/base.html' %}  
+{% extends my_template %} 
 {% load static %}
 {#put this at the top so that the base template is "base.html"#}
 
@@ -19,6 +19,7 @@
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
+		            <th>Requested By:</th>
 					<th>Quantity:</th>
 					<th>Reason:</th>
 					<th>Admin Comment:</th>
@@ -27,6 +28,7 @@
 		        </thead>
 		        <tbody>
 		        		<tr>
+		        			<td>{{request.user_id}}</td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
@@ -51,7 +53,8 @@
 		{{form.reason.label}}:{{ form.reason}}
 		<br/>
 		<br/>
-		<button type="submit" class="btn btn-primary btn-md" value="Edit" onclick="return confirm('Are you sure you want to edit this tag?')" name="edit">Submit Request Edits</button>
+		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
+		{#<button type="submit" class="btn btn-primary btn-md" value="Edit" onclick="return confirm('Are you sure you want to edit this request?')" name="edit">Submit Request Edits</button>#}
 		<br/>
 		<br/>
 		{% if user.is_staff %}

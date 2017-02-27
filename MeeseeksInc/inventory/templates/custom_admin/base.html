@@ -53,7 +53,7 @@
             <span class="icon-bar"></span>
           </button>
 
-          	{% if user.is_staff %}#}
+          	{% if user.is_staff %}
           		<a class="navbar-brand" href="{% url 'custom_admin:index' %}">Duke University ECE Department Inventory</a>
         	{% else %}
         		<a class="navbar-brand" href="{% url 'inventory:index' %}">Duke University ECE Department Inventory</a>
@@ -61,7 +61,12 @@
         </div>
  
       <ul class="nav navbar-nav navbar-right">
-      <li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
+       <li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
+       <li>
+	      	<a href="{% url 'inventory:inventory_cart' %}" class="btn btn-default">
+	          <span class="glyphicon glyphicon-shopping-cart"></span>
+	        </a>
+        </li>
        <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Administration<span class="caret"></span></a>
           <ul class="dropdown-menu">
