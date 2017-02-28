@@ -598,26 +598,26 @@ class APIItemList(ListCreateAPIView):
                        affected_user=None, change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
+            custom_field_values = request.data.get('values_custom_field')
             for field in Custom_Field.objects.all():
-                value = request.data.get(field.field_name,None)
+                value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
                 if value is not None:
                     custom_val = Custom_Field_Value(item=item, field=field)
                     if field.field_type == 'Short':    
-                        custom_val.field_value_short_text = value
+                        custom_val.field_value_short_text = value['field_value_short_text']
                     if field.field_type == 'Long':
-                        custom_val.field_value_long_text = value
+                        custom_val.field_value_long_text = value['field_value_long_text']
                     if field.field_type == 'Int':
                         if value != '':
-                            custom_val.field_value_integer = value
+                            custom_val.field_value_integer = value['field_value_integer']
                         else:
                             custom_val.field_value_integer = None
                     if field.field_type == 'Float':
                         if value != '':
-                            custom_val.field_value_floating = value 
+                            custom_val.field_value_floating = value['field_value_floating'] 
                         else:
                             custom_val.field_value_floating = None
-                    custom_val.save()
-                    
+                    custom_val.save()  
             context = {
             "request": self.request,
             "pk": item.item_id,
