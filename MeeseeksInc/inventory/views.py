@@ -646,7 +646,7 @@ class APIItemList(ListCreateAPIView):
 
 class APIItemDetail(APIView):
     """
-    Retrieve, update or delete a snippet instance.
+    Retrieve, update or delete an item instance.
     """
     permission_classes = (AdminAllManagerNoDelete,)
     
@@ -729,7 +729,7 @@ class APIItemDetail(APIView):
 ########################################## Request ########################################
 class APIRequestList(APIView):  
     """
-    List all Requests (for yourself if user, all if admin), or create a new request 
+    List all Requests (for yourself if user, all if admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -744,7 +744,7 @@ class APIRequestList(APIView):
     
 class APIRequestDetail(APIView):
     """
-    Retrieve, update or delete a request instance.
+    Retrieve, update or delete a request instance (for yourself if user, all if admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -792,7 +792,6 @@ class APIRequestThroughItem(APIView):
         context = {
             "request": self.request,
         }
-        print(request.data)
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
@@ -875,7 +874,7 @@ class APIApproveRequest(APIView):
 
 class APIDenyRequest(APIView):
     """
-    Retrieve, update or delete a request instance.
+    Deny a request with an optional reason.
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -915,7 +914,7 @@ class APIDisbursementList(APIView):
     
 class APIDirectDisbursement(APIView):
     """
-    Create a direct disbursement
+    Create a direct disbursement (Admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -1004,7 +1003,7 @@ class APIUserDetail(APIView):
 ########################################### Tags ##################################################
 class APITagList(APIView):
     """
-    List all Tag (for yourself if user, all if admin)
+    List all Tags
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -1015,7 +1014,7 @@ class APITagList(APIView):
 ########################################### Logs ##################################################
 class APILogList(APIView):
     """
-    List all Logs (for admin -- add this!)
+    List all Logs (admin / manager)
     """
     permission_classes = (IsAdminOrManager,)
 #     pagination_class = rest_framework.pagination.PageNumberPagination
@@ -1060,7 +1059,9 @@ class APILogList(APIView):
 
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
-
+    """
+    List custom fields (w/ private fields for admin/manager) and create custom fields (admin)
+    """
     permission_classes = (IsAdmin,)
     
     def get(self, request, format=None):
@@ -1085,7 +1086,9 @@ class APICustomField(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class APICustomFieldModify(APIView):
-
+    """
+    Delete specific custom field
+    """
     permission_classes = (IsAdminOrUser,)
 
     def delete(self, request, pk, format=None):
