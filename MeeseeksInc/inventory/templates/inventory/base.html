@@ -64,6 +64,7 @@
 	  {% if user.is_authenticated %}
 	      <ul class="nav navbar-nav navbar-right">
 	      	<li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
+	      	<li><a href="{% url 'inventory:api_guide' %}"> API Guide </a></li>
 	      	<li>
 		      	<a href="{% url 'inventory:inventory_cart' %}" class="btn btn-default">
 		          <span class="glyphicon glyphicon-shopping-cart"></span>
