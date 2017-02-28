@@ -60,7 +60,7 @@
 				<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
-					<th>Request</th>
+					<th>Request for</th>
 					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
@@ -72,13 +72,16 @@
 		        <tbody>
 		        	{% for request in request_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
-							<td>{{ request.time_requested }}</td>
+							<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+							</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -89,7 +92,7 @@
 				<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
-					<th>Request</th>
+					<th>Request for</th>
 					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
@@ -101,13 +104,16 @@
 		        <tbody>
 		        	{% for request in approved_request_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
-							<td>{{ request.time_requested }}</td>
+							<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+							</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -118,7 +124,7 @@
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
-					<th>Request</th>
+					<th>Request for</th>
 					<th>Quantity</th>
 					<th>Status</th>
 					<th>Requested by</th>
@@ -131,13 +137,16 @@
 		        <tbody>
 		        	{% for request in pending_request_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
-							<td>{{ request.time_requested }}</td>
+							<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+							</td>
 							<td>
 								{% block comment_accept %}
 								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
@@ -160,7 +169,7 @@
 				<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
 		            <tr>
-					<th>Request</th>
+					<th>Request for</th>
 					<th>Item Quantity</th>
 					<th>Status</th>
 					<th>Request by</th>
@@ -172,13 +181,16 @@
 		        <tbody>
 		        	{% for request in denied_request_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
-							<td>{{ request.time_requested }}</td>
+							<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+							</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -214,7 +226,10 @@
 							<td>{{ disbursed.total_quantity }}</td>
 							<td>{{ disbursed.user_name }}</td>
 							<td>{{ disbursed.comment}}</td>
-							<td>{{ disbursed.time_disbursed }}</td>
+							<td>
+								  <span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+								  {{ disbursed.time_disbursed }}
+							</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -325,7 +340,17 @@
 	        "order": [[ 6, "desc" ]]
 	    });
 	    $('#inventory-request-pending').dataTable({
-	        "order": [[ 6, "desc" ]]
+	        "order": [[ 6, "desc" ]],
+	        "columns": [
+			    null,
+			    null,
+			    null,
+			    null,
+			    null,
+			    null,
+			    null,
+			    { "width": "20%" }
+			  ]
 	    });
 	    $('#inventory-request-denied').dataTable({
 	        "order": [[ 6, "desc" ]]
