@@ -79,7 +79,8 @@ class GetItemSerializer(serializers.ModelSerializer):
 
 class ItemSerializer(serializers.ModelSerializer):
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
-    
+    model_number = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
     item_id = serializers.CharField(read_only=True)
     
     class Meta:

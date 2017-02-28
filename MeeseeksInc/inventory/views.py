@@ -80,7 +80,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['tags'] = Tag.objects.all()
+        context['tags'] = Tag.objects.distinct('tag')
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -538,11 +538,11 @@ class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
 
 class ItemFilter(FilterSet):
     included_tags = TagsMultipleChoiceFilter(
-        queryset = Tag.objects.all(),
+        queryset = Tag.objects.distinct('tag'),
         name="tags", 
     )
     excluded_tags = TagsMultipleChoiceFilter(
-        queryset = Tag.objects.all(),
+        queryset = Tag.objects.distinct('tag'),
         name="tags", 
     )
     class Meta:
@@ -564,8 +564,23 @@ class APIItemList(ListCreateAPIView):
     def get_queryset(self):
         """ allow rest api to filter by submissions """
         queryset = Item.objects.all()
-        included = self.request.query_params.getlist('included_tags')
-        excluded = self.request.query_params.getlist('excluded_tags')
+        included_temp = self.request.query_params.getlist('included_tags')
+        excluded_temp = self.request.query_params.getlist('excluded_tags')
+        # now find all included/excluded tags with the same tag name
+        print(included_temp)
+        print(excluded_temp)
+        included=[]
+        excluded=[]
+        for inc in included_temp:
+            tag_name = Tag.objects.get(id=inc).tag
+            for same_name_tag in Tag.objects.filter(tag=tag_name):
+                included.append(same_name_tag.id)
+
+        for exc in excluded_temp:
+            tag_name = Tag.objects.get(id=exc).tag
+            for same_name_tag in Tag.objects.filter(tag=tag_name):
+                excluded.append(same_name_tag.id)
+
         if not included and excluded:
             queryset = queryset.exclude(tags__in=excluded)
         elif not excluded and included:
@@ -598,26 +613,26 @@ class APIItemList(ListCreateAPIView):
                        affected_user=None, change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
+            custom_field_values = request.data.get('values_custom_field')
             for field in Custom_Field.objects.all():
-                value = request.data.get(field.field_name,None)
+                value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
                 if value is not None:
                     custom_val = Custom_Field_Value(item=item, field=field)
                     if field.field_type == 'Short':    
-                        custom_val.field_value_short_text = value
+                        custom_val.field_value_short_text = value['field_value_short_text']
                     if field.field_type == 'Long':
-                        custom_val.field_value_long_text = value
+                        custom_val.field_value_long_text = value['field_value_long_text']
                     if field.field_type == 'Int':
                         if value != '':
-                            custom_val.field_value_integer = value
+                            custom_val.field_value_integer = value['field_value_integer']
                         else:
                             custom_val.field_value_integer = None
                     if field.field_type == 'Float':
                         if value != '':
-                            custom_val.field_value_floating = value 
+                            custom_val.field_value_floating = value['field_value_floating'] 
                         else:
                             custom_val.field_value_floating = None
-                    custom_val.save()
-                    
+                    custom_val.save()  
             context = {
             "request": self.request,
             "pk": item.item_id,
@@ -669,25 +684,26 @@ class APIItemDetail(APIView):
             else:
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(item.item_name))
+            custom_field_values = request.data.get('values_custom_field')
             for field in Custom_Field.objects.all():
-                value = request.data.get(field.field_name,None)
+                value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
                 if value is not None:
                     if Custom_Field_Value.objects.filter(item = item, field = field).exists():
                         custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                     else:
                         custom_val = Custom_Field_Value(item=item, field=field)
                     if field.field_type == 'Short':    
-                        custom_val.field_value_short_text = value
+                        custom_val.field_value_short_text = value['field_value_short_text']
                     if field.field_type == 'Long':
-                        custom_val.field_value_long_text = value
+                        custom_val.field_value_long_text = value['field_value_long_text']
                     if field.field_type == 'Int':
                         if value != '':
-                            custom_val.field_value_integer = value
+                            custom_val.field_value_integer = value['field_value_integer']
                         else:
                             custom_val.field_value_integer = None
                     if field.field_type == 'Float':
                         if value != '':
-                            custom_val.field_value_floating = value 
+                            custom_val.field_value_floating = value['field_value_floating'] 
                         else:
                             custom_val.field_value_floating = None
                     custom_val.save()
