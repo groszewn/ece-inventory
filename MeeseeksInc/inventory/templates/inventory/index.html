@@ -67,7 +67,10 @@
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
-						<td>{{ request.time_requested }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
 					</tr>
 				{% endfor %}
 	        </tbody>
@@ -93,7 +96,10 @@
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
-						<td>{{ request.time_requested }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
 					</tr>
 				{% endfor %}
 	        </tbody>
@@ -120,7 +126,10 @@
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
-						<td>{{ request.time_requested }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
 						<td>
 							<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
 							<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
@@ -150,7 +159,10 @@
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
-						<td>{{ request.time_requested }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
 					</tr>
 				{% endfor %}
 	        </tbody>
@@ -180,7 +192,10 @@
 						<td>{{ disbursed.total_quantity }}</td>
 						<td>{{ disbursed.admin_name }}</td>
 						<td>{{ disbursed.comment}}</td>
-						<td>{{ disbursed.time_disbursed }}</td>
+						<td>
+						  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+								  {{ disbursed.time_disbursed }}
+							</td>
 					</tr>
 				{% endfor %}
 	        </tbody>

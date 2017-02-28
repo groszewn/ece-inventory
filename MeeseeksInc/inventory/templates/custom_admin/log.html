@@ -55,7 +55,10 @@ $(function(){
 					{% endif %}
 					<td>{{ instance.affected_user }}</td>
 					<td>{{ instance.change_occurred }}</td>
-					<td>{{ instance.time_occurred }}</td>
+					<td>
+						  <span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>
+						  {{ instance.time_occurred }}
+					</td>
 				</tr>
 			{% endfor %}
         </tbody>
