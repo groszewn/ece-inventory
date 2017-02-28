@@ -735,19 +735,27 @@ class APIItemDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ########################################## Request ########################################
-class APIRequestList(APIView):  
+class RequestFilter(FilterSet):
+    class Meta:
+        model = Request
+        fields = ['status']
+       
+class APIRequestList(ListAPIView):  
     """
     List all Requests (for yourself if user, all if admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
     serializer_class = RequestSerializer
+    filter_class = RequestFilter
+    model = Request
+    queryset = Request.objects.all()
     
     def get(self, request, format=None):
         requests = [];
         if User.objects.get(username=request.user.username).is_staff:
-            requests = Request.objects.all()
+            requests = self.filter_queryset(Request.objects.all())
         else:
-            requests = Request.objects.filter(user_id=request.user.username)
+            requests = self.filter_queryset(Request.objects.filter(user_id=request.user.username))
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
     
