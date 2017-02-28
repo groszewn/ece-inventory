@@ -509,7 +509,7 @@
 $.fn.dataTable.ext.search.push(
 function (settings, data, dataIndex) {
     var startDate = Date.parse($('#startdate').val(), 10);
-    var convert = data[5].substring(0,14);
+    var convert = data[5].split('T')[0];
     var columnDate = Date.parse(convert); // use data for the age column
     if ((isNaN(startDate)) || (startDate <= columnDate)) {
         return true;
