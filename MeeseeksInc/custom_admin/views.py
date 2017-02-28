@@ -58,7 +58,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['tags'] = Tag.objects.all()
+        context['tags'] = Tag.objects.distinct('tag')
         return context
     def get_queryset(self):
         """Return the last five published questions."""

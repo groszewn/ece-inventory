@@ -80,7 +80,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['tags'] = Tag.objects.all()
+        context['tags'] = Tag.objects.distinct('tag')
         return context
     def get_queryset(self):
         """Return the last five published questions."""
@@ -538,11 +538,11 @@ class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
 
 class ItemFilter(FilterSet):
     included_tags = TagsMultipleChoiceFilter(
-        queryset = Tag.objects.all(),
+        queryset = Tag.objects.distinct('tag'),
         name="tags", 
     )
     excluded_tags = TagsMultipleChoiceFilter(
-        queryset = Tag.objects.all(),
+        queryset = Tag.objects.distinct('tag'),
         name="tags", 
     )
     class Meta:
@@ -564,8 +564,23 @@ class APIItemList(ListCreateAPIView):
     def get_queryset(self):
         """ allow rest api to filter by submissions """
         queryset = Item.objects.all()
-        included = self.request.query_params.getlist('included_tags')
-        excluded = self.request.query_params.getlist('excluded_tags')
+        included_temp = self.request.query_params.getlist('included_tags')
+        excluded_temp = self.request.query_params.getlist('excluded_tags')
+        # now find all included/excluded tags with the same tag name
+        print(included_temp)
+        print(excluded_temp)
+        included=[]
+        excluded=[]
+        for inc in included_temp:
+            tag_name = Tag.objects.get(id=inc).tag
+            for same_name_tag in Tag.objects.filter(tag=tag_name):
+                included.append(same_name_tag.id)
+
+        for exc in excluded_temp:
+            tag_name = Tag.objects.get(id=exc).tag
+            for same_name_tag in Tag.objects.filter(tag=tag_name):
+                excluded.append(same_name_tag.id)
+
         if not included and excluded:
             queryset = queryset.exclude(tags__in=excluded)
         elif not excluded and included:
