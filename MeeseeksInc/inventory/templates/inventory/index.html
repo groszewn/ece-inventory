@@ -51,7 +51,7 @@
 			<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 	        <thead>
 	            <tr>
-				<th>Request</th>
+				<th>Request for</th>
 				<th>Quantity</th>
 				<th>Status</th>
 				<th>Student Reason</th>
@@ -62,7 +62,7 @@
 	        <tbody>
 	        	{% for request in request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
@@ -80,7 +80,7 @@
 			<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 	        <thead>
 	            <tr>
-				<th>Request</th>
+				<th>Request for</th>
 				<th>Quantity</th>
 				<th>Status</th>
 				<th>Student Reason</th>
@@ -91,7 +91,7 @@
 	        <tbody>
 	        	{% for request in approved_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
@@ -109,7 +109,7 @@
 			<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 	        <thead>
 	            <tr>
-				<th>Request</th>
+				<th>Request for</th>
 				<th>Quantity</th>
 				<th>Status</th>
 				<th>Student Reason</th>
@@ -121,7 +121,7 @@
 	        <tbody>
 	        	{% for request in pending_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
@@ -143,7 +143,7 @@
 			<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 	        <thead>
 	            <tr>
-				<th>Request</th>
+				<th>Request for</th>
 				<th>Quantity</th>
 				<th>Status</th>
 				<th>Student Reason</th>
@@ -154,7 +154,7 @@
 	        <tbody>
 	        	{% for request in denied_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">Request for {{ request.item_name }}:</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
