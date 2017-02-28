@@ -188,7 +188,10 @@
 		        	{% for request in request_list %}
 		        		<tr class="clickable-row" data-href="{% url 'inventory:request_detail' request.request_id %}">
 							<td>{{ request.status }}</td>
-							<td>{{ request.time_requested }}</td>
+							<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+							</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.request_quantity}}</td>
 							<td>{{ request.reason }}</td>
@@ -222,7 +225,9 @@
 	 window.document.location = $(this).parent().data('href');
 	});
 	$(document).ready(function(){
-	    $('#inventory-request-indiv-item').dataTable();
+	    $('#inventory-request-indiv-item').dataTable({
+	        "order": [[ 1, "desc" ]]
+	    });
 	});
 	</script>
 		
@@ -484,7 +489,10 @@
 						<td>{{instance.item_name}}</td>
 						<td>{{ instance.affected_user }}</td>
 						<td>{{ instance.change_occurred }}</td>
-						<td>{{ instance.time_occurred }}</td>
+						<td>
+						  		<span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>
+								  {{ instance.time_occurred }}
+						</td>
 					</tr>
 				{% endfor %}
 	        </tbody>
