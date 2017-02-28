@@ -42,7 +42,12 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
-    
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ('tag',)
+          
 class GetItemSerializer(serializers.ModelSerializer):
     requests_outstanding = serializers.SerializerMethodField('get_outstanding_requests')
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
@@ -82,7 +87,7 @@ class ItemSerializer(serializers.ModelSerializer):
     model_number = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
     item_id = serializers.CharField(read_only=True)
-    
+
     class Meta:
         model = Item
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
@@ -123,10 +128,6 @@ class CustomValueSerializerNoItem(serializers.ModelSerializer):
         fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
         depth = 1
 
-class TagSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tag
-        fields = ('tag',)
 
 class LogSerializer(serializers.ModelSerializer):
     class Meta:
@@ -155,12 +156,15 @@ class RequestSerializer(serializers.ModelSerializer):
     
 class RequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=timezone.localtime(timezone.now())
+        default=timezone.localtime(timezone.now()),
+        read_only=True
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
+    item_name = ItemSerializer(read_only=True)
+    request_id = serializers.CharField(read_only=True)
     class Meta:
         model = Request
         fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
@@ -174,7 +178,8 @@ class RequestPostSerializer(serializers.ModelSerializer):
 
 class MultipleRequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=timezone.localtime(timezone.now())
+        default=timezone.localtime(timezone.now()),
+        read_only=True
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
@@ -221,12 +226,15 @@ class DisbursementSerializer(serializers.ModelSerializer):
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
-        default=timezone.localtime(timezone.now())
+        default=timezone.localtime(timezone.now()),
+        read_only=True
     )
     admin_name = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
+    item_name = ItemSerializer(read_only=True)
+    
     comment = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
@@ -239,4 +247,12 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         if value<0:
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
-        
+    def validate_user_name(self, value):
+        """
+        Check that the user is real
+        """
+        try:
+            return User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value

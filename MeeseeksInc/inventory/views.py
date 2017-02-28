@@ -613,25 +613,26 @@ class APIItemList(ListCreateAPIView):
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
-            for field in Custom_Field.objects.all():
-                value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
-                if value is not None:
-                    custom_val = Custom_Field_Value(item=item, field=field)
-                    if field.field_type == 'Short':    
-                        custom_val.field_value_short_text = value['field_value_short_text']
-                    if field.field_type == 'Long':
-                        custom_val.field_value_long_text = value['field_value_long_text']
-                    if field.field_type == 'Int':
-                        if value != '':
-                            custom_val.field_value_integer = value['field_value_integer']
-                        else:
-                            custom_val.field_value_integer = None
-                    if field.field_type == 'Float':
-                        if value != '':
-                            custom_val.field_value_floating = value['field_value_floating'] 
-                        else:
-                            custom_val.field_value_floating = None
-                    custom_val.save()  
+            if custom_field_values is not None:
+                for field in Custom_Field.objects.all():
+                    value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
+                    if value is not None:
+                        custom_val = Custom_Field_Value(item=item, field=field)
+                        if field.field_type == 'Short':    
+                            custom_val.field_value_short_text = value['field_value_short_text']
+                        if field.field_type == 'Long':
+                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if field.field_type == 'Int':
+                            if value != '':
+                                custom_val.field_value_integer = value['field_value_integer']
+                            else:
+                                custom_val.field_value_integer = None
+                        if field.field_type == 'Float':
+                            if value != '':
+                                custom_val.field_value_floating = value['field_value_floating'] 
+                            else:
+                                custom_val.field_value_floating = None
+                        custom_val.save()  
             context = {
             "request": self.request,
             "pk": item.item_id,
@@ -646,9 +647,10 @@ class APIItemList(ListCreateAPIView):
 
 class APIItemDetail(APIView):
     """
-    Retrieve, update or delete a snippet instance.
+    Retrieve, update or delete an item instance.
     """
     permission_classes = (AdminAllManagerNoDelete,)
+    serializer_class = ItemSerializer
     
     def get_object(self, pk):
         try:
@@ -672,10 +674,15 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
+        tag_ids = request.data.getlist('tags')
+        tags = Tag.objects.filter(id__in=tag_ids)
+        item.tags.set(tags)
+        
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
+            
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -684,28 +691,29 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=None, change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
-            for field in Custom_Field.objects.all():
-                value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
-                if value is not None:
-                    if Custom_Field_Value.objects.filter(item = item, field = field).exists():
-                        custom_val = Custom_Field_Value.objects.get(item = item, field = field)
-                    else:
-                        custom_val = Custom_Field_Value(item=item, field=field)
-                    if field.field_type == 'Short':    
-                        custom_val.field_value_short_text = value['field_value_short_text']
-                    if field.field_type == 'Long':
-                        custom_val.field_value_long_text = value['field_value_long_text']
-                    if field.field_type == 'Int':
-                        if value != '':
-                            custom_val.field_value_integer = value['field_value_integer']
+            if custom_field_values is not None:
+                for field in Custom_Field.objects.all():
+                    value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
+                    if value is not None:
+                        if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                            custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                         else:
-                            custom_val.field_value_integer = None
-                    if field.field_type == 'Float':
-                        if value != '':
-                            custom_val.field_value_floating = value['field_value_floating'] 
-                        else:
-                            custom_val.field_value_floating = None
-                    custom_val.save()
+                            custom_val = Custom_Field_Value(item=item, field=field)
+                        if field.field_type == 'Short':    
+                            custom_val.field_value_short_text = value['field_value_short_text']
+                        if field.field_type == 'Long':
+                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if field.field_type == 'Int':
+                            if value != '':
+                                custom_val.field_value_integer = value['field_value_integer']
+                            else:
+                                custom_val.field_value_integer = None
+                        if field.field_type == 'Float':
+                            if value != '':
+                                custom_val.field_value_floating = value['field_value_floating'] 
+                            else:
+                                custom_val.field_value_floating = None
+                        custom_val.save()
             context = {
             "request": self.request,
             "pk": pk,
@@ -729,9 +737,10 @@ class APIItemDetail(APIView):
 ########################################## Request ########################################
 class APIRequestList(APIView):  
     """
-    List all Requests (for yourself if user, all if admin), or create a new request 
+    List all Requests (for yourself if user, all if admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = RequestSerializer
     
     def get(self, request, format=None):
         requests = [];
@@ -744,9 +753,10 @@ class APIRequestList(APIView):
     
 class APIRequestDetail(APIView):
     """
-    Retrieve, update or delete a request instance.
+    Retrieve, update or delete a request instance (for yourself if user, all if admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = RequestUpdateSerializer
     
     def get_object(self, pk):
         try:
@@ -787,12 +797,12 @@ class APIRequestThroughItem(APIView):
     Create an item request
     """
     permission_classes = (IsAtLeastUser,)
+    serializer_class = RequestPostSerializer
     
     def post(self, request, pk, format=None):
         context = {
             "request": self.request,
         }
-        print(request.data)
         serializer = RequestPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
@@ -844,6 +854,8 @@ class APIApproveRequest(APIView):
     Approve a request with an optional reason.
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = RequestAcceptDenySerializer
+        
     def get_object(self, pk):
         try:
             return Request.objects.get(request_id=pk)
@@ -875,9 +887,10 @@ class APIApproveRequest(APIView):
 
 class APIDenyRequest(APIView):
     """
-    Retrieve, update or delete a request instance.
+    Deny a request with an optional reason.
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = RequestAcceptDenySerializer
     
     def get_object(self, pk):
         try:
@@ -892,7 +905,7 @@ class APIDenyRequest(APIView):
         serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(status="Denied")
-            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
+            Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
                        affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -903,6 +916,7 @@ class APIDisbursementList(APIView):
     List all Disbursements (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = DisbursementSerializer
     
     def get(self, request, format=None):
         requests = [];
@@ -915,9 +929,10 @@ class APIDisbursementList(APIView):
     
 class APIDirectDisbursement(APIView):
     """
-    Create a direct disbursement
+    Create a direct disbursement (Admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = DisbursementPostSerializer
     
     def get_object(self, pk): #get the item to directly disburse to
         try:
@@ -936,7 +951,7 @@ class APIDirectDisbursement(APIView):
                 # decrement quantity in item
                 item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
-                serializer.save(item_name=item_to_disburse)
+                serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
                 recipient=data['user_name']
                 quantity = data['total_quantity']
@@ -996,17 +1011,27 @@ class APIUserDetail(APIView):
             serializer.save()
             Log.objects.create(request_id=None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event="Edit",
                                affected_user=serializer.data['username'], change_occurred="Changed permissions for " + str(serializer.data['username']))
-#             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
-#                                affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 ########################################### Tags ##################################################
 class APITagList(APIView):
     """
-    List all Tag (for yourself if user, all if admin)
+    List all Tags
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = TagSerializer
+    
+    def get(self, request, format=None):
+        serializer = TagSerializer(Tag.objects.all(), many=True)
+        return Response(serializer.data)
+
+class APITagDetail(APIView):
+    """
+    edit tag
+    """
+    permission_classes = (IsAdminOrUser,)
+    serializer_class = TagSerializer
     
     def get(self, request, format=None):
         serializer = TagSerializer(Tag.objects.all(), many=True)
@@ -1015,7 +1040,7 @@ class APITagList(APIView):
 ########################################### Logs ##################################################
 class APILogList(APIView):
     """
-    List all Logs (for admin -- add this!)
+    List all Logs (admin / manager)
     """
     permission_classes = (IsAdminOrManager,)
 #     pagination_class = rest_framework.pagination.PageNumberPagination
@@ -1060,8 +1085,11 @@ class APILogList(APIView):
 
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
-
+    """
+    List custom fields (w/ private fields for admin/manager) and create custom fields (admin)
+    """
     permission_classes = (IsAdmin,)
+    serializer_class = CustomFieldSerializer
     
     def get(self, request, format=None):
         if self.request.user.is_staff:
@@ -1085,9 +1113,29 @@ class APICustomField(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class APICustomFieldModify(APIView):
-
+    """
+    Delete specific custom field
+    """
     permission_classes = (IsAdminOrUser,)
-
+    
+    def get_object(self, pk):
+        try:
+            return Custom_Field.objects.get(id=pk)
+        except Custom_Field.DoesNotExist:
+            raise Http404
+        
+    def get(self, request, pk, format=None):
+        if self.request.user.is_staff:
+            field = self.get_object(pk)
+            serializer = CustomFieldSerializer(field)
+            return Response(serializer.data)
+        else:
+            field = self.get_object(pk)
+            if not field.is_private:
+                serializer = CustomFieldSerializer(field, many=True)
+                return Response(serializer.data)   
+            return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
+        
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
         Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
