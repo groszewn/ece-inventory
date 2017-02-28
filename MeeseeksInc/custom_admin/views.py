@@ -208,7 +208,7 @@ def add_comment_to_request_accept(request, pk):
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                 disbursement.save()
                 Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Disburse", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -409,7 +409,7 @@ def approve_all_requests(request):
             disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
-            Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+            Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
                        affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -439,7 +439,7 @@ def approve_request(request, pk):
         disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                     total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
         disbursement.save()
-        Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+        Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Approve', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     else:
@@ -787,7 +787,7 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
         post.time_disbursed = timezone.localtime(timezone.now())
         post.save()
         disbursement = Disbursement.objects.get(item_name = post.item_name)
-        Log.objects.create(request_id=None, item_id=post.item_name.item_id, item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Direct Disburse', 
+        Log.objects.create(request_id=None, item_id=post.item_name.item_id, item_name=disbursement.item_name, initiating_user=disbursement.admin_name, nature_of_event='Disburse', 
                                          affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
