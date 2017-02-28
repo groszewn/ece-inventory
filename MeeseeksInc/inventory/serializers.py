@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(allow_blank = True)
     class Meta:
         model = User
-        fields = ('username', 'password', 'email', 'is_staff')
+        fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')
     def validate_email(self, value):
         """
         Check that the email is valid
@@ -28,11 +28,17 @@ class UserSerializer(serializers.ModelSerializer):
         user.email = validated_data.get('email')
         user.username = validated_data.get('username')
         try:
-            user.is_staff = validated_data.get('is_staff')
-            if not validated_data.get('is_staff'):
+            if validated_data.get('is_superuser'):
+                user.is_staff=True
+                user.is_superuser = True
+            elif validated_data.get('is_staff'):
+                user.is_staff=True
+            else:
                 user.is_staff = False
+                user.is_superuser = False
         except:
             user.is_staff= False
+            user.is_superuser = False
         user.set_password(validated_data['password'])
         user.save()
         return user

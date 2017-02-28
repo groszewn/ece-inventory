@@ -84,3 +84,21 @@ class IsAdminOrManager(permissions.BasePermission):
             return User.objects.get(username=request.user).is_staff or User.objects.get(username=request.user).is_superuser
         except User.DoesNotExist:
             return False
+        
+class IsAdmin(permissions.BasePermission):
+    """
+    Custom permission to find admin/managers
+    """
+    def has_permission(self, request, view):
+        # Permissions are only allowed to admin 
+        try:
+            if request.method in permissions.SAFE_METHODS:
+                return User.objects.get(username=request.user)
+        except User.DoesNotExist:
+            return False
+
+        # Write permissions are only allowed to admin 
+        try:   
+            return User.objects.get(username=request.user).is_superuser
+        except User.DoesNotExist:
+            return False
