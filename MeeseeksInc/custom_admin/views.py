@@ -628,6 +628,12 @@ def log_item(request):
             messages.error(request, ('Please enter a valid value in order to submit this form.'))
     return render(request, 'inventory/log_item.html', {'form': form})
 
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def api_guide_page(request):
+    return render(request, 'custom_admin/api_guide.html')
+
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def edit_tag(request, pk, item):
