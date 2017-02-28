@@ -72,7 +72,7 @@ class Item_Log(models.Model):
     item_amount = models.SmallIntegerField(null=False)
     
 class Custom_Field(models.Model):
-    field_name = models.CharField(max_length=400, null=True, unique=True)
+    field_name = models.CharField(max_length=400, null=False, unique=True)
     is_private = models.BooleanField(default = False)
     CHOICES = (
         ('Short', 'Short'),
@@ -80,7 +80,7 @@ class Custom_Field(models.Model):
         ('Int', 'Int'),
         ('Float','Float'),
     )
-    field_type = models.CharField(max_length=200, null=True, choices=CHOICES, default='Short') 
+    field_type = models.CharField(max_length=200, null=False, choices=CHOICES, default='Short') 
     
 class Custom_Field_Value(models.Model):
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
