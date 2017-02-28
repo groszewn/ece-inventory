@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(allow_blank = True)
     class Meta:
         model = User
-        fields = ('username', 'password', 'email', 'is_staff')
+        fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')
     def validate_email(self, value):
         """
         Check that the email is valid
@@ -28,11 +28,17 @@ class UserSerializer(serializers.ModelSerializer):
         user.email = validated_data.get('email')
         user.username = validated_data.get('username')
         try:
-            user.is_staff = validated_data.get('is_staff')
-            if not validated_data.get('is_staff'):
+            if validated_data.get('is_superuser'):
+                user.is_staff=True
+                user.is_superuser = True
+            elif validated_data.get('is_staff'):
+                user.is_staff=True
+            else:
                 user.is_staff = False
+                user.is_superuser = False
         except:
             user.is_staff= False
+            user.is_superuser = False
         user.set_password(validated_data['password'])
         user.save()
         return user
@@ -73,6 +79,8 @@ class GetItemSerializer(serializers.ModelSerializer):
 
 class ItemSerializer(serializers.ModelSerializer):
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
+    
+    item_id = serializers.CharField(read_only=True)
     
     class Meta:
         model = Item
@@ -126,13 +134,12 @@ class LogSerializer(serializers.ModelSerializer):
     
 class RequestSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
         read_only=True
     )
-    
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
@@ -147,7 +154,7 @@ class RequestSerializer(serializers.ModelSerializer):
     
 class RequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
@@ -166,7 +173,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
 
 class MultipleRequestPostSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     user_id = serializers.CharField(
         default=serializers.CurrentUserDefault(), 
@@ -213,7 +220,7 @@ class DisbursementSerializer(serializers.ModelSerializer):
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
-        default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
+        default=timezone.localtime(timezone.now())
     )
     admin_name = serializers.CharField(
         default=serializers.CurrentUserDefault(), 

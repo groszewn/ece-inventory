@@ -43,7 +43,7 @@ from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
-    IsAdminOrManager
+    IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
@@ -569,10 +569,11 @@ class APIItemList(ListCreateAPIView):
         if not included and excluded:
             queryset = queryset.exclude(tags__in=excluded)
         elif not excluded and included:
-            queryset = queryset.filter(tags__in=included)
-        elif excluded and included:    
-            tags = [x for x in included if x not in excluded]
-            queryset=queryset.filter(tags__in=tags)
+            queryset = queryset.filter(tags__in=included).distinct()
+        elif excluded and included:
+            included_queryset = queryset.filter(tags__in=included)
+            excluded_queryset = queryset.filter(tags__in=excluded)
+            queryset = included_queryset.exclude(item_id__in=excluded_queryset).distinct()
         return queryset
     
     def get(self, request, format=None):
@@ -581,11 +582,13 @@ class APIItemList(ListCreateAPIView):
             "request": self.request,
         }
         serializer = ItemSerializer(items, many=True, context=context)
-#         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = ItemSerializer(data=request.data)
+        context = {
+            "request": self.request,
+        }
+        serializer = ItemSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -631,7 +634,7 @@ class APIItemDetail(APIView):
     """
     Retrieve, update or delete a snippet instance.
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (AdminAllManagerNoDelete,)
     
     def get_object(self, pk):
         try:
@@ -651,7 +654,11 @@ class APIItemDetail(APIView):
     def put(self, request, pk, format=None):
         item = self.get_object(pk)
         starting_quantity = item.quantity
-        serializer = ItemSerializer(item, data=request.data, partial=True)
+        context = {
+            "request": self.request,
+            "pk": pk,
+        }
+        serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -795,8 +802,15 @@ class APIMultipleRequests(APIView):
         }
         if item_list:
             item_id_list = item_list.split(',')
+            if len(request.data)>len(item_id_list):
+                del request.data[len(item_id_list):]
             for i, item_id in enumerate(item_id_list):
-                request.data[i]['item_name']=item_id
+                if i>=len(request.data):
+                    item_name_dict = {'item_name':item_id}
+                    request.data.append(dict(item_name_dict))
+                else:
+                    request.data[i]['item_name']=item_id
+        print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
         if serializer.is_valid():
             serializer.save()
@@ -919,11 +933,17 @@ class APIDirectDisbursement(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 ########################################## Users ###########################################
-class APICreateNewUser(APIView):
+class APIUserList(APIView):
     """
-    Create new user as an admin 
+    List all users (admin)
     """
     permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        if User.objects.get(username=request.user.username).is_superuser:
+            serializer = UserSerializer(User.objects.all(), many=True)
+            return Response(serializer.data)
+        return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
     
     def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
@@ -933,6 +953,35 @@ class APICreateNewUser(APIView):
             Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
                        affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class APIUserDetail(APIView):
+    """
+    Create new user as an admin 
+    """
+    permission_classes = (IsAdmin,)
+    
+    def get_object(self, pk):
+        try:
+            return User.objects.get(username=pk)
+        except User.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        if User.objects.get(username=request.user.username).is_superuser:
+            user = self.get_object(pk)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
+    
+    def put(self, request, pk, format=None):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+#             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
+#                                affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 ########################################### Tags ##################################################
@@ -946,7 +995,7 @@ class APITagList(APIView):
         serializer = TagSerializer(Tag.objects.all(), many=True)
         return Response(serializer.data)
 
-########################################### Tags ##################################################
+########################################### Logs ##################################################
 class APILogList(APIView):
     """
     List all Logs (for admin -- add this!)
@@ -995,7 +1044,7 @@ class APILogList(APIView):
 ########################################## Custom Field ###########################################    
 class APICustomField(APIView):
 
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAdmin,)
     
     def get(self, request, format=None):
         if self.request.user.is_staff:
@@ -1028,3 +1077,4 @@ class APICustomFieldModify(APIView):
                                        affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
