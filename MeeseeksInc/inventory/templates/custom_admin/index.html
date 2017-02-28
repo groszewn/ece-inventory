@@ -154,10 +154,10 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-								<a href="{% url 'custom_admin:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
-								{% if request.user_id == current_user%}
-								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-								{% endif %}
+{#								<a href="{% url 'custom_admin:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>#}
+{#								{% if request.user_id == current_user%}#}
+{#								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>#}
+{#								{% endif %}#}
 							</td>
 						</tr>
 					{% endfor %}
@@ -340,17 +340,7 @@
 	        "order": [[ 6, "desc" ]]
 	    });
 	    $('#inventory-request-pending').dataTable({
-	        "order": [[ 6, "desc" ]],
-	        "columns": [
-			    null,
-			    null,
-			    null,
-			    null,
-			    null,
-			    null,
-			    null,
-			    { "width": "20%" }
-			  ]
+	        "order": [[ 6, "desc" ]]
 	    });
 	    $('#inventory-request-denied').dataTable({
 	        "order": [[ 6, "desc" ]]
