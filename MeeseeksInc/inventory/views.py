@@ -567,8 +567,6 @@ class APIItemList(ListCreateAPIView):
         included_temp = self.request.query_params.getlist('included_tags')
         excluded_temp = self.request.query_params.getlist('excluded_tags')
         # now find all included/excluded tags with the same tag name
-        print(included_temp)
-        print(excluded_temp)
         included=[]
         excluded=[]
         for inc in included_temp:
