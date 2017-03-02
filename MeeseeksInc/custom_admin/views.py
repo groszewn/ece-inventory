@@ -118,8 +118,8 @@ def add_custom_field(request):
         form = CustomFieldForm(request.POST)
         if form.is_valid():
             form.save()
-            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user=None, change_occurred='Added custom field ' + str(form['field_name'].value()))
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added custom field ' + str(form['field_name'].value()))
             return redirect(reverse('custom_admin:index'))
     else:
         form = CustomFieldForm()
@@ -135,8 +135,8 @@ def delete_custom_field(request):
             if pickedFields:
                 for field in pickedFields:
                     delField = Custom_Field.objects.get(field_name = field)
-                    Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user=None, change_occurred='Deleted custom field ' + str(field))
+                    Log.objects.create(request_id=None,item_id=None,  item_name='', initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted custom field ' + str(field))
                     delField.delete()
             return redirect(reverse('custom_admin:index'))
     else:
@@ -157,7 +157,7 @@ def register_page(request):
             else:
                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
-            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Create', 
+            Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Create', 
                                      affected_user=user.username, change_occurred="Created user")
             return HttpResponseRedirect('/customadmin')
         
@@ -229,10 +229,10 @@ def edit_item_module(request, pk):
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
                 Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
@@ -295,7 +295,7 @@ def post_new_request(request):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = str(post.request_id), item_name=str(post.item_name), initiating_user=post.user_id, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+                                         affected_user='', change_occurred="Requested " + str(form['request_quantity'].value()))
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
             return redirect('/customadmin')
     else:
@@ -317,7 +317,7 @@ def edit_request_main_page(request, pk):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
             return redirect('/customadmin')
     else:
@@ -460,10 +460,10 @@ def edit_item(request, pk):
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
                 Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
@@ -499,7 +499,7 @@ def edit_permission(request, pk):
         form = UserPermissionEditForm(request.POST or None, instance=user)
         if form.is_valid():       
             form.save()
-            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
+            Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
             return redirect('/customadmin')
     else:
@@ -599,7 +599,7 @@ def log_item(request):
             if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
-                                   affected_user=None, change_occurred="Acquired " + str(amount))
+                                   affected_user='', change_occurred="Acquired " + str(amount))
                 item.save()
                 messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
             elif change_type == "Broken":
@@ -607,7 +607,7 @@ def log_item(request):
                     item.quantity = F('quantity')-amount
                     item.save()
                     Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
-                                       affected_user=None, change_occurred="Broke " + str(amount))
+                                       affected_user='', change_occurred="Broke " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't break more of " + item.item_name + " than you have."))
@@ -617,7 +617,7 @@ def log_item(request):
                     item.quantity = F('quantity')-amount
                     item.save()
                     Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
-                                       affected_user=None, change_occurred="Lost " + str(amount))
+                                       affected_user='', change_occurred="Lost " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
@@ -667,7 +667,7 @@ def edit_specific_tag(request, pk, item):
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+                       affected_user='', change_occurred="Deleted item " + str(item.item_name))
     item.delete()
     return redirect(reverse('custom_admin:index'))
 
@@ -694,7 +694,7 @@ def create_new_item(request):
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
             Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(item.item_name))
+                       affected_user='', change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
                     t = Tag(tag=oneTag)

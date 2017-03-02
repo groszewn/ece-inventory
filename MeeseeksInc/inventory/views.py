@@ -225,7 +225,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
                 item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
                 Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
-                        affected_user=None, change_occurred="Requested " + str(item_request.request_quantity))
+                        affected_user='', change_occurred="Requested " + str(item_request.request_quantity))
 
          
         # DELETE ALL CART INSTANCES
@@ -322,7 +322,7 @@ def edit_request(request, pk):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id=instance.request_id, item_id=instance.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
             return redirect('/item/' + instance.item_name.item_id )
     else:
         form = RequestEditForm(instance=instance)
@@ -347,7 +347,7 @@ def post_new_request(request):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = post.request_id,item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+                                         affected_user='', change_occurred="Requested " + str(form['request_quantity'].value()))
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
             return redirect('/')
     else:
@@ -387,7 +387,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     post.save()
                     messages.success(request, ('Successfully edited ' + indiv_request.item_name.item_name + '.'))
                     Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(indiv_request.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(item.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(item.item_name))
                     return redirect('/request_detail/' + pk)
                 if 'approve' in request.POST:
                     if item.quantity >= indiv_request.request_quantity:
@@ -417,7 +417,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                 if 'cancel' in request.POST:
                     instance = Request.objects.get(request_id=pk)
                     Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Delete', 
-                             affected_user=None, change_occurred="Cancelled request for " + str(item.item_name))
+                             affected_user='', change_occurred="Cancelled request for " + str(item.item_name))
                     Request.objects.get(request_id=pk).delete()
                     messages.success(request, ('Canceled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     return redirect('/')
@@ -460,7 +460,7 @@ def approve_request(self, request, pk):
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     Log.objects.create(request_id = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
-                                         affected_user=None, change_occurred="Cancelled request for " + str(instance.item_name))
+                                         affected_user='', change_occurred="Cancelled request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
     instance.delete()
     if request.user.is_staff:
@@ -484,7 +484,7 @@ def request_specific_item(request, pk):
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
             request_id = specific_request.request_id
             Log.objects.create(request_id=request_id,item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(quantity))
+                                         affected_user='', change_occurred="Requested " + str(quantity))
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
@@ -522,7 +522,7 @@ def edit_request_main_page(request, pk):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
             return redirect('/')
     else:
@@ -609,7 +609,7 @@ class APIItemList(ListCreateAPIView):
             item_id=data['item_id']
             item_name=data['item_name']
             Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(item_name))
+                       affected_user='', change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
@@ -686,10 +686,10 @@ class APIItemDetail(APIView):
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+                                         affected_user='', change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
             else:
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(item.item_name))
+                                         affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
@@ -730,7 +730,7 @@ class APIItemDetail(APIView):
     def delete(self, request, pk, format=None):
         item = self.get_object(pk)
         Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+                       affected_user='', change_occurred="Deleted item " + str(item.item_name))
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -786,7 +786,7 @@ class APIRequestDetail(APIView):
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
@@ -795,7 +795,7 @@ class APIRequestDetail(APIView):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Cancelled request for " + str(indiv_request.item_name))
+                       affected_user='', change_occurred="Cancelled request for " + str(indiv_request.item_name))
             indiv_request.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
@@ -819,7 +819,7 @@ class APIRequestThroughItem(APIView):
             id=data['request_id']
             quantity=data['request_quantity']
             Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                       affected_user=None, change_occurred="Requested " + str(quantity))
+                       affected_user='', change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -853,7 +853,7 @@ class APIMultipleRequests(APIView):
                 quantity=data['request_quantity']
                 item = Item.objects.get(item_id=data['item_name'])
                 Log.objects.create(request_id=id, item_id=data['item_name'], item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                            affected_user=None, change_occurred="Requested " + str(quantity))
+                            affected_user='', change_occurred="Requested " + str(quantity))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -988,7 +988,7 @@ class APIUserList(APIView):
         if serializer.is_valid():
             serializer.save()
             username=serializer.data['username']
-            Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
+            Log.objects.create(request_id=None, item_id=None, item_name = '', initiating_user=request.user, nature_of_event="Create", 
                        affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1017,7 +1017,7 @@ class APIUserDetail(APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            Log.objects.create(request_id=None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event="Edit",
+            Log.objects.create(request_id=None, item_id=None, item_name='', initiating_user=request.user, nature_of_event="Edit",
                                affected_user=serializer.data['username'], change_occurred="Changed permissions for " + str(serializer.data['username']))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1115,8 +1115,8 @@ class APICustomField(APIView):
             serializer.save()
             data=serializer.data
             field=data['field_name']
-            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user=None, change_occurred='Added custom field ' + str(field))
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added custom field ' + str(field))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1146,8 +1146,8 @@ class APICustomFieldModify(APIView):
         
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
-        Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
+        Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
