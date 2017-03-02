@@ -1,5 +1,7 @@
 from django.conf.urls import url
 
+import custom_admin.views
+
 from . import views
 
 
@@ -43,4 +45,5 @@ urlpatterns = [
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
+    url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
 ]
