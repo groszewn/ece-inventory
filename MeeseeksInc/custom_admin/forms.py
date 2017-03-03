@@ -164,6 +164,7 @@ class CreateItemForm(forms.ModelForm):
 class CustomFieldForm(forms.ModelForm):  
     class Meta:
         model = Custom_Field
+        
         fields = ('field_name','is_private','field_type',) 
         
 class DeleteFieldForm(forms.Form):

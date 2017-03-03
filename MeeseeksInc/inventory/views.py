@@ -158,7 +158,10 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         cart_instance.save()
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
-        return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id})) 
+        if self.request.user.is_staff:
+            return redirect('/customadmin')
+        else:
+            return redirect('/')
     
     def test_func(self):
         return self.request.user.is_active

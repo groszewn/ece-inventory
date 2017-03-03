@@ -75,10 +75,10 @@ class Custom_Field(models.Model):
     field_name = models.CharField(max_length=400, null=False, unique=True)
     is_private = models.BooleanField(default = False)
     CHOICES = (
-        ('Short', 'Short'),
-        ('Long', 'Long'),
-        ('Int', 'Int'),
-        ('Float','Float'),
+        ( 'Short','Short-Form Text'),
+        ('Long','Long-Form Text'),
+        ('Int','Integer'),
+        ('Float','Floating-Point Number'),
     )
     field_type = models.CharField(max_length=200, null=False, choices=CHOICES, default='Short') 
     
