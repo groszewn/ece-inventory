@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
+from django.core.mail import EmailMessage
 from django.forms.formsets import formset_factory
 from django.forms.models import inlineformset_factory, modelformset_factory, \
     ModelMultipleChoiceField
@@ -20,6 +21,8 @@ from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
 from django.test import Client
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
@@ -485,6 +488,15 @@ def request_specific_item(request, pk):
             request_id = specific_request.request_id
             Log.objects.create(request_id=request_id,item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
                                          affected_user='', change_occurred="Requested " + str(quantity))
+            subject = 'Request confirmation'
+            to = [request.user.email, 'groszewn@gmail.com']
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'request':item.item_name,
+            }
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet

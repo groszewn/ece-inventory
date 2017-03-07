@@ -16,6 +16,9 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
+from django.core.mail import send_mail
+from django.core import mail
+from django.conf import settings
 
 from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm
 from inventory.forms import RequestForm, RequestEditForm
@@ -761,6 +764,20 @@ def deny_all_request(request):
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
+ 
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def create_email(request):
+    email = mail.EmailMessage(
+        'Hello', 
+        'Body goes here', 
+        'from@example.com', 
+        ['nrg12@duke.edu'], 
+    )
+    email.send(fail_silently=False)
+    return redirect(reverse('custom_admin:log'))
+ 
+
  
  
 ################### DJANGO CRIPSY FORM STUFF ###################

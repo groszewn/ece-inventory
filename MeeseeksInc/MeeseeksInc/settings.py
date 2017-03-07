@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 
 import os
 
+# celery import for scheduling
+import djcelery
+djcelery.setup_loader()
+BROKER_URL = 'django://'
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -36,6 +41,8 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
+    'djcelery',
+    'kombu.transport.django',
     'dal',
     'dal_select2',
     'rest_framework',
@@ -162,6 +169,19 @@ STATICFILES_DIRS = (
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
+
+
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_HOST_USER = 'nrg12'
+EMAIL_HOST_PASSWORD = 'meeseeksinc1'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+
+#This did the trick
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 ADMIN_TOOLS_MENU = 'MeeseeksInc.menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'MeeseeksInc.dashboard.CustomIndexDashboard'

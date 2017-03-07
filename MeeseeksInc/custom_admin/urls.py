@@ -46,4 +46,5 @@ urlpatterns = [
     url(r'^users/$', views.UserListView.as_view(), name='user_page'),
     url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete'),
     url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
+    url(r'^send_email/$', views.create_email, name='send_email'),
 ]
