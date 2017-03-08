@@ -55,8 +55,9 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
 
 from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, SubscribedUsers
 from .models import Tag
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def active_check(user):

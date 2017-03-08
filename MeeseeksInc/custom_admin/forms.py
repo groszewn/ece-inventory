@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field
 from inventory.models import Request
-from inventory.models import Tag
+from inventory.models import Tag, SubscribedUsers
 
 
 class DisburseForm(forms.ModelForm):
@@ -198,4 +198,8 @@ class RegistrationForm(forms.Form):
         except User.DoesNotExist:
             return self.cleaned_data['username']
         raise forms.ValidationError(("The username already exists. Please try another one."))
-     
+    
+class SubscribeForm(forms.Form):  
+    subscribed = forms.BooleanField(label = 'Click to subscribe to email notifications.',
+                               widget = forms.CheckboxInput, required=False)
+    

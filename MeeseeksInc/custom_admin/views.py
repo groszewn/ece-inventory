@@ -20,13 +20,14 @@ from django.core.mail import send_mail
 from django.core import mail
 from django.conf import settings
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm
+from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm
 from inventory.forms import RequestForm, RequestEditForm
 from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, SubscribedUsers
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def staff_check(user):
@@ -763,6 +764,26 @@ def deny_all_request(request):
         indiv_request.save()
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
+ 
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def subscribe(request):
+    exists = SubscribedUsers.objects.filter(user=request.user.username).exists()
+    if request.method == "POST":
+        form = SubscribeForm(request.POST or None, initial = {'subscribed': exists})
+        if form.is_valid():  
+            if form['subscribed'].value():
+                SubscribedUsers.objects.create(user=request.user.username, email=request.user.email)
+            else:
+                try:
+                    subscribeduser = SubscribedUsers.objects.get(user=request.user.username)
+                except ObjectDoesNotExist:
+                    return redirect('/customadmin')
+                subscribeduser.delete()
+            return redirect('/customadmin')
+    else:
+        form = SubscribeForm(initial = {'subscribed': exists})
+    return render(request, 'custom_admin/subscribe.html', {'form': form}) 
  
  
 @login_required(login_url='/login/')
