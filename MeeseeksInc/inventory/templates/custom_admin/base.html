@@ -43,7 +43,7 @@
 
   <body>
 
-    <nav class="navbar navbar-inverse navbar-static-top">
+    <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -76,6 +76,7 @@
             <li><a href="{% url 'custom_admin:log' %}">View Log</a></li>
             <li><a href="{% url 'inventory:api_guide' %}"> API Guide </a></li>
             <li><a href="{% url 'custom_admin:subscribe' %}">Subscribe</a></li>
+            <li><a href="{% url 'custom_admin:change_email_prepend' %}">Change Email Prepended Text</a></li>
             {% if user.is_superuser %}
             	<li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
             	<li><a href="{% url 'custom_admin:user_page' %}">User List</a></li>

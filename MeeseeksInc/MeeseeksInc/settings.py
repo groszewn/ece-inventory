@@ -12,10 +12,6 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 
 import os
 
-# celery import for scheduling
-import djcelery
-djcelery.setup_loader()
-BROKER_URL = 'django://'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['meeseeksinc.colab.duke.edu', '127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -41,8 +36,7 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
-    'djcelery',
-    'kombu.transport.django',
+    'custom_admin.tasks',
     'dal',
     'dal_select2',
     'rest_framework',
@@ -170,13 +164,18 @@ STATICFILES_DIRS = (
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
-
-
+# EMAIL
 EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_HOST_USER = 'nrg12'
 EMAIL_HOST_PASSWORD = 'meeseeksinc1'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+
+# CELERY
+BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZEr = 'json'
 
 
 #This did the trick

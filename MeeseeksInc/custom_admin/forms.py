@@ -203,3 +203,6 @@ class SubscribeForm(forms.Form):
     subscribed = forms.BooleanField(label = 'Click to subscribe to email notifications.',
                                widget = forms.CheckboxInput, required=False)
     
+class ChangeEmailPrependForm(forms.Form):
+    text = forms.CharField(label='Choose text to be prepended to all emails.', required=False)
+    

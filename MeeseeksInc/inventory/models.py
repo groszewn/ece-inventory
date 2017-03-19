@@ -120,4 +120,9 @@ class SubscribedUsers(models.Model):
     user = models.CharField(max_length=200)
     email = models.CharField(max_length=200)
     
+class EmailPrependValue(models.Model):
+    prepend_text = models.CharField(max_length=200, default='')
+   
+class LoanReminderEmail(models.Model):
+    body = models.TextField() 
     

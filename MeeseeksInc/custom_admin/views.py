@@ -19,11 +19,13 @@ from django.views.generic.edit import FormView
 from django.core.mail import send_mail
 from django.core import mail
 from django.conf import settings
+from datetime import date, time, datetime, timedelta
+from custom_admin.tasks import email as task_email
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm
+from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm
 from inventory.forms import RequestForm, RequestEditForm
 from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, SubscribedUsers
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, SubscribedUsers, EmailPrependValue
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
@@ -214,6 +216,20 @@ def add_comment_to_request_accept(request, pk):
                 Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=disbursement.user_name).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':User.objects.get(username=disbursement.user_name).username,
+                    'item':disbursement.item_name,
+                    'quantity':disbursement.total_quantity,
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
@@ -280,6 +296,20 @@ def add_comment_to_request_deny(request, pk):
             Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request denial'
+            to = [User.objects.get(username=indiv_request.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':User.objects.get(username=indiv_request.user_id),
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+            }
+            message=render_to_string('inventory/request_denial_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
@@ -301,6 +331,23 @@ def post_new_request(request):
             Log.objects.create(request_id = str(post.request_id), item_name=str(post.item_name), initiating_user=post.user_id, nature_of_event='Request', 
                                          affected_user='', change_occurred="Requested " + str(form['request_quantity'].value()))
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
+            request_list=[]
+            request_list.append((post.item_name, form['request_quantity'].value()))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [User.objects.get(username=post.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':post.user_id,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestForm() # blank request form with no data yet
@@ -312,6 +359,11 @@ def edit_request_main_page(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        change_list=[]
+        if form['request_quantity'].value() != instance.request_quantity:
+            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+        if form['reason'].value() != instance.reason:
+            change_list.append(('reason', instance.reason, form['reason'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -323,6 +375,20 @@ def edit_request_main_page(request, pk):
             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request edit'
+            to = [User.objects.get(username=instance.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':instance.user_id,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
@@ -349,6 +415,21 @@ def post_new_disburse(request):
                 item.save()
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct disbursal'
+                to = [User.objects.get(username=post.user_name).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':post.user_name,
+                    'item':item.item_name,
+                    'quantity':quant_change,
+                    'disburser':request.user.username,
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
@@ -376,6 +457,21 @@ def post_new_disburse_specific(request, pk):
                 item.save()
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=user_name, change_occurred="Disbursed " + str(quant_change))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct disbursal'
+                to = [User.objects.get(username=user_name).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':user_name,
+                    'item':item.item_name,
+                    'quantity':quant_change,
+                    'disburser':request.user.username,
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
@@ -417,6 +513,20 @@ def approve_all_requests(request):
                        affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request approval'
+            to = [User.objects.get(username=indiv_request.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':indiv_request.user_id,
+                'item':disbursement.item_name,
+                'quantity': disbursement.total_quantity,
+            }
+            message=render_to_string('inventory/request_approval_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
         else:
             messages.add_message(request, messages.ERROR, 
                                  ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -446,6 +556,20 @@ def approve_request(request, pk):
         Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Approve', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request approval'
+        to = [User.objects.get(username=indiv_request.user_id).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':indiv_request.user_id,
+            'item':disbursement.item_name,
+            'quantity': disbursement.total_quantity,
+        }
+        message=render_to_string('inventory/request_approval_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))
@@ -747,6 +871,20 @@ def deny_request(request, pk):
     Log.objects.create(request_id=indiv_request.request_id, item_id=id,  item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    try:
+        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+    except (ObjectDoesNotExist, IndexError) as e:
+        prepend = ''
+    subject = prepend + 'Request denial'
+    to = [User.objects.get(username=indiv_request.user_id).email]
+    from_email='noreply@duke.edu'
+    ctx = {
+        'user':indiv_request.user_id,
+        'item':indiv_request.item_name,
+        'quantity':indiv_request.request_quantity,
+    }
+    message=render_to_string('inventory/request_denial_email.txt', ctx)
+    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
@@ -762,6 +900,20 @@ def deny_all_request(request):
         Log.objects.create(request_id =indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
         indiv_request.save()
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request denial'
+        to = [User.objects.get(username=indiv_request.user_id).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':indiv_request.user_id,
+            'item':indiv_request.item_name,
+            'quantity':indiv_request.request_quantity,
+        }
+        message=render_to_string('inventory/request_denial_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
@@ -773,7 +925,10 @@ def subscribe(request):
         form = SubscribeForm(request.POST or None, initial = {'subscribed': exists})
         if form.is_valid():  
             if form['subscribed'].value():
-                SubscribedUsers.objects.create(user=request.user.username, email=request.user.email)
+                try:
+                    SubscribedUsers.objects.get(user=request.user.username)
+                except ObjectDoesNotExist:
+                    SubscribedUsers.objects.create(user=request.user.username, email=request.user.email)
             else:
                 try:
                     subscribeduser = SubscribedUsers.objects.get(user=request.user.username)
@@ -785,19 +940,43 @@ def subscribe(request):
         form = SubscribeForm(initial = {'subscribed': exists})
     return render(request, 'custom_admin/subscribe.html', {'form': form}) 
  
+
+def delay_email(request):
+    #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
+    task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=1))
+    return redirect(reverse('custom_admin:log'))
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def create_email(request):
     email = mail.EmailMessage(
-        'Hello', 
+        'Testing delayed email', 
         'Body goes here', 
-        'from@example.com', 
+        'noreply@duke.edu', 
         ['nrg12@duke.edu'], 
     )
     email.send(fail_silently=False)
     return redirect(reverse('custom_admin:log'))
- 
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def change_email_prepend(request):
+    try:
+        text = EmailPrependValue.objects.all()[0].prepend_text
+    except (ObjectDoesNotExist, IndexError) as e:
+        text=''
+    if request.method == "POST":
+        form = ChangeEmailPrependForm(request.POST or None, initial={'text': text})
+        if form.is_valid():
+            if form['text'].value() == text:
+                return redirect('/customadmin')
+            else:
+                EmailPrependValue.objects.all().delete()
+                EmailPrependValue.objects.create(prepend_text=form['text'].value())
+            return redirect('/customadmin')
+    else:
+        form = ChangeEmailPrependForm(initial={'text':text})
+    return render(request, 'custom_admin/change_prepend.html', {'form': form})
 
  
  
@@ -835,6 +1014,21 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
                                          affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Direct disbursal'
+        to = [User.objects.get(username=post.user_name).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':post.user_name,
+            'item':disbursement.item_name,
+            'quantity':disbursement.total_quantity,
+            'disburser':request.user.username,
+        }
+        message=render_to_string('inventory/disbursement_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
         return super(DisburseFormView, self).form_valid(form)
 
 class UserAutocomplete(autocomplete.Select2QuerySetView):

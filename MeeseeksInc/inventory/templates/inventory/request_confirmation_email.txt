@@ -2,7 +2,9 @@ Hello {{ user }},
 
 You have made a request for the following item(s):
 
-{{ request }}
+{% for r, q in request %}
+	{{ r }} (Quantity: {{ q }})
+{% endfor %}
 
 Best, 
 ECE inventory
