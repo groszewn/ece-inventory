@@ -6,25 +6,29 @@ from inventory.models import ShoppingCartInstance
  
 class RequestForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('item_field', 'request_quantity', 'reason')
+        fields = ('item_field', 'request_quantity','type','reason')
 
 class RequestSpecificForm(forms.Form):  
     available_quantity = forms.IntegerField(disabled=True, required=False)
     quantity = forms.IntegerField(min_value=1)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
     reason = forms.CharField(max_length=200)
     def __init__(self, *args, **kwargs):
         super(RequestSpecificForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = ['available_quantity','quantity', 'reason']
+        self.fields.keyOrder = ['available_quantity','quantity','type','reason']
       
-class RequestEditForm(forms.ModelForm):
-    request_quantity = forms.IntegerField(min_value=1)
-    class Meta:
-        model = Request
-        fields = ('request_quantity', 'reason')
-
 class AddToCartForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(AddToCartForm, self).__init__(*args, **kwargs)
@@ -36,7 +40,7 @@ class EditCartAndAddRequestForm(forms.ModelForm):
     reason = forms.CharField(required=True)
     class Meta:
         model = ShoppingCartInstance
-        fields = ('quantity', 'reason')
+        fields = ('quantity','type','reason')
 
 class SearchForm(forms.Form):
     tags1 = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False,widget=forms.CheckboxSelectMultiple, label="Tags to include")

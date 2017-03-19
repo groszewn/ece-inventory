@@ -44,6 +44,11 @@ class Request(models.Model):
     comment = models.CharField(max_length=200, null=True, default = '') # comment left by admin, can be null, used for denial 
     reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.DateTimeField(default=timezone.now)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = models.CharField(max_length=200, null=False, choices=TYPES, default='Dispersal')
     def __str__(self):
         return "Request for " + str(self.request_quantity) + " " + self.item_name.item_name + " by " + self.user_id  + " (ID: " + self.request_id + ")"
         
@@ -53,18 +58,39 @@ class Disbursement(models.Model):
     admin_name = models.CharField(max_length=200, null=False)
     user_name = models.CharField(max_length=200, null=False)
     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
-    total_quantity = models.SmallIntegerField(null=False)
+    total_quantity = models.IntegerField(null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
     time_disbursed = models.DateTimeField(default=timezone.now)
     def __str__(self):
-        return self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
-
+        return "Disbursement for " + self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
+    
+class Loan(models.Model):
+    loan_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
+    admin_name = models.CharField(max_length=200, null=False)
+    user_name = models.CharField(max_length=200, null=False)
+    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
+    total_quantity = models.IntegerField(null=False)
+    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
+    time_loaned = models.DateTimeField(default=timezone.now)
+    CHOICES = (
+        ('Checked Out', 'Checked Out'),
+        ('Checked In', 'Checked In'),
+    )
+    status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Checked Out')
+    def __str__(self):
+        return "Loan of " + self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
+    
 class ShoppingCartInstance(models.Model):
     cart_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     user_id = models.CharField(max_length=200, null=False)
     item = models.ForeignKey(Item, null = True, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField(null=False)
-    reason=models.CharField(max_length=200, null=False, default="")
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = models.CharField(max_length=200, null=False, choices=TYPES)
+    reason = models.CharField(max_length=200, null=False, default="")
 
 class Item_Log(models.Model):
     item_name = models.ForeignKey(Item, null=True)

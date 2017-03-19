@@ -23,6 +23,7 @@
 		            <tr>
 		            <th>Requested By:</th>
 					<th>Quantity:</th>
+					<th>Type:</th>
 					<th>Reason:</th>
 					<th>Admin Comment:</th>
 					<th>Time Requested:</th>
@@ -31,7 +32,8 @@
 		        <tbody>
 		        		<tr>
 		        			<td>{{request.user_id}}</td>
-							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.request_quantity}}</td>
+							<td>{{request.type}}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 							<td>{{ request.time_requested }}</td>
@@ -50,6 +52,9 @@
 		 
  	<form method="POST" class="post-form">{% csrf_token %}
 		{{form.request_quantity.label}}:{{ form.request_quantity }}
+		<br/>
+		<br/>
+		{{form.type.label}}:{{form.type}}
 		<br/>
 		<br/>
 		{{form.reason.label}}:{{ form.reason}}

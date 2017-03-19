@@ -53,6 +53,7 @@
 	            <tr>
 				<th>Request for</th>
 				<th>Quantity</th>
+				<th>Type</th>
 				<th>Status</th>
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
@@ -64,6 +65,7 @@
 	        		<tr>
 						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
@@ -82,6 +84,7 @@
 	            <tr>
 				<th>Request for</th>
 				<th>Quantity</th>
+				<th>Type</th>
 				<th>Status</th>
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
@@ -93,6 +96,7 @@
 	        		<tr>
 						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
@@ -111,6 +115,7 @@
 	            <tr>
 				<th>Request for</th>
 				<th>Quantity</th>
+				<th>Type</th>
 				<th>Status</th>
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
@@ -123,6 +128,7 @@
 	        		<tr>
 						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
@@ -145,6 +151,7 @@
 	            <tr>
 				<th>Request for</th>
 				<th>Quantity</th>
+				<th>Type</th>
 				<th>Status</th>
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
@@ -156,6 +163,7 @@
 	        		<tr>
 						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
@@ -172,6 +180,39 @@
 {% endif %}
 
 {# <a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request an Item</a> #}
+
+{########################## LOANS #####################}	
+{% if loan_list %}
+		<h2>Loaned to you</h2>
+		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Item Name</th>
+					<th>Item Quantity </th>
+					<th>Loaned to</th>
+					<th>Loaned by</th>
+					<th>Admin Comment</th>
+					<th>Time Disbursed</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td>{{ loan.item_name }}</td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.admin_name }}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+{% endif %}
+
 
 {% if disbursed_list %}
 	<h2>Disbursed to you</h2>

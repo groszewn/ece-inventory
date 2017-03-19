@@ -15,17 +15,6 @@ from inventory.models import Tag
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
-#     user_field = forms.ModelChoiceField(
-#         queryset=User.objects.filter(is_staff="False"),
-#         widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
-#     )
-#     user_field = dal_queryset_sequence.fields.QuerySetSequenceModelField(
-#         queryset=autocomplete.QuerySetSequence(
-#             User.objects.filter(is_staff="False"),
-#         ),
-#         required=False,
-#         widget=dal_select2_queryset_sequence.widgets.QuerySetSequenceSelect2('custom_admin:userfield-autocomplete'),
-#     )
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
@@ -41,6 +30,14 @@ class DisburseSpecificForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(DisburseSpecificForm, self).__init__(*args, **kwargs)
 
+class ConvertLoanForm(forms.Form):
+    OPTIONS = (
+            ("convert_to_disbuse_checkbox", "Convert to disbursement?"),
+            ("cancel_loan_checkbox", "Cancel the loan?"),
+            )
+    name = forms.MultipleChoiceField(choices=OPTIONS)
+    convert_to_disburse_checkbox = forms.BooleanField(label='Convert to disbursement?', required=False)
+    keep_loan_checkbox = forms.BooleanField(label='Keep this loan?', required=False)
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
@@ -64,15 +61,20 @@ class LogForm(forms.ModelForm):
 class AdminRequestEditForm(forms.ModelForm):    
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
     request_quantity = forms.IntegerField(min_value=1)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason','comment')
+        fields = ('request_quantity','type','reason','comment')
 
 class RequestEditForm(forms.ModelForm):
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason')
+        fields = ('request_quantity', 'type','reason')
          
 class ItemEditForm(forms.ModelForm):
     def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
