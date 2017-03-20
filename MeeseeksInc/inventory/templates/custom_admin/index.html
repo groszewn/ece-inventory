@@ -6,7 +6,6 @@
 {% block content %}
 
 {########################## ALL ITEMS ##########################}
-{% if user_list %}
 
 <h2>All available items</h2>
 <form id="search-form">
@@ -62,6 +61,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
@@ -74,6 +74,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -94,6 +95,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
@@ -106,6 +108,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -126,6 +129,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
@@ -139,6 +143,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -171,6 +176,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Item Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Request by</th>
 					<th>Student Reason</th>
@@ -183,6 +189,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -205,6 +212,49 @@
 
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+	
+{########################## LOANS #####################}	
+{% if loan_list %}
+		<h2>Loaned by you</h2>
+		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Item Name</th>
+					<th>Item Quantity </th>
+					<th>Loaned to</th>
+					<th>Loaned by</th>
+					<th>Admin Comment</th>
+					<th>Time Disbursed</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td>{{ loan.item_name }}</td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.admin_name }}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+							<td>
+								{% block check_in %}
+								<a id = "check_in" loan-id="{{ loan.loan_id }}" class="check_in btn btn-success">Check In</a>	
+								{% endblock check_in %}
+								{% block convert %}
+								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+								{% endblock convert %}
+								{% block  edit_loan %}
+								<a id = "edit_loan" loan-id="{{ loan.loan_id }}" class="check_in btn btn-primary">Edit Loan</a>	
+								{% endblock edit_loan %}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+{% endif %}	
 	
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -234,16 +284,11 @@
 					{% endfor %}
 		        </tbody>
 		    </table>
-	{% endif %}
-
-	{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
-{#		{% block modal %}#}
-{#			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button>#}
-{#		{% endblock modal %}#}
-
-
 {% endif %}
 
+{#		{% block modal %} #}
+{#			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button> #}
+{#		{% endblock modal %} #}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -329,6 +374,35 @@
     });
 </script>
 {% endblock js %}
+
+{############################# CONVERT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-convert" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Convert Loan</h4>
+            </div>
+            <div id="form-modal-body-convert" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-convert %}
+<script>
+    $('.convert').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-convert').load(('convert/loan/'+loan_id), function () {
+            $('#form-modal-convert').modal('toggle');
+        });
+    });
+</script>
+    
+{% endblock js-convert %}
 
  <script>
 	$(document).ready(function(){

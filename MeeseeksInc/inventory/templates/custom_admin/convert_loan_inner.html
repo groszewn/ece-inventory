@@ -1,0 +1,12 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+<h3>Do you want to permanently disburse the item(s) and terminate this loan?</h3>
+<div class="row">
+    <form id="formID-convert" action="{% url 'custom_admin:convert_loan' pk %}" class="form-horizontal" method="post">
+{#        {% crispy form %}#}
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
+    </form>
+</div>

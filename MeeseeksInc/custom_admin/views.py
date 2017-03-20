@@ -28,9 +28,8 @@ from custom_admin.tasks import email as task_email
 from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm
 from inventory.forms import RequestForm, RequestEditForm
 from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, SubscribedUsers, EmailPrependValue
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue
 
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -62,6 +61,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
         context['user_list'] = User.objects.all()
+        context['loan_list'] = Loan.objects.all()
         context['current_user'] = self.request.user.username
         if self.request.user.is_staff or self.request.user.is_superuser:
             context['custom_fields'] = Custom_Field.objects.filter() 
@@ -119,8 +119,6 @@ class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): #
     def test_func(self):
         return self.request.user.is_staff
  
-#####################################################################
-
 @login_required(login_url='/login/')
 def add_custom_field(request):
     if request.method == 'POST':
@@ -286,6 +284,47 @@ def edit_item_module(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_request_accept(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            indiv_request = Request.objects.get(request_id=pk)
+            item = Item.objects.get(item_name=indiv_request.item_name)
+            if item.quantity >= indiv_request.request_quantity:
+                # decrement quantity in item
+                item.quantity = F('quantity')-indiv_request.request_quantity
+                item.save()
+                 
+                # change status of request to approved
+                indiv_request.status = "Approved"
+                indiv_request.comment = comment
+                indiv_request.save()
+                
+                if indiv_request.type == "Dispersal": 
+                    # add new disbursement item to table
+                    disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                    disbursement.save()
+                    messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                elif indiv_request.type == "Loan":
+                    loan = Loan(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
+                    loan.save()
+                    messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    # add log object
+                
+            else:
+                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_request_deny(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
@@ -318,6 +357,32 @@ def add_comment_to_request_deny(request, pk):
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def convert_loan(request, pk):
+    if request.method == "POST":
+        form = ConvertLoanForm(request.POST)
+        if form.is_valid():
+            loan = Loan.objects.get(loan_id=pk)
+            if form.cleaned_data.get('convert_to_disburse_checkbox'):
+                admin_name = request.user.username
+                user_name = loan.user_name
+                item = loan.item_name
+                quantity = loan.total_quantity
+                comment = loan.comment
+                time_disbursed = timezone.localtime(timezone.now())
+                loan.delete()
+                disbursement = Disbursement(admin_name=admin_name, user_name=user_name, item_name=item, comment=comment, total_quantity=quantity, time_disbursed=time_disbursed)
+                disbursement.save()
+                
+                # ADD A LOG ENTRY
+                messages.success(request, ('Converted loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                return redirect(reverse('custom_admin:index'))  
+    else:
+        form = ConvertLoanForm() 
+    return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk})
+
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -536,6 +601,22 @@ def approve_all_requests(request):
                                  ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
          
     return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def deny_all_request(request):
+    pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to deny!'))
+        return redirect(reverse('custom_admin:index'))
+    for indiv_request in pending_requests:
+        indiv_request.status = "Denied"
+        id = indiv_request.item_name.item_id
+        Log.objects.create(request_id =indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+        indiv_request.save()
+    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -578,6 +659,18 @@ def approve_request(request, pk):
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))
  
+    return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def deny_request(request, pk):
+    indiv_request = Request.objects.get(request_id=pk)
+    indiv_request.status = "Denied"
+    indiv_request.save()
+    id = indiv_request.item_name.item_id
+    Log.objects.create(request_id=indiv_request.request_id, item_id=id,  item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+    messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -764,7 +857,6 @@ def log_item(request):
 @user_passes_test(active_check, login_url='/login/')
 def api_guide_page(request):
     return render(request, 'custom_admin/api_guide.html')
-
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -984,8 +1076,6 @@ def change_email_prepend(request):
         form = ChangeEmailPrependForm(initial={'text':text})
     return render(request, 'custom_admin/change_prepend.html', {'form': form})
 
- 
- 
 ################### DJANGO CRIPSY FORM STUFF ###################
 class AjaxTemplateMixin(object):
     def dispatch(self, request, *args, **kwargs):

@@ -17,6 +17,8 @@ urlpatterns = [
      
     # this is what it goes to if typed /
 #     url(r'^$', views.AdminIndexView.as_view(), name='index'),
+
+    url(r'^convert/loan/(?P<pk>[\w\-\ ]+)$', views.convert_loan, name='convert_loan'),
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)$', views.add_comment_to_request_accept, name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)$', views.add_comment_to_request_deny, name='add_comment_to_request_deny'),
     url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),

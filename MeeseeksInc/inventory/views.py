@@ -53,9 +53,9 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer
 
-from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
+from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, SubscribedUsers, EmailPrependValue
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
 from .models import Tag
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -80,6 +80,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username)
         if self.request.user.is_staff or self.request.user.is_superuser:
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
@@ -135,10 +136,12 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         if(not user.is_staff):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
+            context['loan_list'] = Loan.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
             context['my_template'] = 'inventory/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
+            context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
             context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
@@ -158,11 +161,14 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         item = Item.objects.get(item_id = self.object.pk)
         username = self.request.user.username
         cart_instance = ShoppingCartInstance(user_id=username, item=item, 
-                                            quantity=quantity)
+                                            type='Dispersal',quantity=quantity)
         cart_instance.save()
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
-        return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id})) 
+        if self.request.user.is_staff:
+            return redirect('/customadmin')
+        else:
+            return redirect('/')
     
     def test_func(self):
         return self.request.user.is_active
@@ -182,7 +188,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         self.object = None
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity','type','reason',), extra=len(self.get_queryset()))
         formset = EditCartAddRequestFormSet(queryset=self.get_queryset())
         return self.render_to_response(
             self.get_context_data(formset=formset))
@@ -206,11 +212,12 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         self.object = None
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity','type','reason',), extra=len(self.get_queryset()))
         formset = EditCartAddRequestFormSet(self.request.POST)
         if (formset.is_valid()):
             return self.form_valid(formset)
         else:
+            messages.error(self.request, 'Form is invalid!')
             return self.form_invalid(formset)
 
     def form_valid(self, formset):
@@ -222,12 +229,12 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         request_list = []
         for idx,form in enumerate(formset):
             if idx<len(self.get_queryset()):
-                dataFromForm = form.cleaned_data
-                quantity = dataFromForm.get('quantity')
-                reason = dataFromForm.get('reason')
+                quantity = form.cleaned_data['quantity']
+                reason = form.cleaned_data['reason']
+                type = form.cleaned_data['type']
                 cart_instance = self.get_queryset()[idx]
                 item = cart_instance.item
-                item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
+                item_request = Request(item_name = item, user_id=self.request.user.username, type=type, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
                 request_list.append((item, quantity))
                 Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
@@ -367,11 +374,6 @@ def edit_request(request, pk):
     else:
         form = RequestEditForm(instance=instance)
     return render(request, 'inventory/request_edit.html', {'form': form})
-  
-# class ResultsView(LoginRequiredMixin, generic.DetailView):
-#     login_url = "/login/"
-#     model = Question
-#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html  
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -620,9 +622,10 @@ def request_specific_item(request, pk):
         if form.is_valid():
             reason = form['reason'].value()
             quantity = form['quantity'].value()
+            type = form['type'].value()
             item = Item.objects.get(item_id=pk)
             specific_request = Request(user_id=request.user.username, item_name=item, 
-                                            request_quantity=quantity, status="Pending", reason=reason, time_requested=timezone.now())
+                                            request_quantity=quantity, status="Pending", type=type, reason=reason, time_requested=timezone.now())
             specific_request.save()
             
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
