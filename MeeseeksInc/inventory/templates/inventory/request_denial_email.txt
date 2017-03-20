@@ -2,5 +2,8 @@ Hello {{ user }},
 
 Your request for {{ item }} (Quantity: {{ quantity }}) has been denied.  
 
+Comments:  {{ comment }}
+
 Best, 
+
 ECE inventory

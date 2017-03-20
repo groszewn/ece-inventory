@@ -638,7 +638,7 @@ def request_specific_item(request, pk):
             from_email='noreply@duke.edu'
             ctx = {
                 'user':request.user,
-                'request':[(item.item_name, item.quantity)],
+                'request':[(item.item_name, quantity)],
             }
             for user in SubscribedUsers.objects.all():
                 to.append(user.email)

@@ -3,4 +3,5 @@ Hello {{ user }},
 Your request for {{ item }} (Quantity: {{ quantity }}) has been cancelled.  
 
 Best, 
+
 ECE inventory

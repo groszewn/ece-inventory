@@ -2,5 +2,6 @@ Hello {{ user }},
 
 Your request for {{ item }} (Quantity: {{ quantity }}) has been approved.  
 
-Best, 
+Best,
+ 
 ECE inventory

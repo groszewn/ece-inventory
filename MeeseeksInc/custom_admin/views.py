@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.mail import EmailMessage
 from django.db import connection, transaction
 from django.db import models
 from django.db.models import F
@@ -11,6 +12,8 @@ from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
 from django.template.defaulttags import comment
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.urls import reverse_lazy 
 from django.utils import timezone
@@ -307,6 +310,7 @@ def add_comment_to_request_deny(request, pk):
                 'user':User.objects.get(username=indiv_request.user_id),
                 'item':indiv_request.item_name,
                 'quantity':indiv_request.request_quantity,
+                'comment':comment,
             }
             message=render_to_string('inventory/request_denial_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -882,6 +886,7 @@ def deny_request(request, pk):
         'user':indiv_request.user_id,
         'item':indiv_request.item_name,
         'quantity':indiv_request.request_quantity,
+        'comment': indiv_request.comment,
     }
     message=render_to_string('inventory/request_denial_email.txt', ctx)
     EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -911,6 +916,7 @@ def deny_all_request(request):
             'user':indiv_request.user_id,
             'item':indiv_request.item_name,
             'quantity':indiv_request.request_quantity,
+            'comment': indiv_request.comment,
         }
         message=render_to_string('inventory/request_denial_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
