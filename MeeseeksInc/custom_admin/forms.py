@@ -62,7 +62,7 @@ class AdminRequestEditForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
     request_quantity = forms.IntegerField(min_value=1)
     TYPES = (
-        ( 'Dispersal','Dispersal'),
+        ( 'Disbursal','Disbursal'),
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)

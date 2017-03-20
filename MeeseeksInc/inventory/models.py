@@ -45,10 +45,10 @@ class Request(models.Model):
     reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.DateTimeField(default=timezone.now)
     TYPES = (
-        ( 'Dispersal','Dispersal'),
+        ( 'Disbursal','Disbursal'),
         ('Loan','Loan'),
     )
-    type = models.CharField(max_length=200, null=False, choices=TYPES, default='Dispersal')
+    type = models.CharField(max_length=200, null=False, choices=TYPES, default='Disbursal')
     def __str__(self):
         return "Request for " + str(self.request_quantity) + " " + self.item_name.item_name + " by " + self.user_id  + " (ID: " + self.request_id + ")"
         
@@ -86,7 +86,7 @@ class ShoppingCartInstance(models.Model):
     item = models.ForeignKey(Item, null = True, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField(null=False)
     TYPES = (
-        ( 'Dispersal','Dispersal'),
+        ( 'Disbursal','Disbursal'),
         ('Loan','Loan'),
     )
     type = models.CharField(max_length=200, null=False, choices=TYPES)

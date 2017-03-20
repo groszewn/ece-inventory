@@ -42,7 +42,7 @@ from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from custom_admin.forms import AdminRequestEditForm
+from custom_admin.forms import AdminRequestEditForm, RequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
@@ -161,7 +161,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         item = Item.objects.get(item_id = self.object.pk)
         username = self.request.user.username
         cart_instance = ShoppingCartInstance(user_id=username, item=item, 
-                                            type='Dispersal',quantity=quantity)
+                                            type='Disbursal',quantity=quantity)
         cart_instance.save()
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))

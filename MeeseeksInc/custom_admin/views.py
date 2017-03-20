@@ -25,8 +25,8 @@ from django.conf import settings
 from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import email as task_email
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm
-from inventory.forms import RequestForm, RequestEditForm
+from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm
+from inventory.forms import RequestForm
 from inventory.forms import SearchForm
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue
 
@@ -301,7 +301,7 @@ def add_comment_to_request_accept(request, pk):
                 indiv_request.comment = comment
                 indiv_request.save()
                 
-                if indiv_request.type == "Dispersal": 
+                if indiv_request.type == "Disbursal": 
                     # add new disbursement item to table
                     disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
