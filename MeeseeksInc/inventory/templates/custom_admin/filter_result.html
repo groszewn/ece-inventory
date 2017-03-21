@@ -1,0 +1,17 @@
+{% extends 'custom_admin/index.html' %}
+
+{% block item_filter_table%}
+
+			<tbody>
+            	{% for item in search_list %}
+					<tr>
+						<td><a href="{% url 'inventory:detail' item.item_id %}">{{ item.item_name }}</a></td>
+						<td>{{ item.quantity }}</td>
+						<td>{{ item.location }}</td>
+						<td>{{ item.model_number }}</td>
+						<td>{{ item.description }}</td>
+					</tr>
+				{% endfor %}
+        	</tbody>	
+    
+{% endblock %}

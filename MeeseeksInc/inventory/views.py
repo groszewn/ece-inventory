@@ -56,6 +56,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
 from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
 from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+
 from .models import Tag
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -69,11 +70,10 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
+    model = Tag
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
@@ -88,8 +88,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
         return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
-    
+        return Instance.objects.order_by('item')[:5] 
     def test_func(self):
         return self.request.user.is_active
         

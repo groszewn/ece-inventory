@@ -32,6 +32,7 @@ from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm
 from django.core.exceptions import ObjectDoesNotExist
 
 
+
 def staff_check(user):
     return user.is_staff
 
@@ -48,8 +49,10 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
     context_object_name = 'instance_list'
+    model = Tag
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
+
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.all()
@@ -70,6 +73,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+
     def test_func(self):
         return self.request.user.is_staff
     

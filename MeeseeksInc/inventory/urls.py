@@ -20,6 +20,7 @@ urlpatterns = [
     url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
+
     url(r'^search/$', views.search_view, name='search_setup'),
     url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.request_specific_item, name='request_specific_item'),
     url(r'^post/request/$', views.post_new_request, name='post_new_request'),

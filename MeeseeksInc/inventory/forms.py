@@ -73,6 +73,3 @@ class SearchForm(forms.Form):
     model_number = forms.CharField(required=False)
     item_name = forms.CharField(required=False)
     fields = ('tags1','tags2','keyword','model_number','item_name')
-
-
-
