@@ -84,6 +84,9 @@
 {#            <li><a href="{% url 'inventory:search_setup' %}"> Search Parameters </a></li>#}
             <li><a href="{% url 'custom_admin:log' %}">View Log</a></li>
             <li><a href="{% url 'inventory:api_guide' %}"> API Guide </a></li>
+            <li><a href="{% url 'custom_admin:subscribe' %}">Subscribe</a></li>
+            <li><a href="{% url 'custom_admin:change_email_prepend' %}">Change Email Prepended Text</a></li>
+            <li><a href="{% url 'custom_admin:change_loan_body' %}">Change Loan Body</a></li>
             {% if user.is_superuser %}
             	<li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
             	<li><a href="{% url 'custom_admin:user_page' %}">User List</a></li>

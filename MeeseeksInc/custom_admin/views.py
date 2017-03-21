@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.mail import EmailMessage
 from django.db import connection, transaction
 from django.db import models
 from django.db.models import F
@@ -11,19 +12,25 @@ from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
 from django.template.defaulttags import comment
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.urls import reverse_lazy 
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
+from django.core.mail import send_mail
+from django.core import mail
+from django.conf import settings
+from datetime import date, time, datetime, timedelta
+from custom_admin.tasks import email as task_email
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm
-from inventory.forms import RequestForm, RequestEditForm
-from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value
 
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
+from inventory.forms import RequestForm, SearchForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 def staff_check(user):
@@ -42,8 +49,10 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
     context_object_name = 'instance_list'
+    model = Tag
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
+
         tags = Tag.objects.all()
         context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.all()
@@ -53,6 +62,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['item_list'] = Item.objects.all()
         context['disbursed_list'] = Disbursement.objects.filter(admin_name=self.request.user.username)
         context['user_list'] = User.objects.all()
+        context['loan_list'] = Loan.objects.all()
         context['current_user'] = self.request.user.username
         if self.request.user.is_staff or self.request.user.is_superuser:
             context['custom_fields'] = Custom_Field.objects.filter() 
@@ -63,6 +73,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+
     def test_func(self):
         return self.request.user.is_staff
     
@@ -110,16 +121,14 @@ class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): #
     def test_func(self):
         return self.request.user.is_staff
  
-#####################################################################
-
 @login_required(login_url='/login/')
 def add_custom_field(request):
     if request.method == 'POST':
         form = CustomFieldForm(request.POST)
         if form.is_valid():
             form.save()
-            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user=None, change_occurred='Added custom field ' + str(form['field_name'].value()))
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added custom field ' + str(form['field_name'].value()))
             return redirect(reverse('custom_admin:index'))
     else:
         form = CustomFieldForm()
@@ -135,8 +144,8 @@ def delete_custom_field(request):
             if pickedFields:
                 for field in pickedFields:
                     delField = Custom_Field.objects.get(field_name = field)
-                    Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user=None, change_occurred='Deleted custom field ' + str(field))
+                    Log.objects.create(request_id=None,item_id=None,  item_name='', initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted custom field ' + str(field))
                     delField.delete()
             return redirect(reverse('custom_admin:index'))
     else:
@@ -157,7 +166,7 @@ def register_page(request):
             else:
                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
                 user.save()
-            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Create', 
+            Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Create', 
                                      affected_user=user.username, change_occurred="Created user")
             return HttpResponseRedirect('/customadmin')
         
@@ -210,6 +219,21 @@ def add_comment_to_request_accept(request, pk):
                 Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=disbursement.user_name).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':User.objects.get(username=disbursement.user_name).username,
+                    'item':disbursement.item_name,
+                    'quantity':disbursement.total_quantity,
+                    'type':'disbursement',
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
@@ -229,10 +253,10 @@ def edit_item_module(request, pk):
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
                 Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
@@ -263,6 +287,47 @@ def edit_item_module(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_request_accept(request, pk):
+    if request.method == "POST":
+        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            comment = form['comment'].value()
+            indiv_request = Request.objects.get(request_id=pk)
+            item = Item.objects.get(item_name=indiv_request.item_name)
+            if item.quantity >= indiv_request.request_quantity:
+                # decrement quantity in item
+                item.quantity = F('quantity')-indiv_request.request_quantity
+                item.save()
+                 
+                # change status of request to approved
+                indiv_request.status = "Approved"
+                indiv_request.comment = comment
+                indiv_request.save()
+                
+                if indiv_request.type == "Dispersal": 
+                    # add new disbursement item to table
+                    disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                    disbursement.save()
+                    messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                elif indiv_request.type == "Loan":
+                    loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
+                    loan.save()
+                    messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
+            else:
+                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = AddCommentRequestForm() # blank request form with no data yet
+    return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_request_deny(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
@@ -276,11 +341,103 @@ def add_comment_to_request_deny(request, pk):
             Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request denial'
+            to = [User.objects.get(username=indiv_request.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':User.objects.get(username=indiv_request.user_id),
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+                'comment':comment,
+            }
+            message=render_to_string('inventory/request_denial_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
 
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def convert_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = ConvertLoanForm(loan.total_quantity, request.POST)
+        if form.is_valid():
+            admin_name = request.user.username
+            user_name = loan.user_name
+            item = loan.item_name
+            comment = loan.comment
+            time_disbursed = timezone.localtime(timezone.now())
+            quantity_disbursed = int(form['items_to_convert'].value())
+            loan.total_quantity = loan.total_quantity - quantity_disbursed
+            loan.save()
+            if loan.total_quantity == 0:
+                loan.delete()
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement.save()
+            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            return redirect(reverse('custom_admin:index'))  
+    else:
+        form = ConvertLoanForm(loan.total_quantity) 
+    return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk})
+    
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def check_in_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        loan = Loan.objects.get(loan_id=pk)
+        form = CheckInLoanForm(loan.total_quantity, request.POST) 
+        if form.is_valid():
+            items_checked_in = form['items_to_check_in'].value()
+            loan.total_quantity = loan.total_quantity - int(items_checked_in)
+            item = loan.item_name
+            item.quantity = item.quantity + int(items_checked_in)
+            loan.save()
+            item.save()
+            if loan.total_quantity == 0:
+                loan.delete()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + items_checked_in + " instances.")
+            messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            return redirect('/customadmin')
+    else:
+        form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
+    return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity})
+  
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def edit_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = EditLoanForm(request.POST, instance=loan) 
+        if form.is_valid():
+            post = form.save(commit=False)
+            loan = Loan.objects.get(loan_id=pk)
+            item = loan.item_name
+            quantity_changed = post.total_quantity - loan.total_quantity 
+            new_quantity = item.quantity - quantity_changed
+            if new_quantity < 0:
+                messages.error(request, ('You cannot loan more items than the quantity available.'))
+                return redirect('/customadmin')
+            item.quantity = new_quantity
+            item.save()
+            post.save()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            return redirect('/customadmin')
+    else:
+        form = EditLoanForm(instance=loan) # blank request form with no data yet
+    return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk})
+    
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
 def post_new_request(request):
@@ -295,8 +452,25 @@ def post_new_request(request):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = str(post.request_id), item_name=str(post.item_name), initiating_user=post.user_id, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+                                         affected_user='', change_occurred="Requested " + str(form['request_quantity'].value()))
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
+            request_list=[]
+            request_list.append((post.item_name, form['request_quantity'].value()))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [User.objects.get(username=post.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':post.user_id,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestForm() # blank request form with no data yet
@@ -308,6 +482,13 @@ def edit_request_main_page(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        change_list=[]
+        if int(form['request_quantity'].value()) != int(instance.request_quantity):
+            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+        if form['reason'].value() != instance.reason:
+            change_list.append(('reason', instance.reason, form['reason'].value()))
+        if form['type'].value() != instance.type:
+            change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -317,8 +498,22 @@ def edit_request_main_page(request, pk):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request edit'
+            to = [User.objects.get(username=instance.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':instance.user_id,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
@@ -345,6 +540,22 @@ def post_new_disburse(request):
                 item.save()
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
                                          affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct Dispersal'
+                to = [User.objects.get(username=post.user_name).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':post.user_name,
+                    'item':item.item_name,
+                    'quantity':quant_change,
+                    'disburser':request.user.username,
+                    'type':'disbursed',
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
@@ -360,31 +571,74 @@ def post_new_disburse(request):
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def post_new_disburse_specific(request, pk):
+    item = Item.objects.get(item_id=pk)
     if request.method == "POST":
         form = DisburseSpecificForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
-            item = Item.objects.get(item_id=pk)
             user_name = User.objects.get(id=form['user_field'].value()).username
             if item.quantity >= int(form['total_quantity'].value()):
                 # decrement quantity in item
                 quant_change = int(form['total_quantity'].value())
                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
                 item.save()
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
-                                         affected_user=user_name, change_occurred="Disbursed " + str(quant_change))
+                if form['type'].value() == "Loan":
+                    loan = Loan(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
+                                        total_quantity=form['total_quantity'].value(), time_loaned=timezone.localtime(timezone.now()))
+                    loan.save()
+                    messages.success(request, 
+                                 ('Successfully loaned ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Loan', 
+                                         affected_user=user_name, change_occurred="Loaned " + str(quant_change))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Direct Dispersal'
+                    to = [User.objects.get(username=user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':user_name,
+                        'item':item.item_name,
+                        'quantity':quant_change,
+                        'disburser':request.user.username,
+                        'type':"loaned", 
+                    }
+                    message=render_to_string('inventory/disbursement_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                if form['type'].value() == "Dispersal":
+                    disbursement = Disbursement(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
+                                        total_quantity=form['total_quantity'].value(), time_disbursed=timezone.localtime(timezone.now()))
+                    disbursement.save()
+                    messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=user_name, change_occurred="Dispersed " + str(quant_change))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Direct Dispersal'
+                    to = [User.objects.get(username=user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':user_name,
+                        'item':item.item_name,
+                        'quantity':quant_change,
+                        'disburser':request.user.username,
+                        'type':'disbursed',
+                    }
+                    message=render_to_string('inventory/disbursement_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
-            disbursement = Disbursement(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
-                                        total_quantity=form['total_quantity'].value(), time_disbursed=timezone.localtime(timezone.now()))
-            disbursement.save()
-            messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
-        
+            
             return redirect('/item/'+pk)
     else:
         form = DisburseSpecificForm() # blank request form with no data yet
-    return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk})
+    return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk, 'amount_left':item.quantity})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -404,19 +658,72 @@ def approve_all_requests(request):
             indiv_request.status = "Approved"
             indiv_request.save()
              
-            # add new disbursement item to table
-            # TODO: add comments!!
-            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+            if indiv_request.type == "Dispersal":
+                # add new disbursement item to table
+                disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
-            disbursement.save()
-            Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
-                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
-            messages.add_message(request, messages.SUCCESS, 
+                disbursement.save()
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
+                                   affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':indiv_request.user_id,
+                    'item':disbursement.item_name,
+                    'quantity': disbursement.total_quantity,
+                    'type':'disbursement',
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            if indiv_request.type == "Loan":
+                loan = Loan(admin_name=request.user.username,orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+                                        total_quantity=indiv_request.request_quantity, time_loaned=timezone.localtime(timezone.now()))
+                loan.save()
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
+                                   affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))
+                messages.add_message(request, messages.SUCCESS, 
+                                 ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':indiv_request.user_id,
+                    'item':disbursement.item_name,
+                    'quantity': disbursement.total_quantity,
+                    'type':'loan',
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
         else:
             messages.add_message(request, messages.ERROR, 
-                                 ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-         
+                                 ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))    
+    return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def deny_all_request(request):
+    pending_requests = Request.objects.filter(status="Pending")
+    if not pending_requests:
+        messages.error(request, ('No requests to deny!'))
+        return redirect(reverse('custom_admin:index'))
+    for indiv_request in pending_requests:
+        indiv_request.status = "Denied"
+        id = indiv_request.item_name.item_id
+        Log.objects.create(request_id =indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+        indiv_request.save()
+    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
@@ -442,10 +749,37 @@ def approve_request(request, pk):
         Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Approve', 
                                          affected_user=indiv_request.user_id, change_occurred="Approved request for " + str(indiv_request.request_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request approval'
+        to = [User.objects.get(username=indiv_request.user_id).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':indiv_request.user_id,
+            'item':disbursement.item_name,
+            'quantity': disbursement.total_quantity,
+            'type':'disbursement',
+        }
+        message=render_to_string('inventory/request_approval_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
         return redirect(reverse('custom_admin:index'))
  
+    return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def deny_request(request, pk):
+    indiv_request = Request.objects.get(request_id=pk)
+    indiv_request.status = "Denied"
+    indiv_request.save()
+    id = indiv_request.item_name.item_id
+    Log.objects.create(request_id=indiv_request.request_id, item_id=id,  item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+    messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -460,10 +794,10 @@ def edit_item(request, pk):
         if form.is_valid():
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
             else:
                 Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(form['item_name'].value()))
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
@@ -499,7 +833,7 @@ def edit_permission(request, pk):
         form = UserPermissionEditForm(request.POST or None, instance=user)
         if form.is_valid():       
             form.save()
-            Log.objects.create(request_id = None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event='Edit', 
+            Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
             return redirect('/customadmin')
     else:
@@ -599,7 +933,7 @@ def log_item(request):
             if change_type == 'Acquired':  # this correlates to the item_change_option numbers for the tuples
                 item.quantity = F('quantity')+amount
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Acquire", 
-                                   affected_user=None, change_occurred="Acquired " + str(amount))
+                                   affected_user='', change_occurred="Acquired " + str(amount))
                 item.save()
                 messages.success(request, ('Successfully logged ' + str(item.item_name) + ' (added ' + str(amount) +')'))
             elif change_type == "Broken":
@@ -607,7 +941,7 @@ def log_item(request):
                     item.quantity = F('quantity')-amount
                     item.save()
                     Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
-                                       affected_user=None, change_occurred="Broke " + str(amount))
+                                       affected_user='', change_occurred="Broke " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't break more of " + item.item_name + " than you have."))
@@ -617,7 +951,7 @@ def log_item(request):
                     item.quantity = F('quantity')-amount
                     item.save()
                     Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
-                                       affected_user=None, change_occurred="Lost " + str(amount))
+                                       affected_user='', change_occurred="Lost " + str(amount))
                     messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(amount) +')'))
                 else:
                     messages.error(request, ("You can't lose more of " + item.item_name + " than you have."))
@@ -631,8 +965,11 @@ def log_item(request):
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
 def api_guide_page(request):
-    return render(request, 'custom_admin/api_guide.html')
-
+    if(not request.user.is_staff):
+        my_template = 'inventory/base.html'
+    else:
+        my_template = 'custom_admin/base.html'
+    return render(request, 'custom_admin/api_guide.html', {'my_template':my_template})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -667,7 +1004,7 @@ def edit_specific_tag(request, pk, item):
 def delete_item(request, pk):
     item = Item.objects.get(item_id=pk)
     Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+                       affected_user='', change_occurred="Deleted item " + str(item.item_name))
     item.delete()
     return redirect(reverse('custom_admin:index'))
 
@@ -694,7 +1031,7 @@ def create_new_item(request):
             messages.success(request, (form['item_name'].value() + " created successfully."))
             item = Item.objects.get(item_name = form['item_name'].value())
             Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(item.item_name))
+                       affected_user='', change_occurred="Created item " + str(item.item_name))
             if pickedTags:
                 for oneTag in pickedTags:
                     t = Tag(tag=oneTag)
@@ -743,6 +1080,21 @@ def deny_request(request, pk):
     Log.objects.create(request_id=indiv_request.request_id, item_id=id,  item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    try:
+        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+    except (ObjectDoesNotExist, IndexError) as e:
+        prepend = ''
+    subject = prepend + 'Request denial'
+    to = [User.objects.get(username=indiv_request.user_id).email]
+    from_email='noreply@duke.edu'
+    ctx = {
+        'user':indiv_request.user_id,
+        'item':indiv_request.item_name,
+        'quantity':indiv_request.request_quantity,
+        'comment': indiv_request.comment,
+    }
+    message=render_to_string('inventory/request_denial_email.txt', ctx)
+    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')
@@ -758,11 +1110,106 @@ def deny_all_request(request):
         Log.objects.create(request_id =indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
         indiv_request.save()
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request denial'
+        to = [User.objects.get(username=indiv_request.user_id).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':indiv_request.user_id,
+            'item':indiv_request.item_name,
+            'quantity':indiv_request.request_quantity,
+            'comment': indiv_request.comment,
+        }
+        message=render_to_string('inventory/request_denial_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect(reverse('custom_admin:index'))
  
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def subscribe(request):
+    exists = SubscribedUsers.objects.filter(user=request.user.username).exists()
+    if request.method == "POST":
+        form = SubscribeForm(request.POST or None, initial = {'subscribed': exists})
+        if form.is_valid():  
+            if form['subscribed'].value():
+                try:
+                    SubscribedUsers.objects.get(user=request.user.username)
+                except ObjectDoesNotExist:
+                    SubscribedUsers.objects.create(user=request.user.username, email=request.user.email)
+            else:
+                try:
+                    subscribeduser = SubscribedUsers.objects.get(user=request.user.username)
+                except ObjectDoesNotExist:
+                    return redirect('/customadmin')
+                subscribeduser.delete()
+            return redirect('/customadmin')
+    else:
+        form = SubscribeForm(initial = {'subscribed': exists})
+    return render(request, 'custom_admin/subscribe.html', {'form': form}) 
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def loan_reminder_body(request):
+    try:
+        body = LoanReminderEmailBody.objects.all()[0]
+    except (ObjectDoesNotExist, IndexError) as e:
+        body = LoanReminderEmailBody.objects.create(body='')
+    if request.method == "POST":
+        form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
+        if form.is_valid():
+            try:
+                body.delete()
+            except (ObjectDoesNotExist) as e:
+                pass
+            LoanReminderEmailBody.objects.create(body=form['body'].value())
+            return redirect('/customadmin')
+    else:
+        form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form})
+            
  
+
+def delay_email(request):
+    #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
+    task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=1))
+    return redirect(reverse('custom_admin:log'))
  
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def create_email(request):
+    email = mail.EmailMessage(
+        'Testing delayed email', 
+        'Body goes here', 
+        'noreply@duke.edu', 
+        ['nrg12@duke.edu'], 
+    )
+    email.send(fail_silently=False)
+    return redirect(reverse('custom_admin:log'))
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def change_email_prepend(request):
+    try:
+        text = EmailPrependValue.objects.all()[0].prepend_text
+    except (ObjectDoesNotExist, IndexError) as e:
+        text=''
+    if request.method == "POST":
+        form = ChangeEmailPrependForm(request.POST or None, initial={'text': text})
+        if form.is_valid():
+            if form['text'].value() == text:
+                return redirect('/customadmin')
+            else:
+                EmailPrependValue.objects.all().delete()
+                EmailPrependValue.objects.create(prepend_text=form['text'].value())
+            return redirect('/customadmin')
+    else:
+        form = ChangeEmailPrependForm(initial={'text':text})
+    return render(request, 'custom_admin/change_prepend.html', {'form': form})
+
 ################### DJANGO CRIPSY FORM STUFF ###################
 class AjaxTemplateMixin(object):
     def dispatch(self, request, *args, **kwargs):
@@ -797,6 +1244,22 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
                                          affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(self.request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + name_requested + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Direct Dispersal'
+        to = [User.objects.get(username=post.user_name).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':post.user_name,
+            'item':disbursement.item_name,
+            'quantity':disbursement.total_quantity,
+            'disburser':request.user.username,
+            'type':'disbursed',
+        }
+        message=render_to_string('inventory/disbursement_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
         return super(DisburseFormView, self).form_valid(form)
 
 class UserAutocomplete(autocomplete.Select2QuerySetView):

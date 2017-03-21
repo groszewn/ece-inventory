@@ -6,7 +6,6 @@
 {% block content %}
 
 {########################## ALL ITEMS ##########################}
-{% if user_list %}
 
 <h2>All available items</h2>
 
@@ -31,7 +30,6 @@
 	</select>
     <input type="submit"/>
 </form>
-
 
 
 <table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -71,6 +69,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
@@ -83,6 +82,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -103,6 +103,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
@@ -115,6 +116,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -135,10 +137,10 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Requested by</th>
 					<th>Student Reason</th>
-					<th>Admin Comment</th>
 					<th>Time Requested</th>
 					<th>Actions</th>
 				</tr>
@@ -148,10 +150,10 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
-							<td>{{ request.comment }}</td>
 							<td>
 						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
 								  {{ request.time_requested }}
@@ -163,10 +165,6 @@
 								{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 								{% endblock comment_deny %}
-{#								<a href="{% url 'custom_admin:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>#}
-{#								{% if request.user_id == current_user%}#}
-{#								<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>#}
-{#								{% endif %}#}
 							</td>
 						</tr>
 					{% endfor %}
@@ -180,6 +178,7 @@
 		            <tr>
 					<th>Request for</th>
 					<th>Item Quantity</th>
+					<th>Type</th>
 					<th>Status</th>
 					<th>Request by</th>
 					<th>Student Reason</th>
@@ -192,6 +191,7 @@
 		        		<tr>
 							<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.status }}</td>
 							<td>{{ request.user_id }}</td>
 							<td>{{ request.reason}}</td>
@@ -215,6 +215,50 @@
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 	
+{########################## LOANS #####################}	
+{% if loan_list %}
+		<h2>Loaned by you</h2>
+		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Item Quantity </th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+							<td>
+								{% block checkIn %}
+								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+								{% endblock checkIn %}
+								{% block convert %}
+								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+								{% endblock convert %}
+								{% block  editLoan %}
+								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+								{% endblock editLoan %}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+{% endif %}	
+	
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
 		<h2>Disbursed by you</h2>
@@ -224,6 +268,7 @@
 					<th>Item Name</th>
 					<th>Item Quantity </th>
 					<th>Disbursed to</th>
+					<th>User Reason</th>
 					<th>Admin Comment</th>
 					<th>Time Disbursed</th>
 				</tr>
@@ -234,6 +279,7 @@
 							<td>{{ disbursed.item_name }}</td>
 							<td>{{ disbursed.total_quantity }}</td>
 							<td>{{ disbursed.user_name }}</td>
+							<td>{{ disbursed.orig_request.reason}}</td>
 							<td>{{ disbursed.comment}}</td>
 							<td>
 								  <span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
@@ -243,16 +289,11 @@
 					{% endfor %}
 		        </tbody>
 		    </table>
-	{% endif %}
-
-	{#<a href="{% url 'custom_admin:post_new_disburse' %}" class="top-menu">Directly disburse Items to Users here<span class="glyphicon glyphicon-plus"></span></a>	#}
-{#		{% block modal %}#}
-{#			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button>#}
-{#		{% endblock modal %}#}
-
-
 {% endif %}
 
+{#		{% block modal %} #}
+{#			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button> #}
+{#		{% endblock modal %} #}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -339,6 +380,90 @@
 </script>
 {% endblock js %}
 
+{############################# CHECK IN MODAL LOGIC ##############################}
+<div id="form-modal-checkIn" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-checkIn" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-checkIn %}
+<script>
+    $('.checkIn').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-checkIn').load(('checkIn/loan/'+loan_id), function () {
+            $('#form-modal-checkIn').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-checkIn %}
+
+{############################# EDIT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-editLoan" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-editLoan" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-editLoan %}
+<script>
+    $('.editLoan').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-editLoan').load(('edit/loan/'+loan_id), function () {
+            $('#form-modal-editLoan').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-editLoan %}
+
+{############################# CONVERT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-convert" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Convert Loan</h4>
+            </div>
+            <div id="form-modal-body-convert" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-convert %}
+<script>
+    $('.convert').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-convert').load(('convert/loan/'+loan_id), function () {
+            $('#form-modal-convert').modal('toggle');
+        });
+    });
+</script> 
+{% endblock js-convert %}
+
  <script>
 	$(document).ready(function(){
 		//var inventory_item_table = $('#inventory-item').DataTable();
@@ -355,13 +480,15 @@
 	        "order": [[ 6, "desc" ]]
 	    });
 	    $('#inventory-disbursed').dataTable({
-	        "order": [[ 4, "desc" ]]
+	        "order": [[ 5, "desc" ]]
 	    });
 	    $('#user-table').dataTable();
-	    
 	    //inventory_item_table.MakeCellsEditable({
 		//    "onUpdate": myCallbackFunction
 		//});
+	    $('#inventory-loaned').dataTable({
+        "order": [[ 5, "desc" ]]
+    });
 	});
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select

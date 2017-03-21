@@ -1,0 +1,7 @@
+Hello {{ user }}, 
+
+{{ item }} (Quantity: {{ quantity }}) has been {{ type }} directly to you by {{ disburser }}.  
+
+Best, 
+
+ECE inventory

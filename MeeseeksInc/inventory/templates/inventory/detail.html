@@ -14,8 +14,9 @@
 					<th>Model Number:</th>
 					<th>Description:</th>
 					{% for field in custom_fields%}
-					<th>{{field.field_name}}</th>
+					<th>{{field.field_name}}:</th>
 					{% endfor %}
+					<th> Tags: </th>
 				</tr>
 		        </thead>
 		        <tbody>
@@ -50,64 +51,22 @@
 								{% endif %}
 							{% endfor %}
 							</td>
-					{% endfor %}
+						{% endfor %}
+						<td>
+							{% for oneTag in tag_list %}
+								 {% if not forloop.last %}
+								 {{oneTag.tag}},
+								 {% else %}
+								 {{oneTag.tag}}
+								 {% endif %}
+							{% endfor %}
+						</td>
 						</tr>
 		        </tbody>
 		    </table>
 
 <br/>
     
-{% if tag_list%}
-	<table id="inventory-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <tr>
-			<th>Tag Name</th>
-			<th>Tag ID</th>
-			{% if user.is_staff %}
-			<th>Actions</th>
-			{% endif %}
-			</tr>
-        </thead>
-     <tbody>
-	{% for oneTag in tag_list %}
-		<script>
-		function tagEvent(){
-    		if (confirm("Delete this tag?")) {
-    			window.location='{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}';
-    		}
-		}
-		</script>
-		<script> 
-		function tagEvent3() {
-			window.location='{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}';
-		}
-		</script>
-		
-				<tr>
-					<td>{{ oneTag.tag }}</td>
-					<td>{{ oneTag.id }}</td>
-					{% if user.is_staff %}
-					<td>						
-
-		 			{#<a value="Edit this tag" type="button" href="{% url 'custom_admin:edit_tag' pk=oneTag.id item=item.item_id %}" class="btn btn-primary btn-sm">Edit Tag</a>#}
-		 			
-		 			{% block tag_edit_module %}
-					<a id = "specificTagEdit" tag-id="{{ oneTag.id }}" item-id="{{ item.item_id }}" class="specificTagEdit btn btn-primary btn-sm">Edit Tag</a>
-					{% endblock tag_edit_module %}
-		 			
-		 			<a value="Delete this tag" href="{% url 'custom_admin:delete_tag' pk=oneTag.id item=item.item_id %}" onclick="return confirm('Do you want to delete this tag?')" class="btn btn-primary btn-sm">Delete Tag</a>
-
-		 			</td> 
-		 			{% endif %}
-				</tr>
-	
-	{% endfor %}
-	</tbody>
-    </table>
-</div>
-
-{% endif %} 
-
 <div>
 	{% if user.is_staff %}
 	<script>
@@ -117,22 +76,7 @@
 	    }
 	}
 	</script>
-	
-	<script>
-	function clickEvent2() {
-		window.location='{%url 'custom_admin:edit_item' item.item_id %}';
-	}
-	</script>
-	
-	<script>
-	function clickEvent3() {
-		window.location='{%url 'custom_admin:add_tags' item.item_id %}';
-	}
-	</script>
-	
-		{#<button value="Edit Item" onclick="clickEvent2();"type="button" class="btn btn-primary btn-md">Edit Item</button>#}
-	   	{#<button value="Add or Create Tags" onclick="clickEvent3();" type="button" class="btn btn-primary btn-md">Add, Create, or Edit Tags</button>#}
-
+		
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
 {% endblock edit_specific_item %}
@@ -141,9 +85,9 @@
 <a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Tags</a>									
 {% endblock tag_item %}
 	
-	{% if user.is_superuser %}
-	<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
-	{% endif %}
+{% if user.is_superuser %}
+<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+{% endif %}
 	
 </div>
 
@@ -180,6 +124,7 @@
 					<th>Time Requested</th>
 					<th>Requested by</th>
 					<th>Quantity</th>
+					<th>Type</th>
 					<th>Reason</th>
 					<th>Actions</th>
 				</tr>
@@ -193,7 +138,8 @@
 								  {{ request.time_requested }}
 							</td>
 							<td>{{ request.user_id }}</td>
-							<td>{{ request.request_quantity}}</td>
+							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.type }}</td>
 							<td>{{ request.reason }}</td>
 							<td>
 								{% if user.is_staff %}
@@ -230,8 +176,63 @@
 	    });
 	});
 	</script>
-		
+{% endif %} 
 	
+{% if loan_list %}
+<h2>Loans for This Item:  </h2>
+	<table id="inventory-loan-indiv-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>Status</th>
+					<th>Time Loaned</th>
+					<th>Loaned To</th>
+					<th>Loaned By</th>
+					<th>Quantity</th>
+					<th>Admin Comment</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        	<tr class="clickable-row" data-href="{% url 'inventory:loan_detail' loan.loan_id %}">
+		        			<td>{{ loan.status }}</td>
+							<td>
+						  		<span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.admin_name }}</td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.comment }}</td>
+							<td>
+							{% if user.is_staff %}
+								{% block checkIn %}
+								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+								{% endblock checkIn %}
+								{% block convert %}
+								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+								{% endblock convert %}
+								{% block  editLoan %}
+								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+								{% endblock editLoan %}
+							{% endif %}	
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	<script>
+	$('#inventory-loan-indiv-item tr td:not(:last-child)').click(function ()    {
+	 window.document.location = $(this).parent().data('href');
+	});
+	$(document).ready(function(){
+	    $('#inventory-loan-indiv-item').dataTable({
+	        "order": [[ 1, "desc" ]]
+	    });
+	});
+	</script>
+{% endif %}
+		
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
     <div class="modal-dialog">
@@ -289,7 +290,6 @@
     });
 </script>
 {% endblock js-deny %}
-{% endif %} 
 
 {############################# ITEM REQUEST QUANTITY AND COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-request" class="modal fade">
@@ -317,7 +317,6 @@
         });
     });
 </script>
-
 {% endblock js-request %}
 
 {############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
@@ -346,7 +345,6 @@
         });
     });
 </script>
-
 {% endblock js-disbursement %}
 
 {############################# EDIT TAG LOGIC ##############################}
@@ -375,7 +373,6 @@
         });
     });
 </script>
-
 {% endblock js-tag %}
 
 
@@ -405,7 +402,6 @@
         });
     });
 </script>
-
 {% endblock js-edit %}
 
 {############################# EDIT SPECIFIC TAG LOGIC ##############################}
@@ -435,10 +431,91 @@
         });
     });
 </script>
-
 {% endblock js-specifictag %}
 
+{############################# CHECK IN MODAL LOGIC ##############################}
+<div id="form-modal-checkIn" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-checkIn" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-checkIn %}
+<script>
+    $('.checkIn').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-checkIn').load(('../../customadmin/checkIn/loan/'+loan_id), function () {
+            $('#form-modal-checkIn').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-checkIn %}
 
+{############################# EDIT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-editLoan" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-editLoan" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-editLoan %}
+<script>
+    $('.editLoan').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-editLoan').load(('../../customadmin/edit/loan/'+loan_id), function () {
+            $('#form-modal-editLoan').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-editLoan %}
+
+{############################# CONVERT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-convert" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Convert Loan</h4>
+            </div>
+            <div id="form-modal-body-convert" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-convert %}
+<script>
+    $('.convert').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-convert').load(('../../customadmin/convert/loan/'+loan_id), function () {
+            $('#form-modal-convert').modal('toggle');
+        });
+    });
+</script> 
+{% endblock js-convert %}
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
@@ -450,7 +527,7 @@
 <a id='togglebutton' class="request btn btn-info">Show/hide log</a>
 <br>
 <div id='logtable_toggle'>
-	<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+	<div align='right'>Start Date : <input id="startdate" type="text" name='startdate' /></div>
 	{% block js %}
 	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 	<script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>

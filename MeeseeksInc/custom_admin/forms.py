@@ -8,24 +8,11 @@ from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field
-from inventory.models import Request
-from inventory.models import Tag
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers
 
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
-#     user_field = forms.ModelChoiceField(
-#         queryset=User.objects.filter(is_staff="False"),
-#         widget=autocomplete.ModelSelect2(url='custom_admin:userfield-autocomplete')
-#     )
-#     user_field = dal_queryset_sequence.fields.QuerySetSequenceModelField(
-#         queryset=autocomplete.QuerySetSequence(
-#             User.objects.filter(is_staff="False"),
-#         ),
-#         required=False,
-#         widget=dal_select2_queryset_sequence.widgets.QuerySetSequenceSelect2('custom_admin:userfield-autocomplete'),
-#     )
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
@@ -37,10 +24,30 @@ class DisburseSpecificForm(forms.Form):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
     
     def __init__(self, *args, **kwargs):
         super(DisburseSpecificForm, self).__init__(*args, **kwargs)
 
+class ConvertLoanForm(forms.Form):
+    def __init__(self, amount, *args, **kwargs):
+        super(ConvertLoanForm, self).__init__(*args, **kwargs)
+        self.fields['items_to_convert'] = forms.IntegerField(label='How many items from this loan would you like to disburse?',required=True, min_value=1, max_value=amount, initial=amount)
+        
+class CheckInLoanForm(forms.Form):
+    def __init__(self, amount, *args, **kwargs):
+        super(CheckInLoanForm, self).__init__(*args, **kwargs)
+        self.fields['items_to_check_in'] = forms.IntegerField(required=True, min_value=0, max_value=amount, initial=amount)
+    
+class EditLoanForm(forms.ModelForm):
+    total_quantity = forms.IntegerField(min_value=0)
+    class Meta:
+        model = Loan
+        fields = ('total_quantity','comment')
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
@@ -64,15 +71,20 @@ class LogForm(forms.ModelForm):
 class AdminRequestEditForm(forms.ModelForm):    
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
     request_quantity = forms.IntegerField(min_value=1)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason','comment')
+        fields = ('request_quantity','type','reason','comment')
 
 class RequestEditForm(forms.ModelForm):
     request_quantity = forms.IntegerField(min_value=1)
     class Meta:
         model = Request
-        fields = ('request_quantity', 'reason')
+        fields = ('request_quantity', 'type','reason')
          
 class ItemEditForm(forms.ModelForm):
     def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
@@ -164,6 +176,7 @@ class CreateItemForm(forms.ModelForm):
 class CustomFieldForm(forms.ModelForm):  
     class Meta:
         model = Custom_Field
+        
         fields = ('field_name','is_private','field_type',) 
         
 class DeleteFieldForm(forms.Form):
@@ -176,7 +189,7 @@ class DeleteFieldForm(forms.Form):
           
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30, required = True)
-    email = forms.EmailField(label='Email', required = False)
+    email = forms.EmailField(label='Email', required = True)
     password1 = forms.CharField(label='Password',
                                 widget=forms.PasswordInput(), required = True )
     password2 = forms.CharField(label='Confirm Password',
@@ -198,4 +211,14 @@ class RegistrationForm(forms.Form):
         except User.DoesNotExist:
             return self.cleaned_data['username']
         raise forms.ValidationError(("The username already exists. Please try another one."))
-     
+    
+class SubscribeForm(forms.Form):  
+    subscribed = forms.BooleanField(label = 'Click to subscribe to email notifications.',
+                               widget = forms.CheckboxInput, required=False)
+    
+class ChangeEmailPrependForm(forms.Form):
+    text = forms.CharField(label='Write text to be prepended to all emails.', required=False)
+    
+class ChangeLoanReminderBodyForm(forms.Form):
+    body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
+    

@@ -6,7 +6,6 @@ import inventory
 
 from . import views
 
-
 #this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'custom_admin'  
@@ -15,8 +14,12 @@ urlpatterns = [
     # b/c we use it to load these urls later in the html files
     # this allows us to change the url of a page without changing it in the HTML files
      
-    # this is what it goes to if typed /
-#     url(r'^$', views.AdminIndexView.as_view(), name='index'),
+    # if typed /, goes to following url
+    # url(r'^$', views.AdminIndexView.as_view(), name='index'),
+
+    url(r'^edit/loan/(?P<pk>[\w\-\ ]+)$', views.edit_loan, name='edit_loan'),
+    url(r'^convert/loan/(?P<pk>[\w\-\ ]+)$', views.convert_loan, name='convert_loan'),
+    url(r'^checkIn/loan/(?P<pk>[\w\-\ ]+)$', views.check_in_loan, name='check_in_loan'),
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)$', views.add_comment_to_request_accept, name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)$', views.add_comment_to_request_deny, name='add_comment_to_request_deny'),
     url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),
@@ -46,4 +49,9 @@ urlpatterns = [
     url(r'^users/$', views.UserListView.as_view(), name='user_page'),
     url(r'^userfield-autocomplete/$', UserAutocomplete.as_view(), name='userfield-autocomplete'),
     url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
+    url(r'^subscription/$', views.subscribe, name='subscribe'),
+    url(r'^edit_prepend/$', views.change_email_prepend, name='change_email_prepend'),
+    url(r'^send_email/$', views.create_email, name='send_email'),
+    url(r'delay_email/$', views.delay_email, name='delay_email'),
+    url(r'change_loan_email_body/$', views.loan_reminder_body, name='change_loan_body'),
 ]

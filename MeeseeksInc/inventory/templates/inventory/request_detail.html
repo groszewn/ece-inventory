@@ -1,11 +1,12 @@
 {% extends my_template %} 
-{% load static %}
-{#put this at the top so that the base template is "base.html"#}
 
+{% load rest_framework %}
+{% load static %}
+{% load index %}
 {% block content %}
 
 <center> <h1>  Request for: {{ request.item_name }} </h1> </center> 
-<center> <h3>  Quantitiy Remaining: {{ request.item_name.quantity }} </h3> </center> 
+<center> <h3>  Quantity Remaining: {{ request.item_name.quantity }} </h3> </center> 
 
 {% if request.status == "Pending"%}
 <center> <h1 style="color:gold">  Status: {{ request.status }} </h1> </center> 
@@ -23,6 +24,7 @@
 		            <tr>
 		            <th>Requested By:</th>
 					<th>Quantity:</th>
+					<th>Type:</th>
 					<th>Reason:</th>
 					<th>Admin Comment:</th>
 					<th>Time Requested:</th>
@@ -31,7 +33,8 @@
 		        <tbody>
 		        		<tr>
 		        			<td>{{request.user_id}}</td>
-							<td>{{ request.request_quantity }}</td>
+							<td>{{ request.request_quantity}}</td>
+							<td>{{request.type}}</td>
 							<td>{{ request.reason}}</td>
 							<td>{{ request.comment }}</td>
 							<td>{{ request.time_requested }}</td>
@@ -40,48 +43,115 @@
 		    </table>
 		    
 <br/>
-	
 	{% if request.status == "Pending" %}
 	
-		 <h2>Edit This Request </h2>
-		  Change the parameters below and hit the resubmit button to update this request.
-		 <br/>
-		 <br/>
-		 
- 	<form method="POST" class="post-form">{% csrf_token %}
-		{{form.request_quantity.label}}:{{ form.request_quantity }}
-		<br/>
-		<br/>
-		{{form.reason.label}}:{{ form.reason}}
-		<br/>
-		<br/>
-		<button type="submit" class="btn btn-primary btn-md" value="Edit" name="edit">Submit Request Edits</button>
-		{#<button type="submit" class="btn btn-primary btn-md" value="Edit" onclick="return confirm('Are you sure you want to edit this request?')" name="edit">Submit Request Edits</button>#}
-		<br/>
-		<br/>
-		{% if user.is_staff %}
-		<h2>Handle This Request </h2>
-		 Add a comment to this request.
-		<br/>
-		<br/>
-		{{form.comment.label}}:{{ form.comment }}
-		<br/>
-		<br/>
-		<button type="submit" class="btn btn-success btn-md" onclick="return confirm('Are you sure you want to APPROVE this request?')" value="Approve" name="approve">Approve Request</button>
-		<button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to DENY this request?')" value="Deny" name="deny">Deny Request</button>
-		{%endif%}
-		{% if request.user_id == current_user%}
+	{% block requestEdit %}
+			<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit This Request</a>	
+	{% endblock requestEdit %}
+	
+	{% if user.is_staff %}
+	{% block comment_accept %}
+			<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve This Request</a>
+	{% endblock comment_accept %}
+	{% block comment_deny %}
+			<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny This Request</a>	
+	{% endblock comment_deny %}
+	{% endif %}
+	
+	{% if request.user_id == current_user%}
 		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
-		{% endif %}
-	</form>
+	{% endif %}
 	
 	{%endif%}
+	
 <br/>
-
-	
-	
 	
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 	
+{############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Deny</h4>
+            </div>
+            <div id="form-modal-body-deny" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-deny %}
+<script>
+    $('.deny').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny').load(('../../customadmin/request/deny/addcomment/'+request_id), function () {
+        	$('#formID-comment-deny').attr("request-comment", request_id);
+            $('#form-modal-deny').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny %}
+
+{############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-approve %}
+<script>
+    $('.accept').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept').load(('../../customadmin/request/accept/addcomment/'+request_id), function () {
+        	$('#formID-comment-accept').attr("request-comment", request_id);
+            $('#form-modal-accept').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve %}
+
+{############################# REQUEST EDIT MODAL LOGIC ##############################}
+<div id="form-modal-requestEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Request</h4>
+            </div>
+            <div id="form-modal-body-requestEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-requestEdit %}
+<script>
+    $('.requestEdit').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-requestEdit').load(('../../request_edit/'+request_id), function () {
+            $('#form-modal-requestEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-requestEdit %}
 	
 {% endblock %}

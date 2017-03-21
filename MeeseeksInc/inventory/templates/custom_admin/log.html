@@ -7,7 +7,7 @@
 
 <h2>Log</h2>
 
-<div>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+<div align='right'>Start Date : <input id="startdate" type="text" name='startdate' /></div>
 {% block js %}
 <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <script src="//code.jquery.com/jquery-1.12.4.js"></script>
@@ -22,7 +22,6 @@ $(function(){
 </script>
 <br>
 {% endblock js %}
-
 
 {% if log_list %}
 	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">

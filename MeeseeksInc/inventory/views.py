@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
+from django.core.mail import EmailMessage
 from django.forms.formsets import formset_factory
 from django.forms.models import inlineformset_factory, modelformset_factory, \
     ModelMultipleChoiceField
@@ -20,6 +21,8 @@ from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
 from django.test import Client
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
@@ -42,7 +45,7 @@ from rest_framework.views import APIView
 from rest_framework_csv.parsers import CSVParser
 from rest_framework_csv.renderers import CSVRenderer
 
-from custom_admin.forms import AdminRequestEditForm
+from custom_admin.forms import AdminRequestEditForm, RequestEditForm
 from custom_admin.forms import DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
@@ -53,11 +56,12 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer
 
-from .forms import RequestForm, RequestEditForm, RequestSpecificForm, SearchForm, AddToCartForm
+from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log
-from .models import Tag
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
 
+from .models import Tag
+from django.core.exceptions import ObjectDoesNotExist
 
 def active_check(user):
     return user.is_active
@@ -69,16 +73,16 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
+    model = Tag
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
         context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
         context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
         context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
         context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
+        context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username)
         if self.request.user.is_staff or self.request.user.is_superuser:
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
@@ -87,8 +91,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## 
         return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
-    
+        return Instance.objects.order_by('item')[:5] 
     def test_func(self):
         return self.request.user.is_active
         
@@ -134,10 +137,12 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         if(not user.is_staff):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
+            context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
             context['my_template'] = 'inventory/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
+            context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
             context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
@@ -154,14 +159,19 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         
     def form_valid(self, form):
         quantity = form['quantity'].value()
+        type = form['type'].value()
+        reason = form['reason'].value()
         item = Item.objects.get(item_id = self.object.pk)
         username = self.request.user.username
         cart_instance = ShoppingCartInstance(user_id=username, item=item, 
-                                            quantity=quantity)
+                                            type=type,quantity=quantity,reason=reason)
         cart_instance.save()
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
-        return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id})) 
+        if self.request.user.is_staff:
+            return redirect('/customadmin')
+        else:
+            return redirect('/')
     
     def test_func(self):
         return self.request.user.is_active
@@ -181,7 +191,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         self.object = None
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity','type','reason',), extra=len(self.get_queryset()))
         formset = EditCartAddRequestFormSet(queryset=self.get_queryset())
         return self.render_to_response(
             self.get_context_data(formset=formset))
@@ -205,11 +215,12 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         self.object = None
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity', 'reason'), extra=len(self.get_queryset()))
+        EditCartAddRequestFormSet = modelformset_factory(ShoppingCartInstance, fields=('quantity','type','reason',), extra=len(self.get_queryset()))
         formset = EditCartAddRequestFormSet(self.request.POST)
         if (formset.is_valid()):
             return self.form_valid(formset)
         else:
+            messages.error(self.request, 'Form is invalid!')
             return self.form_invalid(formset)
 
     def form_valid(self, formset):
@@ -218,18 +229,35 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         associated Ingredients and Instructions and then redirects to a
         success page.
         """
+        request_list = []
         for idx,form in enumerate(formset):
             if idx<len(self.get_queryset()):
-                dataFromForm = form.cleaned_data
-                quantity = dataFromForm.get('quantity')
-                reason = dataFromForm.get('reason')
+                quantity = form.cleaned_data['quantity']
+                reason = form.cleaned_data['reason']
+                type = form.cleaned_data['type']
                 cart_instance = self.get_queryset()[idx]
                 item = cart_instance.item
-                item_request = Request(item_name = item, user_id=self.request.user.username, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
+                item_request = Request(item_name = item, user_id=self.request.user.username, type=type, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
+                request_list.append((item, quantity))
                 Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
-                        affected_user=None, change_occurred="Requested " + str(item_request.request_quantity))
-
+                        affected_user='', change_occurred="Requested " + str(item_request.request_quantity))
+        # SEND EMAIL
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request confirmation'
+        to = [self.request.user.email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':self.request.user,
+            'request':request_list,
+        }
+        for user in SubscribedUsers.objects.all():
+            to.append(user.email)
+        message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
          
         # DELETE ALL CART INSTANCES
         for cart_instance in self.get_queryset():
@@ -312,12 +340,30 @@ def search_view(request):
         custom_fields = Custom_Field.objects.filter(is_private=False)
     return render(request, 'inventory/search.html', {'tags': tags, 'custom_fields': custom_fields})
 
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def loan_detail(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "GET":
+        if request.user.is_staff:
+            my_template = 'custom_admin/base.html'
+        else:
+            my_template = 'inventory/base.html'
+        return render(request, 'inventory/loan_detail.html', {'loan':loan,'my_template':my_template})
+
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
 def edit_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance)
+        change_list = []
+        if int(form['request_quantity'].value()) != int(instance.request_quantity):
+            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+        if form['reason'].value() != instance.reason:
+            change_list.append(('reason', instance.reason, form['reason'].value()))
+        if form['type'].value() != instance.type:
+            change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -325,16 +371,25 @@ def edit_request(request, pk):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id=instance.request_id, item_id=instance.item_name.item_id, item_name=post.item_name, initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
-            return redirect('/item/' + instance.item_name.item_id )
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request edit'
+            to = [request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            return redirect('/request_detail/' + instance.request_id )
     else:
         form = RequestEditForm(instance=instance)
-    return render(request, 'inventory/request_edit.html', {'form': form})
-  
-# class ResultsView(LoginRequiredMixin, generic.DetailView):
-#     login_url = "/login/"
-#     model = Question
-#     template_name = 'inventory/results.html' # w/o this line, default would've been inventory/<model_name>.html  
+    return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
@@ -350,7 +405,22 @@ def post_new_request(request):
             post.time_requested = timezone.now()
             post.save()
             Log.objects.create(request_id = post.request_id,item_id=post.item_name.item_id, item_name=post.item_name, initiating_user=post.user_id, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(form['request_quantity'].value()))
+                                         affected_user='', change_occurred="Requested " + str(form['request_quantity'].value()))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user.username,
+                'request': post.item_name , 
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             messages.success(request, ('Successfully posted new request for ' + post.item_name.item_name + ' (' + post.user_id +')'))
             return redirect('/')
     else:
@@ -381,6 +451,13 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
         item = Item.objects.get(item_id=indiv_request.item_name_id)
         if request.method == "POST":
             form = AdminRequestEditForm(request.POST, instance=indiv_request)
+            change_list = []
+            if int(form['request_quantity'].value()) != int(indiv_request.request_quantity):
+                change_list.append(('request quantity', indiv_request.request_quantity, form['request_quantity'].value()))
+            if form['reason'].value() != indiv_request.reason:
+                change_list.append(('reason', indiv_request.reason, form['reason'].value()))
+            if form['type'].value() != indiv_request.type:
+                change_list.append(('type', indiv_request.type, form['type'].value()))
             if form.is_valid():
                 if 'edit' in request.POST:
                     post = form.save(commit=False)
@@ -390,7 +467,21 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     post.save()
                     messages.success(request, ('Successfully edited ' + indiv_request.item_name.item_name + '.'))
                     Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(indiv_request.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(item.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(item.item_name))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Request edit'
+                    to = [User.objects.get(username=indiv_request.user_id).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':request.user,
+                        'changes':change_list,
+                    }
+                    message=render_to_string('inventory/request_edit_email.txt', ctx)
+                    if len(change_list)>0:
+                        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                     return redirect('/request_detail/' + pk)
                 if 'approve' in request.POST:
                     if item.quantity >= indiv_request.request_quantity:
@@ -400,15 +491,52 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
          
                         # change status of request to approved
                         indiv_request.status = "Approved"
-                        indiv_request.save()
-         
-                        # add new disbursement item to table
-                        disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
-                                    total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
-                        disbursement.save()
-                        Log.objects.create(request_id=disbursement.disburse_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(disbursement.admin_name), nature_of_event='Approve', 
-                                         affected_user=str(disbursement.user_name), change_occurred="Disbursed " + str(disbursement.total_quantity))
-                        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                        indiv_request.save()                 
+                        if indiv_request.type == "Dispersal": 
+                            # add new disbursement item to table
+                            disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                            disbursement.save()
+                            messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                            try:
+                                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                            except (ObjectDoesNotExist, IndexError) as e:
+                                prepend = ''
+                            subject = prepend + 'Request approval'
+                            to = [User.objects.get(username=indiv_request.user_id).email]
+                            from_email='noreply@duke.edu'
+                            ctx = {
+                                'user':request.user,
+                                'item':disbursement.item_name,
+                                'quantity': disbursement.total_quantity,
+                                'type':'disbursement',
+                            }
+                            message=render_to_string('inventory/request_approval_email.txt', ctx)
+                            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                        elif indiv_request.type == "Loan":
+                            loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
+                            loan.save()
+                            messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
+                            try:
+                                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                            except (ObjectDoesNotExist, IndexError) as e:
+                                prepend = ''
+                            subject = prepend + 'Request approval'
+                            to = [User.objects.get(username=indiv_request.user_id).email]
+                            from_email='noreply@duke.edu'
+                            ctx = {
+                                'user':request.user,
+                                'item':disbursement.item_name,
+                                'quantity': disbursement.total_quantity,
+                                'type':'loan',
+                            }
+                            message=render_to_string('inventory/request_approval_email.txt', ctx)
+                            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                     else:
                         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 if 'deny' in request.POST:
@@ -417,12 +545,40 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                     Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Deny', 
                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(item.item_name))
                     messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Request denied'
+                    to = [User.objects.get(username=indiv_request.user_id).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':request.user,
+                        'item':indiv_request.item_name,
+                        'quantity': indiv_request.request_quantity,
+                    }
+                    message=render_to_string('inventory/request_denial_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 if 'cancel' in request.POST:
                     instance = Request.objects.get(request_id=pk)
                     Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Delete', 
-                             affected_user=None, change_occurred="Cancelled request for " + str(item.item_name))
+                             affected_user='', change_occurred="Cancelled request for " + str(item.item_name))
+                    messages.success(request, ('Cancelled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Request cancel'
+                    to = [User.objects.get(username=instance.user_id).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':request.user,
+                        'item':instance.item_name,
+                        'quantity': instance.request_quantity,
+                    }
+                    message=render_to_string('inventory/request_cancel_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                     Request.objects.get(request_id=pk).delete()
-                    messages.success(request, ('Canceled request for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     return redirect('/')
                 return redirect(reverse('custom_admin:index'))
             else:
@@ -454,6 +610,21 @@ def approve_request(self, request, pk):
         Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(request.user.username), nature_of_event='Approve', 
                                      affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
         messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request approval'
+        to = [User.objects.get(username=instance.user_id).email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':request.user,
+            'item':disbursement.item_name,
+            'quantity': disbursement.total_quantity,
+            'type': 'disbursement',
+        }
+        message=render_to_string('inventory/request_approval_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     else:
         messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
     return redirect('/')
@@ -463,8 +634,22 @@ def approve_request(self, request, pk):
 def cancel_request(request, pk):
     instance = Request.objects.get(request_id=pk)
     Log.objects.create(request_id = instance.request_id,item_id=instance.item_name.item_id, item_name=instance.item_name, initiating_user=instance.user_id, nature_of_event='Delete', 
-                                         affected_user=None, change_occurred="Cancelled request for " + str(instance.item_name))
+                                         affected_user='', change_occurred="Cancelled request for " + str(instance.item_name))
     messages.success(request, ('Successfully deleted request for ' + str(instance.item_name )))
+    try:
+        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+    except (ObjectDoesNotExist, IndexError) as e:
+        prepend = ''
+    subject = prepend + 'Request cancel'
+    to = [User.objects.get(username=instance.user_id).email]
+    from_email='noreply@duke.edu'
+    ctx = {
+        'user':request.user,
+        'item':instance.item_name,
+        'quantity': instance.request_quantity,
+    }
+    message=render_to_string('inventory/request_cancel_email.txt', ctx)
+    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     instance.delete()
     if request.user.is_staff:
         return redirect(reverse('custom_admin:index'))
@@ -479,15 +664,31 @@ def request_specific_item(request, pk):
         if form.is_valid():
             reason = form['reason'].value()
             quantity = form['quantity'].value()
+            type = form['type'].value()
             item = Item.objects.get(item_id=pk)
             specific_request = Request(user_id=request.user.username, item_name=item, 
-                                            request_quantity=quantity, status="Pending", reason=reason, time_requested=timezone.now())
+                                            request_quantity=quantity, status="Pending", type=type, reason=reason, time_requested=timezone.now())
             specific_request.save()
             
             messages.success(request, ('Successfully requested ' + item.item_name + ' (' + request.user.username +')'))
             request_id = specific_request.request_id
             Log.objects.create(request_id=request_id,item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Request', 
-                                         affected_user=None, change_occurred="Requested " + str(quantity))
+                                         affected_user='', change_occurred="Requested " + str(quantity))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'request':[(item.item_name, quantity)],
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
     else:
         form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
@@ -516,6 +717,11 @@ def edit_request_main_page(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
+        change_list = []
+        if int(form['request_quantity'].value())!=int(instance.request_quantity):
+            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+        if form['reason'].value()!=instance.reason:
+            change_list.append(('reason', instance.reason, form['reason'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -523,10 +729,24 @@ def edit_request_main_page(request, pk):
 #             post.item_name = Item.objects.get(item_id = post.item_id)
             post.status = "Pending"
             post.time_requested = timezone.now()
-            post.save()
             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(post.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
             item = instance.item_name
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request edit'
+            to = [request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            post.save()
             return redirect('/')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
@@ -612,7 +832,7 @@ class APIItemList(ListCreateAPIView):
             item_id=data['item_id']
             item_name=data['item_name']
             Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(item_name))
+                       affected_user='', change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
@@ -689,10 +909,10 @@ class APIItemDetail(APIView):
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+                                         affected_user='', change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
             else:
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(item.item_name))
+                                         affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
@@ -733,7 +953,7 @@ class APIItemDetail(APIView):
     def delete(self, request, pk, format=None):
         item = self.get_object(pk)
         Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+                       affected_user='', change_occurred="Deleted item " + str(item.item_name))
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -786,10 +1006,29 @@ class APIRequestDetail(APIView):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
+            change_list=[]
+            if int(serializer.data['request_quantity']) != int(instance.request_quantity):
+                change_list.append(('request quantity', instance.request_quantity, serializer.data['request_quantity']))
+            if serializer.data['reason'] != instance.reason:
+                change_list.append(('reason', instance.reason, serializer.data['reason']))
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
+                                         affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request edit'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':request.user,
+                    'changes':change_list,
+                }
+                message=render_to_string('inventory/request_edit_email.txt', ctx)
+                if len(change_list)>0:
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
@@ -798,7 +1037,21 @@ class APIRequestDetail(APIView):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Cancelled request for " + str(indiv_request.item_name))
+                       affected_user='', change_occurred="Cancelled request for " + str(indiv_request.item_name))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request cancel'
+            to = [User.objects.get(username=indiv_request.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+            }
+            message=render_to_string('inventory/request_cancel_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             indiv_request.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
@@ -815,14 +1068,31 @@ class APIRequestThroughItem(APIView):
             "request": self.request,
         }
         serializer = RequestPostSerializer(data=request.data, context=context)
+        request_list=[]
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
             item = Item.objects.get(item_id=pk)
             data=serializer.data
             id=data['request_id']
             quantity=data['request_quantity']
+            request_list.append((item.item_name, quantity))
             Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                       affected_user=None, change_occurred="Requested " + str(quantity))
+                       affected_user='', change_occurred="Requested " + str(quantity))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -848,6 +1118,7 @@ class APIMultipleRequests(APIView):
                     request.data[i]['item_name']=item_id
         print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
+        request_list=[]
         if serializer.is_valid():
             serializer.save()
             dataDict=serializer.data
@@ -855,8 +1126,24 @@ class APIMultipleRequests(APIView):
                 id=data['request_id']
                 quantity=data['request_quantity']
                 item = Item.objects.get(item_id=data['item_name'])
+                request_list.append((item.item_name, quantity))
                 Log.objects.create(request_id=id, item_id=data['item_name'], item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                            affected_user=None, change_occurred="Requested " + str(quantity))
+                            affected_user='', change_occurred="Requested " + str(quantity))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -891,6 +1178,20 @@ class APIApproveRequest(APIView):
                 serializer.save(status="Approved")
                 Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
                        affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [self.request.user.email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':self.request.user,
+                    'item':item.item_name,
+                    'quantity':disbursement.total_quantity,
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -918,6 +1219,20 @@ class APIDenyRequest(APIView):
             serializer.save(status="Denied")
             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
                        affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request cancel'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+            }
+            message=render_to_string('inventory/request_cancel_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -968,6 +1283,22 @@ class APIDirectDisbursement(APIView):
                 quantity = data['total_quantity']
                 Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
                        affected_user=recipient, change_occurred="Disbursed " + str(quantity))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct Dispersal'
+                to = [User.objects.get(username=recipient).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':recipient,
+                    'item':item_to_disburse.item_name,
+                    'quantity':item_to_disburse.quantity,
+                    'disburser':request.user.username,
+                    'type': 'disbursed',
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -991,7 +1322,7 @@ class APIUserList(APIView):
         if serializer.is_valid():
             serializer.save()
             username=serializer.data['username']
-            Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
+            Log.objects.create(request_id=None, item_id=None, item_name = '', initiating_user=request.user, nature_of_event="Create", 
                        affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1020,7 +1351,7 @@ class APIUserDetail(APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            Log.objects.create(request_id=None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event="Edit",
+            Log.objects.create(request_id=None, item_id=None, item_name='', initiating_user=request.user, nature_of_event="Edit",
                                affected_user=serializer.data['username'], change_occurred="Changed permissions for " + str(serializer.data['username']))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1132,8 +1463,8 @@ class APICustomField(APIView):
             serializer.save()
             data=serializer.data
             field=data['field_name']
-            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user=None, change_occurred='Added custom field ' + str(field))
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added custom field ' + str(field))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1163,8 +1494,8 @@ class APICustomFieldModify(APIView):
         
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
-        Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
+        Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
