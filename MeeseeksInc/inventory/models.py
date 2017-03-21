@@ -33,8 +33,7 @@ class Request(models.Model):
     request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     user_id = models.CharField(max_length=200, null=False)
     item_name = models.ForeignKey(Item, null=True, related_name='requests', on_delete=models.CASCADE) 
-#     item_name = models.CharField(max_length=200, null=False)
-    request_quantity = models.SmallIntegerField(null=False)
+    request_quantity = models.IntegerField(null=False)
     CHOICES = (
         ('Pending', 'Pending'),
         ('Approved', 'Approved'),
@@ -52,12 +51,12 @@ class Request(models.Model):
     def __str__(self):
         return "Request for " + str(self.request_quantity) + " " + self.item_name.item_name + " by " + self.user_id  + " (ID: " + self.request_id + ")"
         
- 
 class Disbursement(models.Model):   
     disburse_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     admin_name = models.CharField(max_length=200, null=False)
     user_name = models.CharField(max_length=200, null=False)
-    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
+    item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE)
+    orig_request = models.ForeignKey(Request, null=True, on_delete=models.CASCADE) 
     total_quantity = models.IntegerField(null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
     time_disbursed = models.DateTimeField(default=timezone.now)
@@ -69,6 +68,7 @@ class Loan(models.Model):
     admin_name = models.CharField(max_length=200, null=False)
     user_name = models.CharField(max_length=200, null=False)
     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
+    orig_request = models.ForeignKey(Request, null=True, on_delete=models.CASCADE) 
     total_quantity = models.IntegerField(null=False)
     comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
     time_loaned = models.DateTimeField(default=timezone.now)
@@ -101,7 +101,7 @@ class Custom_Field(models.Model):
     field_name = models.CharField(max_length=400, null=False, unique=True)
     is_private = models.BooleanField(default = False)
     CHOICES = (
-        ( 'Short','Short-Form Text'),
+        ('Short','Short-Form Text'),
         ('Long','Long-Form Text'),
         ('Int','Integer'),
         ('Float','Floating-Point Number'),
@@ -137,6 +137,7 @@ class Log(models.Model):
         ('Lost', 'Lost'), 
         ('Broken', 'Broken'),
         ('Loan', 'Loan'),
+        ('Check In', 'Check In')
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)

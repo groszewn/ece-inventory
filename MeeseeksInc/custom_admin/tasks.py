@@ -4,7 +4,7 @@ from celery import Celery
 from django.conf import settings
 from django.core import mail
 from datetime import datetime
-from inventory.models import Loan
+#from inventory.models import Loan
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'MeeseeksInc.settings')
 

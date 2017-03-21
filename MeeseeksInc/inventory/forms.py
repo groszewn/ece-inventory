@@ -15,6 +15,17 @@ class RequestForm(forms.ModelForm):
     class Meta:
         model = Request
         fields = ('item_field', 'request_quantity','type','reason')
+        
+class RequestEditForm(forms.ModelForm):
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+    request_quantity = forms.IntegerField(min_value=1)
+    class Meta:
+        model = Request
+        fields = ('request_quantity','type','reason')
 
 class RequestSpecificForm(forms.Form):  
     available_quantity = forms.IntegerField(disabled=True, required=False)
@@ -33,7 +44,13 @@ class AddToCartForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(AddToCartForm, self).__init__(*args, **kwargs)
         self.fields['quantity'] = forms.IntegerField(required=True, min_value=1)
-    fields =('quantity')
+        TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+        )
+        self.fields['type'] = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+        self.fields['reason'] = forms.CharField(max_length=200) 
+    fields =('quantity', 'type','reason')
 
 class EditCartAndAddRequestForm(forms.ModelForm):
     quantity = forms.IntegerField(required=True, min_value=1)

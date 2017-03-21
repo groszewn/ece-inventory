@@ -25,12 +25,10 @@ from django.conf import settings
 from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import email as task_email
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
-from inventory.forms import RequestForm
-from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
 
-from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
+from inventory.forms import RequestForm, SearchForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -228,6 +226,7 @@ def add_comment_to_request_accept(request, pk):
                     'user':User.objects.get(username=disbursement.user_name).username,
                     'item':disbursement.item_name,
                     'quantity':disbursement.total_quantity,
+                    'type':'disbursement',
                 }
                 message=render_to_string('inventory/request_approval_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -303,20 +302,19 @@ def add_comment_to_request_accept(request, pk):
                 
                 if indiv_request.type == "Dispersal": 
                     # add new disbursement item to table
-                    disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                    disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
                     disbursement.save()
                     messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 elif indiv_request.type == "Loan":
-                    loan = Loan(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+                    loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
                     loan.save()
                     messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                    Log.objects.create(request_id=loan.loan_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                       nature_of_event="Loan", affected_user=loan.user_name, change_occurred="Loaned " + str(loan.total_quantity))
-                
+                    Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
@@ -362,29 +360,80 @@ def add_comment_to_request_deny(request, pk):
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def convert_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
     if request.method == "POST":
-        form = ConvertLoanForm(request.POST)
+        form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
-            loan = Loan.objects.get(loan_id=pk)
-            if form.cleaned_data.get('convert_to_disburse_checkbox'):
-                admin_name = request.user.username
-                user_name = loan.user_name
-                item = loan.item_name
-                quantity = loan.total_quantity
-                comment = loan.comment
-                time_disbursed = timezone.localtime(timezone.now())
+            admin_name = request.user.username
+            user_name = loan.user_name
+            item = loan.item_name
+            comment = loan.comment
+            time_disbursed = timezone.localtime(timezone.now())
+            quantity_disbursed = int(form['items_to_convert'].value())
+            loan.total_quantity = loan.total_quantity - quantity_disbursed
+            loan.save()
+            if loan.total_quantity == 0:
                 loan.delete()
-                disbursement = Disbursement(admin_name=admin_name, user_name=user_name, item_name=item, comment=comment, total_quantity=quantity, time_disbursed=time_disbursed)
-                disbursement.save()
-                Log.objects.create(request_id=disbursement.disburse_id, item_id=Item.objects.get(item_name=item), item_name=item, initiating_user=request.user, nature_of_event='Disburse', 
-                                         affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
-                messages.success(request, ('Converted loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
-                return redirect(reverse('custom_admin:index'))  
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement.save()
+            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            return redirect(reverse('custom_admin:index'))  
     else:
-        form = ConvertLoanForm() 
+        form = ConvertLoanForm(loan.total_quantity) 
     return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk})
-
-
+    
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def check_in_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        loan = Loan.objects.get(loan_id=pk)
+        form = CheckInLoanForm(loan.total_quantity, request.POST) 
+        if form.is_valid():
+            items_checked_in = form['items_to_check_in'].value()
+            loan.total_quantity = loan.total_quantity - int(items_checked_in)
+            item = loan.item_name
+            item.quantity = item.quantity + int(items_checked_in)
+            loan.save()
+            item.save()
+            if loan.total_quantity == 0:
+                loan.delete()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + items_checked_in + " instances.")
+            messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            return redirect('/customadmin')
+    else:
+        form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
+    return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity})
+  
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def edit_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = EditLoanForm(request.POST, instance=loan) 
+        if form.is_valid():
+            post = form.save(commit=False)
+            loan = Loan.objects.get(loan_id=pk)
+            item = loan.item_name
+            quantity_changed = post.total_quantity - loan.total_quantity 
+            new_quantity = item.quantity - quantity_changed
+            if new_quantity < 0:
+                messages.error(request, ('You cannot loan more items than the quantity available.'))
+                return redirect('/customadmin')
+            item.quantity = new_quantity
+            item.save()
+            post.save()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            return redirect('/customadmin')
+    else:
+        form = EditLoanForm(instance=loan) # blank request form with no data yet
+    return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk})
+    
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
 def post_new_request(request):
@@ -499,6 +548,7 @@ def post_new_disburse(request):
                     'item':item.item_name,
                     'quantity':quant_change,
                     'disburser':request.user.username,
+                    'type':'disbursed',
                 }
                 message=render_to_string('inventory/disbursement_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -517,46 +567,74 @@ def post_new_disburse(request):
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def post_new_disburse_specific(request, pk):
+    item = Item.objects.get(item_id=pk)
     if request.method == "POST":
         form = DisburseSpecificForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
-            item = Item.objects.get(item_id=pk)
             user_name = User.objects.get(id=form['user_field'].value()).username
             if item.quantity >= int(form['total_quantity'].value()):
                 # decrement quantity in item
                 quant_change = int(form['total_quantity'].value())
                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
                 item.save()
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
-                                         affected_user=user_name, change_occurred="Disbursed " + str(quant_change))
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username=user_name).email]
-                from_email='noreply@duke.edu'
-                ctx = {
-                    'user':user_name,
-                    'item':item.item_name,
-                    'quantity':quant_change,
-                    'disburser':request.user.username,
-                }
-                message=render_to_string('inventory/disbursement_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                if form['type'].value() == "Loan":
+                    loan = Loan(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
+                                        total_quantity=form['total_quantity'].value(), time_loaned=timezone.localtime(timezone.now()))
+                    loan.save()
+                    messages.success(request, 
+                                 ('Successfully loaned ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Loan', 
+                                         affected_user=user_name, change_occurred="Loaned " + str(quant_change))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Direct Dispersal'
+                    to = [User.objects.get(username=user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':user_name,
+                        'item':item.item_name,
+                        'quantity':quant_change,
+                        'disburser':request.user.username,
+                        'type':"loaned", 
+                    }
+                    message=render_to_string('inventory/disbursement_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                if form['type'].value() == "Dispersal":
+                    disbursement = Disbursement(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
+                                        total_quantity=form['total_quantity'].value(), time_disbursed=timezone.localtime(timezone.now()))
+                    disbursement.save()
+                    messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=user_name, change_occurred="Dispersed " + str(quant_change))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Direct Dispersal'
+                    to = [User.objects.get(username=user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':user_name,
+                        'item':item.item_name,
+                        'quantity':quant_change,
+                        'disburser':request.user.username,
+                        'type':'disbursed',
+                    }
+                    message=render_to_string('inventory/disbursement_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect(reverse('custom_admin:index'))
-            disbursement = Disbursement(admin_name=request.user.username, user_name=user_name, item_name=item, comment=form['comment'].value(),
-                                        total_quantity=form['total_quantity'].value(), time_disbursed=timezone.localtime(timezone.now()))
-            disbursement.save()
-            messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
-        
+            
             return redirect('/item/'+pk)
     else:
         form = DisburseSpecificForm() # blank request form with no data yet
-    return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk})
+    return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk, 'amount_left':item.quantity})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -576,33 +654,56 @@ def approve_all_requests(request):
             indiv_request.status = "Approved"
             indiv_request.save()
              
-            # add new disbursement item to table
-            # TODO: add comments!!
-            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+            if indiv_request.type == "Dispersal":
+                # add new disbursement item to table
+                disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
                                         total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
-            disbursement.save()
-            Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
-                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
-            messages.add_message(request, messages.SUCCESS, 
+                disbursement.save()
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
+                                   affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                messages.add_message(request, messages.SUCCESS, 
                                  ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Request approval'
-            to = [User.objects.get(username=indiv_request.user_id).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':indiv_request.user_id,
-                'item':disbursement.item_name,
-                'quantity': disbursement.total_quantity,
-            }
-            message=render_to_string('inventory/request_approval_email.txt', ctx)
-            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':indiv_request.user_id,
+                    'item':disbursement.item_name,
+                    'quantity': disbursement.total_quantity,
+                    'type':'disbursement',
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            if indiv_request.type == "Loan":
+                loan = Loan(admin_name=request.user.username,orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
+                                        total_quantity=indiv_request.request_quantity, time_loaned=timezone.localtime(timezone.now()))
+                loan.save()
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
+                                   affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))
+                messages.add_message(request, messages.SUCCESS, 
+                                 ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':indiv_request.user_id,
+                    'item':disbursement.item_name,
+                    'quantity': disbursement.total_quantity,
+                    'type':'loan',
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
         else:
             messages.add_message(request, messages.ERROR, 
-                                 ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-         
+                                 ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))    
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
@@ -655,6 +756,7 @@ def approve_request(request, pk):
             'user':indiv_request.user_id,
             'item':disbursement.item_name,
             'quantity': disbursement.total_quantity,
+            'type':'disbursement',
         }
         message=render_to_string('inventory/request_approval_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -859,7 +961,11 @@ def log_item(request):
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
 def api_guide_page(request):
-    return render(request, 'custom_admin/api_guide.html')
+    if(not request.user.is_staff):
+        my_template = 'inventory/base.html'
+    else:
+        my_template = 'custom_admin/base.html'
+    return render(request, 'custom_admin/api_guide.html', {'my_template':my_template})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -1146,6 +1252,7 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
             'item':disbursement.item_name,
             'quantity':disbursement.total_quantity,
             'disburser':request.user.username,
+            'type':'disbursed',
         }
         message=render_to_string('inventory/disbursement_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()

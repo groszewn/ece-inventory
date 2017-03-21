@@ -1,6 +1,6 @@
 Hello {{ user }}, 
 
-{{ item }} (Quantity: {{ quantity }}) has been disbursed directly to you by {{ disburser }}.  
+{{ item }} (Quantity: {{ quantity }}) has been {{ type }} directly to you by {{ disburser }}.  
 
 Best, 
 

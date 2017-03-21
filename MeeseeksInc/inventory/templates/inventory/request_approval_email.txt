@@ -1,6 +1,6 @@
 Hello {{ user }}, 
 
-Your request for {{ item }} (Quantity: {{ quantity }}) has been approved.  
+Your request for {{ item }} (Quantity: {{ quantity }}) has been approved for {{ type }}.  
 
 Best,
  
