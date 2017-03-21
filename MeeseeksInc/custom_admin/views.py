@@ -23,7 +23,7 @@ from django.core.mail import send_mail
 from django.core import mail
 from django.conf import settings
 from datetime import date, time, datetime, timedelta
-from custom_admin.tasks import email as task_email
+from custom_admin.tasks import loan_reminder_email as task_email
 
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
@@ -312,6 +312,21 @@ def add_comment_to_request_accept(request, pk):
                     messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Request approval'
+                    to = [User.objects.get(username=disbursement.user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':User.objects.get(username=disbursement.user_name).username,
+                        'item':disbursement.item_name,
+                        'quantity':disbursement.total_quantity,
+                        'type':'disbursement',
+                    }
+                    message=render_to_string('inventory/request_approval_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 elif indiv_request.type == "Loan":
                     loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
@@ -319,6 +334,21 @@ def add_comment_to_request_accept(request, pk):
                     messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                     Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Request approval'
+                    to = [User.objects.get(username=loan.user_name).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':User.objects.get(username=loan.user_name).username,
+                        'item':loan.item_name,
+                        'quantity':loan.total_quantity,
+                        'type':'loan',
+                    }
+                    message=render_to_string('inventory/request_approval_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
@@ -1175,7 +1205,7 @@ def loan_reminder_body(request):
 
 def delay_email(request):
     #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
-    task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=1))
+    task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=5))
     return redirect(reverse('custom_admin:log'))
  
 @login_required(login_url='/login/')
