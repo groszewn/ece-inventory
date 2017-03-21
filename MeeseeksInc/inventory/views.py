@@ -161,7 +161,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         item = Item.objects.get(item_id = self.object.pk)
         username = self.request.user.username
         cart_instance = ShoppingCartInstance(user_id=username, item=item, 
-                                            type='Disbursal',quantity=quantity)
+                                            type='Dispersal',quantity=quantity)
         cart_instance.save()
         messages.success(self.request, 
                                  ('Successfully added ' + form['quantity'].value() + " " + item.item_name + " to cart."))
@@ -344,10 +344,12 @@ def edit_request(request, pk):
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance)
         change_list = []
-        if form['request_quantity'].value() != instance.request_quantity:
+        if int(form['request_quantity'].value()) != int(instance.request_quantity):
             change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
         if form['reason'].value() != instance.reason:
             change_list.append(('reason', instance.reason, form['reason'].value()))
+        if form['type'].value() != instance.type:
+            change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -436,10 +438,12 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
         if request.method == "POST":
             form = AdminRequestEditForm(request.POST, instance=indiv_request)
             change_list = []
-            if form['request_quantity'].value() != indiv_request.request_quantity:
+            if int(form['request_quantity'].value()) != int(indiv_request.request_quantity):
                 change_list.append(('request quantity', indiv_request.request_quantity, form['request_quantity'].value()))
             if form['reason'].value() != indiv_request.reason:
                 change_list.append(('reason', indiv_request.reason, form['reason'].value()))
+            if form['type'].value() != indiv_request.type:
+                change_list.append(('type', indiv_request.type, form['type'].value()))
             if form.is_valid():
                 if 'edit' in request.POST:
                     post = form.save(commit=False)
@@ -676,7 +680,7 @@ def edit_request_main_page(request, pk):
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
         change_list = []
-        if form['request_quantity'].value()!=instance.request_quantity:
+        if int(form['request_quantity'].value())!=int(instance.request_quantity):
             change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
         if form['reason'].value()!=instance.reason:
             change_list.append(('reason', instance.reason, form['reason'].value()))
@@ -965,7 +969,7 @@ class APIRequestDetail(APIView):
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             change_list=[]
-            if serializer.data['request_quantity'] != instance.request_quantity:
+            if int(serializer.data['request_quantity']) != int(instance.request_quantity):
                 change_list.append(('request quantity', instance.request_quantity, serializer.data['request_quantity']))
             if serializer.data['reason'] != instance.reason:
                 change_list.append(('reason', instance.reason, serializer.data['reason']))
@@ -1242,7 +1246,7 @@ class APIDirectDisbursement(APIView):
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
-                subject = prepend + 'Direct disbursal'
+                subject = prepend + 'Direct Dispersal'
                 to = [User.objects.get(username=recipient).email]
                 from_email='noreply@duke.edu'
                 ctx = {

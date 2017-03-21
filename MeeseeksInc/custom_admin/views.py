@@ -25,10 +25,10 @@ from django.conf import settings
 from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import email as task_email
 
-from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm
+from custom_admin.forms import UserPermissionEditForm, DisburseSpecificForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
 from inventory.forms import RequestForm
 from inventory.forms import SearchForm
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
 
 from .forms import EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 from django.core.exceptions import ObjectDoesNotExist
@@ -301,7 +301,7 @@ def add_comment_to_request_accept(request, pk):
                 indiv_request.comment = comment
                 indiv_request.save()
                 
-                if indiv_request.type == "Disbursal": 
+                if indiv_request.type == "Dispersal": 
                     # add new disbursement item to table
                     disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
@@ -314,7 +314,8 @@ def add_comment_to_request_accept(request, pk):
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
                     loan.save()
                     messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                    # add log object
+                    Log.objects.create(request_id=loan.loan_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                       nature_of_event="Loan", affected_user=loan.user_name, change_occurred="Loaned " + str(loan.total_quantity))
                 
             else:
                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
@@ -375,8 +376,8 @@ def convert_loan(request, pk):
                 loan.delete()
                 disbursement = Disbursement(admin_name=admin_name, user_name=user_name, item_name=item, comment=comment, total_quantity=quantity, time_disbursed=time_disbursed)
                 disbursement.save()
-                
-                # ADD A LOG ENTRY
+                Log.objects.create(request_id=disbursement.disburse_id, item_id=Item.objects.get(item_name=item), item_name=item, initiating_user=request.user, nature_of_event='Disburse', 
+                                         affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
                 messages.success(request, ('Converted loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
                 return redirect(reverse('custom_admin:index'))  
     else:
@@ -429,10 +430,12 @@ def edit_request_main_page(request, pk):
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
         change_list=[]
-        if form['request_quantity'].value() != instance.request_quantity:
+        if int(form['request_quantity'].value()) != int(instance.request_quantity):
             change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
         if form['reason'].value() != instance.reason:
             change_list.append(('reason', instance.reason, form['reason'].value()))
+        if form['type'].value() != instance.type:
+            change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
             messages.success(request, 'You just edited the request successfully.')
             post = form.save(commit=False)
@@ -488,7 +491,7 @@ def post_new_disburse(request):
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
-                subject = prepend + 'Direct disbursal'
+                subject = prepend + 'Direct Dispersal'
                 to = [User.objects.get(username=post.user_name).email]
                 from_email='noreply@duke.edu'
                 ctx = {
@@ -530,7 +533,7 @@ def post_new_disburse_specific(request, pk):
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
-                subject = prepend + 'Direct disbursal'
+                subject = prepend + 'Direct Dispersal'
                 to = [User.objects.get(username=user_name).email]
                 from_email='noreply@duke.edu'
                 ctx = {
@@ -1037,6 +1040,27 @@ def subscribe(request):
     else:
         form = SubscribeForm(initial = {'subscribed': exists})
     return render(request, 'custom_admin/subscribe.html', {'form': form}) 
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def loan_reminder_body(request):
+    try:
+        body = LoanReminderEmailBody.objects.all()[0]
+    except (ObjectDoesNotExist, IndexError) as e:
+        body = LoanReminderEmailBody.objects.create(body='')
+    if request.method == "POST":
+        form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
+        if form.is_valid():
+            try:
+                body.delete()
+            except (ObjectDoesNotExist) as e:
+                pass
+            LoanReminderEmailBody.objects.create(body=form['body'].value())
+            return redirect('/customadmin')
+    else:
+        form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form})
+            
  
 
 def delay_email(request):
@@ -1114,7 +1138,7 @@ class DisburseFormView(SuccessMessageMixin, AjaxTemplateMixin, FormView):
             prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
         except (ObjectDoesNotExist, IndexError) as e:
             prepend = ''
-        subject = prepend + 'Direct disbursal'
+        subject = prepend + 'Direct Dispersal'
         to = [User.objects.get(username=post.user_name).email]
         from_email='noreply@duke.edu'
         ctx = {

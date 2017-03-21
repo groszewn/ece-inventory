@@ -52,4 +52,5 @@ urlpatterns = [
     url(r'^edit_prepend/$', views.change_email_prepend, name='change_email_prepend'),
     url(r'^send_email/$', views.create_email, name='send_email'),
     url(r'delay_email/$', views.delay_email, name='delay_email'),
+    url(r'change_loan_email_body/$', views.loan_reminder_body, name='change_loan_body'),
 ]

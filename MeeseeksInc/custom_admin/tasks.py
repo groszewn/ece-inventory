@@ -4,6 +4,7 @@ from celery import Celery
 from django.conf import settings
 from django.core import mail
 from datetime import datetime
+from inventory.models import Loan
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'MeeseeksInc.settings')
 
@@ -15,11 +16,15 @@ app.config_from_object('django.conf:settings')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 #from inventory.models import Request
 
+
 @app.task
 def test(param):
     return 'The test task executed with argument " %s" ' % param
 
-
+@app.task
+def loan_reminder_email():
+    pass
+    
 @app.task
 def email():
     email = mail.EmailMessage(

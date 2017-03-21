@@ -45,10 +45,10 @@ class Request(models.Model):
     reason = models.CharField(max_length=200, null=False) # reason given by user
     time_requested = models.DateTimeField(default=timezone.now)
     TYPES = (
-        ( 'Disbursal','Disbursal'),
+        ( 'Dispersal','Dispersal'),
         ('Loan','Loan'),
     )
-    type = models.CharField(max_length=200, null=False, choices=TYPES, default='Disbursal')
+    type = models.CharField(max_length=200, null=False, choices=TYPES, default='Dispersal')
     def __str__(self):
         return "Request for " + str(self.request_quantity) + " " + self.item_name.item_name + " by " + self.user_id  + " (ID: " + self.request_id + ")"
         
@@ -86,7 +86,7 @@ class ShoppingCartInstance(models.Model):
     item = models.ForeignKey(Item, null = True, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField(null=False)
     TYPES = (
-        ( 'Disbursal','Disbursal'),
+        ( 'Dispersal','Dispersal'),
         ('Loan','Loan'),
     )
     type = models.CharField(max_length=200, null=False, choices=TYPES)
@@ -136,6 +136,7 @@ class Log(models.Model):
         ('Acquire', 'Acquire'), 
         ('Lost', 'Lost'), 
         ('Broken', 'Broken'),
+        ('Loan', 'Loan'),
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)
@@ -149,6 +150,6 @@ class SubscribedUsers(models.Model):
 class EmailPrependValue(models.Model):
     prepend_text = models.CharField(max_length=200, default='')
    
-class LoanReminderEmail(models.Model):
+class LoanReminderEmailBody(models.Model):
     body = models.TextField() 
     

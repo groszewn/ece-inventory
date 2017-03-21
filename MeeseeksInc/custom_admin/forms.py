@@ -62,7 +62,7 @@ class AdminRequestEditForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by Admin (optional)', max_length=200, required=False)
     request_quantity = forms.IntegerField(min_value=1)
     TYPES = (
-        ( 'Disbursal','Disbursal'),
+        ( 'Dispersal','Dispersal'),
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
@@ -207,5 +207,8 @@ class SubscribeForm(forms.Form):
                                widget = forms.CheckboxInput, required=False)
     
 class ChangeEmailPrependForm(forms.Form):
-    text = forms.CharField(label='Choose text to be prepended to all emails.', required=False)
+    text = forms.CharField(label='Write text to be prepended to all emails.', required=False)
+    
+class ChangeLoanReminderBodyForm(forms.Form):
+    body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
     

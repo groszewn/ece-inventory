@@ -7,7 +7,7 @@ from inventory.models import ShoppingCartInstance
 class RequestForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     TYPES = (
-        ( 'Disbursal','Disbursal'),
+        ( 'dispersal','dispersal'),
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
@@ -20,7 +20,7 @@ class RequestSpecificForm(forms.Form):
     available_quantity = forms.IntegerField(disabled=True, required=False)
     quantity = forms.IntegerField(min_value=1)
     TYPES = (
-        ( 'Disbursal','Disbursal'),
+        ( 'dispersal','dispersal'),
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
