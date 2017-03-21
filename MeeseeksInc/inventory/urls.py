@@ -5,7 +5,7 @@ import custom_admin.views
 from . import views
 
 
-#this app_name is important b/c Django needs to look through all the apps 
+# this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'inventory'  
 urlpatterns = [
@@ -14,7 +14,9 @@ urlpatterns = [
     # b/c we use it to load these urls later in the html files
     # this allows us to change the url of a page without changing it in the HTML files
      
-    # this is what it goes to if typed /
+    url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.check_in_loan, name='check_in_loan'), 
+    url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.edit_loan, name='edit_loan'), 
+    url(r'^loan/detail/(?P<pk>[\w\-\ ]+)$', views.loan_detail, name='loan_detail'),
     url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),

@@ -8,10 +8,7 @@ from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field
-from inventory.models import Request
-from inventory.models import Tag
-
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -26,18 +23,30 @@ class DisburseSpecificForm(forms.Form):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
     
     def __init__(self, *args, **kwargs):
         super(DisburseSpecificForm, self).__init__(*args, **kwargs)
 
 class ConvertLoanForm(forms.Form):
-    OPTIONS = (
-            ("convert_to_disbuse_checkbox", "Convert to disbursement?"),
-            ("cancel_loan_checkbox", "Cancel the loan?"),
-            )
-    name = forms.MultipleChoiceField(choices=OPTIONS)
-    convert_to_disburse_checkbox = forms.BooleanField(label='Convert to disbursement?', required=False)
-    keep_loan_checkbox = forms.BooleanField(label='Keep this loan?', required=False)
+    def __init__(self, amount, *args, **kwargs):
+        super(ConvertLoanForm, self).__init__(*args, **kwargs)
+        self.fields['items_to_convert'] = forms.IntegerField(label='How many items from this loan would you like to disburse?',required=True, min_value=1, max_value=amount, initial=amount)
+        
+class CheckInLoanForm(forms.Form):
+    def __init__(self, amount, *args, **kwargs):
+        super(CheckInLoanForm, self).__init__(*args, **kwargs)
+        self.fields['items_to_check_in'] = forms.IntegerField(required=True, min_value=0, max_value=amount, initial=amount)
+    
+class EditLoanForm(forms.ModelForm):
+    total_quantity = forms.IntegerField(min_value=0)
+    class Meta:
+        model = Loan
+        fields = ('total_quantity','comment')
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
