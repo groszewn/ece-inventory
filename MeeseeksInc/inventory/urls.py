@@ -46,4 +46,5 @@ urlpatterns = [
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
+    url(r'^api/upload/$', views.ItemUpload.as_view(), name='upload'),
 ]

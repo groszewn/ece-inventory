@@ -28,7 +28,8 @@ from django.views.generic.edit import FormMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin
 from django.views.generic.edit import FormMixin, ProcessFormView
 import django_filters
-from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter, \
+    DateTimeFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
 from rest_framework import status, permissions, viewsets
@@ -38,6 +39,8 @@ from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_csv.parsers import CSVParser
+from rest_framework_csv.renderers import CSVRenderer
 
 from custom_admin.forms import AdminRequestEditForm
 from custom_admin.forms import DisburseForm
@@ -1046,21 +1049,35 @@ class APITagDetail(APIView):
         return Response(serializer.data)
 
 ########################################### Logs ##################################################
-class APILogList(APIView):
+class LogFilter(FilterSet):
+    item_name = ModelChoiceFilter(
+        queryset = Item.objects.all(),
+        name="item_name", 
+    )
+#     time_occurred = DateTimeFilter(
+#         name="time_occurred"
+#     )
+    class Meta:
+        model = Log
+        fields = ['item_name', 'initiating_user', 'nature_of_event', 'time_occurred', 'affected_user', 'change_occurred']
+        
+class APILogList(ListAPIView):
     """
     List all Logs (admin / manager)
     """
     permission_classes = (IsAdminOrManager,)
 #     pagination_class = rest_framework.pagination.PageNumberPagination
     pagination_class = rest_framework.pagination.LimitOffsetPagination
-    
+    model = Log
+    filter_class = LogFilter
+    queryset = Log.objects.all()
+    serializer_class = LogSerializer
+     
     def get(self, request, format=None):
-#         if(User.objects.get(username=request.user).is_staff) 
-        page = self.paginate_queryset(Log.objects.all())
+        page = self.paginate_queryset(self.filter_queryset(Log.objects.all()))
         if page is not None:
             serializer = LogSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-
         serializer = LogSerializer(Log.objects.all(), many=True)
         return Response(serializer.data)
     
@@ -1151,3 +1168,112 @@ class APICustomFieldModify(APIView):
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+########################################## Bulk Upload ########################################### 
+class ItemUpload(APIView):
+    """
+    Uploading items via API
+    """
+    def errorHandling(self, request, message, createdItems):
+        for createdItem in createdItems:
+            createdItem.delete()
+        messages.error(request._request, message)
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        
+    def post(self, request, *args, **kwargs):
+        csvData = request.POST.getlist('data[]')
+        headerMap = {}
+        customFieldMap = {}
+        headers = csvData[0].split(',')
+        custom_fields = Custom_Field.objects.all()
+        for i, header in enumerate(headers):
+            if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
+                # ERROR CHECK, make sure the custom field names are correct 
+                if not any(field.field_name == header for field in custom_fields):
+                    messages.error(request._request, 
+                                 'field ' + header + ' does not exist')
+                    return Response('field ' + header + ' does not exist', status=status.HTTP_400_BAD_REQUEST) 
+                customFieldMap[header.lower()] = i
+            else:
+                headerMap[header.lower()] = i    
+            
+        # ERROR CHECK, make sure that item name and quantity headers exist
+        if not "item name" in headerMap:
+            messages.error(request._request, 
+                                 'Item Name does not exist in header')
+            return Response("Make sure item name exists in header", status=status.HTTP_400_BAD_REQUEST) 
+        if not "quantity" in headerMap:
+            messages.error(request._request, 
+                                 'Quantity does not exist in header')
+            return Response("Make sure quantity exists in header", status=status.HTTP_400_BAD_REQUEST) 
+        
+        createdItems = []
+        for i, csvRow in enumerate(csvData[1:]):
+            row = csvRow.split(',')
+            if row[headerMap["item name"]]=='':
+                messages.error(request._request, 
+                                 'item name does not exist in row ' + str(i+1))
+                return Response('item name does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
+            if row[headerMap["quantity"]]=='':
+                messages.error(request._request, 
+                                 'quantity does not exist in row ' + str(i+1))
+                return Response('quantity does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
+            item, created = Item.objects.get_or_create(item_name=row[headerMap["item name"]], quantity=row[headerMap["quantity"]], model_number=row[headerMap["model number"]], description=row[headerMap["description"]])
+            if not created:
+                return self.errorHandling(request, "Item " + row[headerMap["item name"]] + " already exists", createdItems)
+
+            item.save()
+            createdItems.append(item)
+            # add to tags
+            for tag in row[headerMap["tags"]].split('/'):
+                t = Tag(tag=tag)
+                t.save(force_insert=True)
+                item.tags.add(t)
+                item.save()
+            # add custom fields
+            for custom_field, j in customFieldMap.items():
+                actual_field = next((x for x in custom_fields if x.field_name.lower() == custom_field), None)
+                if actual_field.field_type == "Short":
+                    if len(row[j])<=400:
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
+                        value.save()
+                    else:
+                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
+                elif actual_field.field_type == "Long":
+                    if len(row[j])<=1000:
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_long_text=row[j])
+                        value.save()
+                    else:
+                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
+                elif actual_field.field_type == "Int":
+                    try:
+                        int(row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_integer=int(row[j]))
+                        value.save()
+                    except ValueError:
+                        if row[j] == "":
+                            continue
+                        else:
+                            return self.errorHandling(request,"custom_field at row " + str(i+1) + " is not a int", createdItems) 
+                elif actual_field.field_type == "Float":
+                    try:
+                        float(row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_floating=float(row[j]))
+                        value.save()
+                    except ValueError:
+                        if row[j] == "":
+                            continue
+                        else:
+                            return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not a float", createdItems)
+        items = {}
+#         pk_list = [5, 7, 1, 3, 4]  
+#         clauses = ' '.join(['WHEN id=%s THEN %s' % (pk, i) for i, pk in enumerate(pk_list)])  
+#         ordering = 'CASE %s END' % clauses  
+#         items = Article.objects.filter(pk__in=pk_list).extra(  
+#                    select={'ordering': ordering}, order_by=('ordering',))
+        serializer = ItemSerializer(items, many=True)
+        messages.success(request._request, 
+                                 'CSV file successfully uploaded')
+        return Response(serializer.data)
+    
+         
+            

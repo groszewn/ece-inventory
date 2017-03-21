@@ -9,6 +9,13 @@
 {% if user_list %}
 
 <h2>All available items</h2>
+
+<form id="dvImportSegments" class="fileupload ">
+	{% csrf_token %}
+    <legend>Upload your CSV File</legend>
+    <input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+</form>
+
 <form id="search-form">
     <label>Included Tags:</label>
     <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
@@ -24,6 +31,8 @@
 	</select>
     <input type="submit"/>
 </form>
+
+
 
 <table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
@@ -332,7 +341,7 @@
 
  <script>
 	$(document).ready(function(){
-		$('#inventory-item').dataTable();
+		//var inventory_item_table = $('#inventory-item').DataTable();
 	    $('#inventory-request-all').dataTable({
 	        "order": [[ 6, "desc" ]]
 	    });
@@ -349,9 +358,11 @@
 	        "order": [[ 4, "desc" ]]
 	    });
 	    $('#user-table').dataTable();
+	    
+	    //inventory_item_table.MakeCellsEditable({
+		//    "onUpdate": myCallbackFunction
+		//});
 	});
-	</script>
-<script>
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
 get_search_data(); // initialize item data
@@ -361,6 +372,13 @@ $('#search-form').on('submit', function(event){
     get_search_data();
 });
 
+function myCallbackFunction (updatedCell, updatedRow, oldValue) {
+        console.log("The new value for the cell is: " + updatedCell.data());
+        console.log("The values for each cell in that row are: " + updatedRow.data());
+}
+
+
+    
 function get_search_data() {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
@@ -376,20 +394,28 @@ function get_search_data() {
 		}
 	}
 	console.log(data);
+	var table = $('#inventory-search').dataTable()
     $.ajax({
         url : '{% url 'inventory:api_item_list' %}',
         type : "GET", // http method
         data : data,
         success : function(json) {
             $('#item_name').val(''); // remove the value from the input
-            console.log(json); // log the returned json to the console
-        	$('#inventory-search').dataTable().fnClearTable();
+        	table.fnClearTable();
         	var numCustomFields = {{ custom_fields|length }}
         	var djangoCustomFieldNameList = [];
 			{% for field in custom_fields %} 
 				djangoCustomFieldNameList.push("{{ field.field_name }}");
+				
 			{% endfor %}
 			
+			columns = [1,2,3];
+			columnsNullAllowed = [2,3];
+			for(p = 0; p<djangoCustomFieldNameList.length; p++) {
+			  columns.push(p+4);
+			  columnsNullAllowed.push(p+4);
+			}
+			   
          	for(i in json) {
          		var dataTableData = [
 			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
@@ -427,7 +453,44 @@ function get_search_data() {
 			    	}
 			    	dataTableData.push.apply(dataTableData, customFieldArr);
 			    }
-         		$('#inventory-search').dataTable().fnAddData(dataTableData);
+         		table.fnAddData(dataTableData);
+         		
+         		table.api().MakeCellsEditable({
+			        "onUpdate": myCallbackFunction,
+			        "inputCss":'my-input-class',
+			        "columns": columns,
+			        "allowNulls": {
+			            "columns": columnsNullAllowed,
+			            "errorClass": 'error' // LOOK AT THIS - NEED ERROR CHECK
+			        },
+			        "confirmationButton": { 
+			            "confirmCss": 'my-confirm-class',
+			            "cancelCss": 'my-cancel-class'
+			        },
+			        //"inputTypes": [
+			         //   {
+			         //       "column":0, 
+			         //       "type":"text", 
+			         //       "options":null 
+			         //   }, 
+			         //   {
+			          //      "column":1, 
+			          //      "type": "list",
+			          //      "options":[
+			           //         { "value": "1", "display": "Beaty" },
+			           //         { "value": "2", "display": "Doe" },
+			           //         { "value": "3", "display": "Dirt" }
+			           //     ]
+			          //  }
+			           // ,{
+			           //     "column": 2,
+			           //     "type": "datepicker", // requires jQuery UI: http://http://jqueryui.com/download/
+			           ///     "options": {
+			           //        "icon": "http://jqueryui.com/resources/demos/datepicker/images/calendar.gif" // Optional
+			           //     }
+			           // }
+			        //]
+			    });
         	}
         },
         error : function(xhr,errmsg,err) {
@@ -447,8 +510,101 @@ function getIndexOfFieldName(list, name) {
 }
 
 $(document).ready(function(){
-	    $('#inventory-search').dataTable();
-	});
+	 $('#inventory-search').dataTable();
+	 // The event listener for the file upload
+    document.getElementById('txtFileUpload').addEventListener('change', upload, false);
+
+    // Method that checks that the browser supports the HTML5 File API
+    function browserSupportFileUpload() {
+        var isCompatible = false;
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+        isCompatible = true;
+        }
+        return isCompatible;
+    }
+    
+	var csrftoken = $.cookie('csrftoken');
+	
+    // Method that reads and processes the selected file
+    function upload(evt) {
+    if (!browserSupportFileUpload()) {
+        alert('The File APIs are not fully supported in this browser!');
+        } else {
+            var data = null;
+            var file = evt.target.files[0];
+            var reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(event) {
+                var csvData = event.target.result;
+                data = $.csv.toArrays(csvData);
+                console.log(data)
+                if (data && data.length > 0) {
+                  $.ajax({
+				       url: '/api/upload/',
+				       //Ajax events
+				       beforeSend: function (xhr,settings) {
+				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				         alert('Are you sure you want to upload document.');
+				       },
+				       success: function (e) {
+				         //alert('Upload completed');
+				         window.location.reload();
+				       },
+				       error: function (e) {
+				         //alert('ERROR: ' + e.responseText);
+				          window.location.reload();
+				       },
+				       // Form data
+				       data: {'data[]' : data},
+				       type: 'POST',
+				    });
+                } else {
+                    alert('No data to import!');
+                }
+            };
+            reader.onerror = function() {
+                alert('Unable to read ' + file.fileName);
+            };
+        }
+    }
+});
+
+$('#submit').click(function (event) {
+    event.preventDefault()
+   var file = $('#CSV').get(0).files[0];
+  $.get(file, function(data) {
+	   console.log(data);
+	}, 'text');
+   var formData = new FormData();
+   formData.append('file', file);
+   console.log(formData);
+   console.log("HI CSV");
+   $.ajax({
+       url: '/api/upload',
+       //Ajax events
+       beforeSend: function (e) {
+         alert('Are you sure you want to upload document.');
+       },
+       success: function (e) {
+         alert('Upload completed');
+       },
+       error: function (e) {
+         alert('error ' + e.message);
+       },
+       // Form data
+       data: formData,
+       type: 'POST',
+       //Options to tell jQuery not to process data or worry about content-type.
+       cache: false,
+       contentType: false,
+       processData: false
+    });
+    return false;
+});
+
+	
+	
+
 </script>
 {% endblock %}
 
