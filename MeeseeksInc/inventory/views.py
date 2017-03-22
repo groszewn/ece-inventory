@@ -1697,6 +1697,3 @@ class APILoan(APIView):
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
             
-
-        
->>>>>>> 2a76a9be6821ad1564c058666f325c35d10b9ea4
