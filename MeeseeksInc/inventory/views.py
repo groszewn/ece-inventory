@@ -48,7 +48,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer
 
 from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
@@ -1180,6 +1180,18 @@ class APICustomFieldModify(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ########################################## LOAN ###########################################    
+class APILoanList(APIView):
+    permission_classes = (IsAdminOrUser,)
+    
+    def get(self, request, format=None):
+        if 'item_name' in request.data: # these nested ifs allow for a user to filter based on a regular item_name string (not an item_id) using the item_name field, use item_name_id to filter by id
+            request.data['item_name'] = Item.objects.get(item_name=request.data['item_name'])
+        loans = Loan.objects.filter(**request.data)
+        if not User.objects.get(username=request.user.username).is_staff:
+            loans = Loan.objects.filter(user_name = request.user.username,**request.data)
+        serializer = FullLoanSerializer(loans, many=True)
+        return Response(serializer.data)
+
 class APILoan(APIView):
     permission_classes = (IsAdmin,)
     serializer_class = LoanSerializer

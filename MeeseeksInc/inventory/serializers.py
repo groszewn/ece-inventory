@@ -261,4 +261,8 @@ class LoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ('total_quantity', 'comment',)
-             
+        
+class FullLoanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Loan
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned')
