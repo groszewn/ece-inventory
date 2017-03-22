@@ -355,7 +355,7 @@ def convert_loan(request, pk):
             loan.save()
             if loan.total_quantity == 0:
                 loan.delete()
-            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
             disbursement.save()
             Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
