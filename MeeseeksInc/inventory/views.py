@@ -495,7 +495,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                         if indiv_request.type == "Dispersal": 
                             # add new disbursement item to table
                             disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
-                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                                            total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_disbursed=timezone.localtime(timezone.now()))
                             disbursement.save()
                             messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                             Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
@@ -517,7 +517,7 @@ class request_detail(ModelFormMixin, LoginRequiredMixin, UserPassesTestMixin, ge
                             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                         elif indiv_request.type == "Loan":
                             loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
-                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
+                                            total_quantity=indiv_request.request_quantity, comment=indiv_request.comment, time_loaned=timezone.localtime(timezone.now()))
                             loan.save()
                             messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
@@ -615,7 +615,7 @@ def approve_request(self, request, pk):
         except (ObjectDoesNotExist, IndexError) as e:
             prepend = ''
         subject = prepend + 'Request approval'
-        to = [User.objects.get(username=instance.user_id).email]
+        to = [User.objects.get(username=indiv_request.user_id).email]
         from_email='noreply@duke.edu'
         ctx = {
             'user':request.user,
@@ -1007,10 +1007,10 @@ class APIRequestDetail(APIView):
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             change_list=[]
-            if int(serializer.data['request_quantity']) != int(instance.request_quantity):
-                change_list.append(('request quantity', instance.request_quantity, serializer.data['request_quantity']))
-            if serializer.data['reason'] != instance.reason:
-                change_list.append(('reason', instance.reason, serializer.data['reason']))
+            if int(serializer.data['request_quantity']) != int(indiv_request.request_quantity):
+                change_list.append(('request quantity', indiv_request.request_quantity, serializer.data['request_quantity']))
+            if serializer.data['reason'] != indiv_request.reason:
+                change_list.append(('reason', indiv_request.reason, serializer.data['reason']))
             if serializer.is_valid():
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
