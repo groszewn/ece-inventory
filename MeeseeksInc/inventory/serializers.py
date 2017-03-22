@@ -5,8 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log
-
+    Log, Loan
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(allow_blank = True)
@@ -167,7 +166,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
     request_id = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id','type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -204,7 +203,7 @@ class RequestUpdateSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Request
-        fields = ('time_requested', 'request_quantity', 'reason')    
+        fields = ('time_requested', 'request_quantity', 'reason','type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -256,3 +255,10 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist")
         return value
+    
+class LoanSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(required=False, allow_blank=True)
+    class Meta:
+        model = Loan
+        fields = ('total_quantity', 'comment',)
+             

@@ -48,7 +48,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer
 
 from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
@@ -893,19 +893,29 @@ class APIApproveRequest(APIView):
         if not indiv_request.status == "Pending":
             return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
         serializer = RequestAcceptDenySerializer(indiv_request, data=request.data, partial=True)
-        item = Item.objects.get(item_id=indiv_request.item_name_id)
+        item = Item.objects.get(item_name = indiv_request.item_name.item_name)
+        comment = request.data['comment']
         if item.quantity >= indiv_request.request_quantity:
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
-            
-            disbursement = Disbursement(admin_name=request.user.username, user_name=indiv_request.user_id, item_name=Item.objects.get(item_id = indiv_request.item_name_id), 
-                                    total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
-            disbursement.save()
+            if indiv_request.type == "Dispersal": 
+                # add new disbursement item to table
+                disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+                disbursement.save()   
+                Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+            elif indiv_request.type == "Loan":
+                # add new loan item to table
+                loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))    
+                loan.save()
+                Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))
+            # change status of request to approved
             if serializer.is_valid():
                 serializer.save(status="Approved")
-                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
-                       affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -1164,8 +1174,76 @@ class APICustomFieldModify(APIView):
         
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
-        Log.objects.create(request_id=None,item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
+        Log.objects.create(request_id=None, item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
                                        affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+########################################## LOAN ###########################################    
+class APILoan(APIView):
+    permission_classes = (IsAdmin,)
+    serializer_class = LoanSerializer
+    
+    def put(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
+        orig_quant = loan.total_quantity
+        new_quant = int(request.data['total_quantity'])
+        item = loan.item_name
+        quantity_changed = new_quant - orig_quant
+        item_quant = item.quantity - quantity_changed
+        serializer = LoanSerializer(loan, data=request.data, partial=True)
+        if item_quant < 0 or new_quant < 1:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        item.quantity = item_quant
+        item.save()
+        if serializer.is_valid():
+            serializer.save()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
+        requested_quant = int(request.data['check_in'])   
+        if requested_quant > 0 and requested_quant <= loan.total_quantity:
+            loan.total_quantity = loan.total_quantity - requested_quant
+            item = loan.item_name
+            item.quantity = item.quantity + requested_quant
+            loan.save()
+            item.save()
+            if loan.total_quantity == 0:
+                loan.delete()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(requested_quant) + " instances.")
+            serializer = LoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def post(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
+        admin_name = request.user.username
+        user_name = loan.user_name
+        item = loan.item_name
+        comment = loan.comment
+        time_disbursed = timezone.localtime(timezone.now())
+        quantity_disbursed = int(request.data['convert'])
+        if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
+            loan.total_quantity = loan.total_quantity - quantity_disbursed
+            loan.save()
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement.save()
+            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            if loan.total_quantity == 0:
+                loan.delete()
+            serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+            
+
+        

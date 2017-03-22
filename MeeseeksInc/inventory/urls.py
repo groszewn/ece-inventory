@@ -47,5 +47,7 @@ urlpatterns = [
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
+    url(r'^api/loan/(?P<pk>[\w\-\ ]+)/$', views.APILoan.as_view(), name='api_loan'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
+    
 ]
