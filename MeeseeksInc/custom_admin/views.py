@@ -24,6 +24,7 @@ from django.core import mail
 from django.conf import settings
 from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
+from MeeseeksInc.celery import app
 
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
@@ -1115,6 +1116,7 @@ def loan_reminder_body(request):
     if request.method == "POST":
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
+            app.control.purge()
             try:
                 body.delete()
             except (ObjectDoesNotExist) as e:
