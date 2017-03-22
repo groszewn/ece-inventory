@@ -154,3 +154,6 @@ class EmailPrependValue(models.Model):
 class LoanReminderEmailBody(models.Model):
     body = models.TextField() 
     
+class LoanSendDates(models.Model):
+    date = models.DateField()
+    

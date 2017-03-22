@@ -26,7 +26,7 @@ from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
 
 
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody
+from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
 from inventory.forms import RequestForm, SearchForm
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
@@ -1188,6 +1188,10 @@ def loan_reminder_body(request):
         body = LoanReminderEmailBody.objects.all()[0]
     except (ObjectDoesNotExist, IndexError) as e:
         body = LoanReminderEmailBody.objects.create(body='')
+    try:
+        selected_dates = LoanSendDates.objects.all()
+    except ObjectDoesNotExist:
+        selected_dates = None
     if request.method == "POST":
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
@@ -1195,11 +1199,21 @@ def loan_reminder_body(request):
                 body.delete()
             except (ObjectDoesNotExist) as e:
                 pass
+            input_date_list = form['send_dates'].value().split(',')
+            output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            try:
+                LoanSendDates.objects.all().delete()
+            except ObjectDoesNotExist as e:
+                pass
+            for date in output_date_list:
+                LoanSendDates.objects.create(date=date)
+                print(date, datetime.utcnow())
+                task_email.apply_async(eta=date+timedelta(hours=3))
             LoanReminderEmailBody.objects.create(body=form['body'].value())
             return redirect('/customadmin')
     else:
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
-    return render(request, 'custom_admin/loan_email_body.html', {'form':form})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
             
  
 

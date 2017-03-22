@@ -54,6 +54,7 @@ def loan_reminder_email():
         }
         message=render_to_string('inventory/loan_reminder_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+    print(datetime.now())
     return
     
 @app.task

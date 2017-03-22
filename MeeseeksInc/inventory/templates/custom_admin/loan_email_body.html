@@ -1,14 +1,48 @@
 {% extends 'custom_admin/base.html' %} 
 {#put this at the top so that the base template is "base.html"#}
+{% load static %}
+
 
 {% block content %}
 <h2>Create Loan Body</h2>
 <form method="post" action=".">
 {% csrf_token %}
-{{ form.as_p }}
+<h3>{{ form.body.label }}</h3>
+<div>{{ form.body }}</div>
+<h3>{{ form.send_dates.label }}</h3>
+<div>{{ form.send_dates }}</div>
+
+<h3>Selected dates</h3>
+{% if selected_dates %}
+	{% for date in selected_dates %}
+		<li>{{ date.date }}</li>
+	{% endfor %}
+{% else %}
+	<div>No dates selected</div>
+{% endif %}
+<br>
 <input type="hidden" value="Submit" />
 <button type="submit" class="btn btn-success">Submit</button>
 
 </form>
+
+
+{% block js %}
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.datepick.css"> 
+<script type="text/javascript" src="/static/js/jquery.plugin.js"></script> 
+<script type="text/javascript" src="/static/js/jquery.datepick.js"></script>
+
+<script>
+$(function() {
+	$('#id_send_dates').datepick({
+		multiSelect:999
+	});
+});
+
+</script>
+
+{% endblock js %}
+
 
 {% endblock %}
