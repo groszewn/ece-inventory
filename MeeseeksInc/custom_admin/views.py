@@ -1127,7 +1127,6 @@ def loan_reminder_body(request):
                 pass
             for date in output_date_list:
                 LoanSendDates.objects.create(date=date)
-                print(date, datetime.utcnow())
                 task_email.apply_async(eta=date+timedelta(hours=3))
             LoanReminderEmailBody.objects.create(body=form['body'].value())
             return redirect('/customadmin')
