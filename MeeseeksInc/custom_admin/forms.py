@@ -7,7 +7,6 @@ from django import forms
 from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from datetimewidget.widgets import DateWidget
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers
 
 
