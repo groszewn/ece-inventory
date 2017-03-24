@@ -492,20 +492,39 @@
 	});
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
+var editor; // use a global for the submit and return data rendering in the examples
+editor = new $.fn.dataTable.Editor( {
+	    ajax: function ( method, url, d, successCallback, errorCallback ) {
+	        console.log(method);
+	        console.log(url);
+	        console.log(d);
+	    },
+	    table: "#inventory-search",
+	    idSrc:  'item_id',
+	    fields: [ { label: "Item Name", name: "item_name" },
+	        { label: "Quantity", name: "quantity" },
+	        { label: "Model Number", name: "model_number" },
+	        { label: "Description", name: "description" }
+	        ]
+	} ); 
+	// Disable KeyTable while the main editing form is open
+editor
+    .on( 'open', function ( e, mode, action ) {
+        if ( mode === 'main' ) {
+            table.keys.disable();
+        }
+    } )
+    .on( 'close', function () {
+        table.keys.enable();
+    } );
 get_search_data(); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
     console.log("form submitted!")  // sanity check
     get_search_data();
 });
-
-function myCallbackFunction (updatedCell, updatedRow, oldValue) {
-        console.log("The new value for the cell is: " + updatedCell.data());
-        console.log("The values for each cell in that row are: " + updatedRow.data());
-}
-
-
-    
+var table;
+   
 function get_search_data() {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
@@ -520,110 +539,79 @@ function get_search_data() {
 			data += 'excluded_tags=' + excluded_tags[i] + '&';
 		}
 	}
-	console.log(data);
-	var table = $('#inventory-search').dataTable()
-    $.ajax({
-        url : '{% url 'inventory:api_item_list' %}',
-        type : "GET", // http method
-        data : data,
-        success : function(json) {
-            $('#item_name').val(''); // remove the value from the input
-        	table.fnClearTable();
-        	var numCustomFields = {{ custom_fields|length }}
-        	var djangoCustomFieldNameList = [];
-			{% for field in custom_fields %} 
-				djangoCustomFieldNameList.push("{{ field.field_name }}");
-				
-			{% endfor %}
-			
-			columns = [1,2,3];
-			columnsNullAllowed = [2,3];
-			for(p = 0; p<djangoCustomFieldNameList.length; p++) {
-			  columns.push(p+4);
-			  columnsNullAllowed.push(p+4);
-			}
-			   
-         	for(i in json) {
-         		var dataTableData = [
-			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
-			        json[i].quantity,
-			        json[i].model_number,
-			        json[i].description
-			         ];
-			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
-			    if(numCustomFieldsAvailable === 0) {
-			    	for(count = 0; count<numCustomFields; count++) {
-			    		dataTableData.push('');
-			    	}
-			    } else {
-			    	var customFieldArr = Array(numCustomFields).fill('');
-			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
-			    		var custom_field_object = json[i].values_custom_field[count];
-			    		var field = custom_field_object.field;
-						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
-						if(indexOfField == -1) {
-			    			continue;
-			    		}
-			    		if (field.field_type == "Short") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
-						} else if(field.field_type == "Long") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
-						} else if(field.field_type == "Int") {
-							if(custom_field_object.field_value_integer) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+	columns = [{ data: "item_name" },
+	        { data: "quantity" },
+	        { data: "model_number" },
+	        { data: "description" }];
+	var djangoCustomFieldNameList = [];
+	{% for field in custom_fields %} 
+		djangoCustomFieldNameList.push("{{ field.field_name }}");
+		editor.add( {
+		    label: "{{ field.field_name }}",
+		    name: "{{ field.field_name }}"
+		} );
+		columns.push({ data: "{{ field.field_name }}" });
+	{% endfor %}
+	table = $('#inventory-search').DataTable({
+		destroy: true,
+		dom: "Bfrtip",
+		ajax: {
+		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
+		    type: "GET",
+		    dataSrc: function ( json ) {
+		      $('#item_name').val(''); // remove the value from the input
+	        	var numCustomFields = {{ custom_fields|length }}
+	        	
+	         	for(i in json) {
+	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
+	         			json[i][djangoCustomFieldNameList[p]] = "";
+	         		}
+				    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+				    if(numCustomFieldsAvailable !== 0) {
+				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+				    		var custom_field_object = json[i].values_custom_field[count];
+				    		var field = custom_field_object.field;
+							var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+							if(indexOfField == -1) {
+				    			continue;
+				    		}
+				    		if (field.field_type == "Short") {
+								json[i][field.field_name] = custom_field_object.field_value_short_text;
+							} else if(field.field_type == "Long") {
+								json[i][field.field_name] = custom_field_object.field_value_long_text;
+							} else if(field.field_type == "Int") {
+								if(custom_field_object.field_value_integer) {
+									json[i][field.field_name] = custom_field_object.field_value_integer;
+								}
+							} else if(field.field_type == "Float") {
+								if(custom_field_object.field_value_floating) {
+									json[i][field.field_name] = custom_field_object.field_value_floating;
+								}
 							}
-						} else if(field.field_type == "Float") {
-							if(custom_field_object.field_value_floating) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
-							}
-						}
-			    	}
-			    	dataTableData.push.apply(dataTableData, customFieldArr);
-			    }
-         		table.fnAddData(dataTableData);
-         		
-         		table.api().MakeCellsEditable({
-			        "onUpdate": myCallbackFunction,
-			        "inputCss":'my-input-class',
-			        "columns": columns,
-			        "allowNulls": {
-			            "columns": columnsNullAllowed,
-			            "errorClass": 'error' // LOOK AT THIS - NEED ERROR CHECK
-			        },
-			        "confirmationButton": { 
-			            "confirmCss": 'my-confirm-class',
-			            "cancelCss": 'my-cancel-class'
-			        },
-			        //"inputTypes": [
-			         //   {
-			         //       "column":0, 
-			         //       "type":"text", 
-			         //       "options":null 
-			         //   }, 
-			         //   {
-			          //      "column":1, 
-			          //      "type": "list",
-			          //      "options":[
-			           //         { "value": "1", "display": "Beaty" },
-			           //         { "value": "2", "display": "Doe" },
-			           //         { "value": "3", "display": "Dirt" }
-			           //     ]
-			          //  }
-			           // ,{
-			           //     "column": 2,
-			           //     "type": "datepicker", // requires jQuery UI: http://http://jqueryui.com/download/
-			           ///     "options": {
-			           //        "icon": "http://jqueryui.com/resources/demos/datepicker/images/calendar.gif" // Optional
-			           //     }
-			           // }
-			        //]
-			    });
-        	}
-        },
-        error : function(xhr,errmsg,err) {
-            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
-        }
-    });
+				    	}
+				    }
+	        	}
+	        	console.log(json);
+	        	return json;
+		    }
+		  },
+		columns: columns,
+		keys: {
+	        columns: ':not(:first-child)',
+	        editor:  editor
+	    },
+	    select: {
+	        style:    'os',
+	        selector: 'td:first-child',
+	        blurable: true
+	    },
+	    buttons: [
+	        { extend: "create", editor: editor },
+	        { extend: "edit",   editor: editor },
+	        { extend: "remove", editor: editor }
+	    ]
+	});
 };
 
 function getIndexOfFieldName(list, name) {

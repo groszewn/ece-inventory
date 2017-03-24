@@ -390,13 +390,14 @@ def edit_request(request, pk):
     else:
         form = RequestEditForm(instance=instance)
     return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
-
+    
 @login_required(login_url='/login/')
 @user_passes_test(active_check, login_url='/login/')
 def post_new_request(request):
     if request.method == "POST":
         form = RequestForm(request.POST) # create request-form with the data from the request 
         if form.is_valid():
+            
             post = form.save(commit=False)
             post.item_id = form['item_field'].value()
             post.item_name = Item.objects.get(item_id = post.item_id)
