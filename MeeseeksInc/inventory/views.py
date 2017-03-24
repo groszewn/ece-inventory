@@ -1637,6 +1637,9 @@ class APILoan(APIView):
     serializer_class = LoanSerializer
     
     def put(self, request, pk, format=None):
+        print("SELF",self)
+        print("REQUEST",request.data)
+        print("PK", pk)
         loan = Loan.objects.get(loan_id=pk)
         orig_quant = loan.total_quantity
         new_quant = int(request.data['total_quantity'])

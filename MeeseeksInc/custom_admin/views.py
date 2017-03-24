@@ -25,6 +25,7 @@ from django.conf import settings
 from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
 from MeeseeksInc.celery import app
+import requests, json, urllib, subprocess
 
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
@@ -402,12 +403,17 @@ def edit_loan(request, pk):
             item = loan.item_name
             quantity_changed = post.total_quantity - loan.total_quantity 
             new_quantity = item.quantity - quantity_changed
+            url='http://localhost:8000/api/loan/'+loan.loan_id+'/'
+            payload = {'comment': post.comment,'total_quantity':post.total_quantity}
+            header = {'Authorization': 'Token fc35618c7edc6fff0f52e468586a1002418ab740', 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data=json.dumps(payload))
             if new_quantity < 0:
                 messages.error(request, ('You cannot loan more items than the quantity available.'))
                 return redirect('/customadmin')
-            item.quantity = new_quantity
-            item.save()
-            post.save()
+            #item.quantity = new_quantity
+            #item.save()
+            #post.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
             messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
