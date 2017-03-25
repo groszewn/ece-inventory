@@ -26,13 +26,13 @@ from datetime import date, time, datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
 from MeeseeksInc.celery import app
 import requests, json, urllib, subprocess
+from rest_framework.authtoken.models import Token
 
 
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
 from inventory.forms import RequestForm, SearchForm
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
-
 
 
 def staff_check(user):
@@ -43,6 +43,9 @@ def admin_check(user):
 
 def active_check(user):
     return user.is_active
+
+def get_host(request):
+    return 'http://' + request.META.get('HTTP_HOST')
 
 # from inventory.models import Instance, Request, Item, Disbursement
 # from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
@@ -72,6 +75,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
         context['tags'] = Tag.objects.distinct('tag')
         return context
+    
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
@@ -128,9 +132,20 @@ def add_custom_field(request):
     if request.method == 'POST':
         form = CustomFieldForm(request.POST)
         if form.is_valid():
-            form.save()
-            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user='', change_occurred='Added custom field ' + str(form['field_name'].value()))
+            field_name = form['field_name'].value()
+            field_type = form['field_type'].value()
+            is_private = form['is_private'].value()
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/custom/field/'
+            payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.post(url, headers = header, data=json.dumps(payload))
+            #form.save()
+            #Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+             #                  affected_user='', change_occurred='Added custom field ' + str(form['field_name'].value()))
             return redirect(reverse('custom_admin:index'))
     else:
         form = CustomFieldForm()
@@ -145,10 +160,19 @@ def delete_custom_field(request):
             pickedFields = form.cleaned_data.get('fields')
             if pickedFields:
                 for field in pickedFields:
-                    delField = Custom_Field.objects.get(field_name = field)
-                    Log.objects.create(request_id=None,item_id=None,  item_name='', initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user='', change_occurred='Deleted custom field ' + str(field))
-                    delField.delete()
+                    delField = Custom_Field.objects.get(field_name=field)
+                    user = request.user
+                    token, create = Token.objects.get_or_create(user=user)
+                    http_host = get_host(request)
+                    url=http_host+'/api/custom/field/modify/'+ str(delField.id)+ '/'
+                    #payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
+                    header = {'Authorization': 'Token '+ str(token), 
+                              "Accept": "application/json", "Content-type":"application/json"}
+                    requests.delete(url, headers = header)
+#                     delField = Custom_Field.objects.get(field_name = field)
+#                     Log.objects.create(request_id=None,item_id=None,  item_name='', initiating_user = request.user, nature_of_event="Delete", 
+#                                        affected_user='', change_occurred='Deleted custom field ' + str(field))
+#                     delField.delete()
             return redirect(reverse('custom_admin:index'))
     else:
         form = DeleteFieldForm(fields)
@@ -160,16 +184,30 @@ def register_page(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            if form.cleaned_data['admin']:
-                user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
-                user.save()
-            elif form.cleaned_data['staff']:
-                user = User.objects.create_user(username=form.cleaned_data['username'], password=form.cleaned_data['password1'], email=form.cleaned_data['email'], is_staff=True)
-            else:
-                user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
-                user.save()
-            Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Create', 
-                                     affected_user=user.username, change_occurred="Created user")
+            username = form['username'].value()
+            password = form['password1'].value()
+            email = form['email'].value()
+            is_staff = form['staff'].value()
+            is_superuser = form['admin'].value()
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/users/'
+            payload = {'username': username,'password':password, 'email':email, 'is_staff':is_staff, 
+                       'is_superuser':is_superuser, 'is_active':True}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.post(url, headers = header, data = json.dumps(payload))
+#             if form.cleaned_data['admin']:
+#                 user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+#                 user.save()
+#             elif form.cleaned_data['staff']:
+#                 user = User.objects.create_user(username=form.cleaned_data['username'], password=form.cleaned_data['password1'], email=form.cleaned_data['email'], is_staff=True)
+#             else:
+#                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
+#                 user.save()
+#             Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Create', 
+#                                      affected_user=user.username, change_occurred="Created user")
             return HttpResponseRedirect('/customadmin')
         
         elif form['password1'].value() != form['password2'].value():
@@ -201,61 +239,74 @@ def add_comment_to_request_accept(request, pk):
     if request.method == "POST":
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
-            comment = form['comment'].value()
             indiv_request = Request.objects.get(request_id=pk)
             item = Item.objects.get(item_name=indiv_request.item_name)
             if item.quantity >= indiv_request.request_quantity:
-                # decrement quantity in item
-                item.quantity = F('quantity')-indiv_request.request_quantity
-                item.save()
-                 
-                # change status of request to approved
-                indiv_request.status = "Approved"
-                indiv_request.comment = comment
-                indiv_request.save()
-                # setting up email
-                to = []
-                ctx = {}
-                
+                comment = form['comment'].value()
+                indiv_request = Request.objects.get(request_id=pk)
+                item = Item.objects.get(item_name=indiv_request.item_name)
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/requests/approve/'+pk+'/'
+                payload = {'comment':comment}
+                header = {'Authorization': 'Token '+ str(token), 
+                          "Accept": "application/json", "Content-type":"application/json"}
+                requests.put(url, headers = header, data = json.dumps(payload))
+            
+#                 # decrement quantity in item
+#                 #item.quantity = F('quantity')-indiv_request.request_quantity
+#                 #item.save()
+#                  
+#                 # change status of request to approved
+#                 #indiv_request.status = "Approved"
+#                 #indiv_request.comment = comment
+#                 #indiv_request.save()
+#                 # setting up email
+#                 
+#                 
+#                 to = []
+#                 ctx = {}
+#                 
                 if indiv_request.type == "Dispersal": 
-                    # add new disbursement item to table
-                    disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
-                                            total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
-                    disbursement.save()
+#                     # add new disbursement item to table
+#                     disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+#                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
+#                     disbursement.save()
                     messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                    Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
-                    to = [User.objects.get(username=disbursement.user_name).email]
-                    ctx = {
-                        'user':User.objects.get(username=disbursement.user_name).username,
-                        'item':disbursement.item_name,
-                        'quantity':disbursement.total_quantity,
-                        'type':'disbursement',
-                    }
+#                     Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+#                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+#                     to = [User.objects.get(username=disbursement.user_name).email]
+#                     ctx = {
+#                         'user':User.objects.get(username=disbursement.user_name).username,
+#                         'item':disbursement.item_name,
+#                         'quantity':disbursement.total_quantity,
+#                         'type':'disbursement',
+#                     }
                 elif indiv_request.type == "Loan":
-                    loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
-                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
-                    loan.save()
+#                     loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=Item.objects.get(item_name = indiv_request.item_name), 
+#                                             total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))
+#                     loan.save()
                     messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                    Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
-                    to = [User.objects.get(username=loan.user_name).email]
-                    ctx = {
-                        'user':User.objects.get(username=loan.user_name).username,
-                        'item':loan.item_name,
-                        'quantity':loan.total_quantity,
-                        'type':'loan',
-                    }
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Request approval'
-                from_email='noreply@duke.edu'
-                message=render_to_string('inventory/request_approval_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            else:
-                messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+#                     Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+#                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))   
+#                     to = [User.objects.get(username=loan.user_name).email]
+#                     ctx = {
+#                         'user':User.objects.get(username=loan.user_name).username,
+#                         'item':loan.item_name,
+#                         'quantity':loan.total_quantity,
+#                         'type':'loan',
+#                     }
+#                 try:
+#                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#                 except (ObjectDoesNotExist, IndexError) as e:
+#                     prepend = ''
+#                 subject = prepend + 'Request approval'
+#                 from_email='noreply@duke.edu'
+#                 message=render_to_string('inventory/request_approval_email.txt', ctx)
+#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+#             else:
+#                 messages.error(request, ('Not enough stock available for ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
@@ -312,29 +363,37 @@ def add_comment_to_request_deny(request, pk):
         form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
         if form.is_valid():
             comment = form['comment'].value()
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/requests/deny/'+pk+'/'
+            payload = {'comment':comment}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
             indiv_request = Request.objects.get(request_id=pk)
-            indiv_request.status = "Denied"
-            indiv_request.comment = comment
-            indiv_request.save()
-            id = indiv_request.item_name.item_id
-            Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
-                                         affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+#             indiv_request.status = "Denied"
+#             indiv_request.comment = comment
+#             indiv_request.save()
+#             id = indiv_request.item_name.item_id
+#             Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
+#                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Request denial'
-            to = [User.objects.get(username=indiv_request.user_id).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':User.objects.get(username=indiv_request.user_id),
-                'item':indiv_request.item_name,
-                'quantity':indiv_request.request_quantity,
-                'comment':comment,
-            }
-            message=render_to_string('inventory/request_denial_email.txt', ctx)
-            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+#             try:
+#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#             except (ObjectDoesNotExist, IndexError) as e:
+#                 prepend = ''
+#             subject = prepend + 'Request denial'
+#             to = [User.objects.get(username=indiv_request.user_id).email]
+#             from_email='noreply@duke.edu'
+#             ctx = {
+#                 'user':User.objects.get(username=indiv_request.user_id),
+#                 'item':indiv_request.item_name,
+#                 'quantity':indiv_request.request_quantity,
+#                 'comment':comment,
+#             }
+#             message=render_to_string('inventory/request_denial_email.txt', ctx)
+#             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect(reverse('custom_admin:index'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
@@ -403,9 +462,12 @@ def edit_loan(request, pk):
             item = loan.item_name
             quantity_changed = post.total_quantity - loan.total_quantity 
             new_quantity = item.quantity - quantity_changed
-            url='http://localhost:8000/api/loan/'+loan.loan_id+'/'
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/'+loan.loan_id+'/'
             payload = {'comment': post.comment,'total_quantity':post.total_quantity}
-            header = {'Authorization': 'Token fc35618c7edc6fff0f52e468586a1002418ab740', 
+            header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.put(url, headers = header, data=json.dumps(payload))
             if new_quantity < 0:
@@ -414,8 +476,8 @@ def edit_loan(request, pk):
             #item.quantity = new_quantity
             #item.save()
             #post.save()
-            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            #Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+            #                       nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
             messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
             return redirect('/customadmin')
     else:

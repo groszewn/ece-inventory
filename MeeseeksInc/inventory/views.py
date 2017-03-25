@@ -1175,7 +1175,7 @@ class APIApproveRequest(APIView):
                 # add new disbursement item to table
                 disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
-                disbursement.save()   
+                disbursement.save() 
                 Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             elif indiv_request.type == "Loan":
@@ -1189,7 +1189,7 @@ class APIApproveRequest(APIView):
             if serializer.is_valid():
                 serializer.save(status="Approved")
                 Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
-                       affected_user=disbursement.user_name, change_occurred="Disbursed " + str(disbursement.total_quantity))
+                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
@@ -1200,7 +1200,7 @@ class APIApproveRequest(APIView):
                 ctx = {
                     'user':self.request.user,
                     'item':item.item_name,
-                    'quantity':disbursement.total_quantity,
+                    'quantity':indiv_request.request_quantity,
                 }
                 message=render_to_string('inventory/request_approval_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -1243,7 +1243,7 @@ class APIDenyRequest(APIView):
                 'item':indiv_request.item_name,
                 'quantity':indiv_request.request_quantity,
             }
-            message=render_to_string('inventory/request_cancel_email.txt', ctx)
+            message=render_to_string('inventory/request_denial_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1637,9 +1637,6 @@ class APILoan(APIView):
     serializer_class = LoanSerializer
     
     def put(self, request, pk, format=None):
-        print("SELF",self)
-        print("REQUEST",request.data)
-        print("PK", pk)
         loan = Loan.objects.get(loan_id=pk)
         orig_quant = loan.total_quantity
         new_quant = int(request.data['total_quantity'])
