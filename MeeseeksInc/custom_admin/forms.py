@@ -15,9 +15,14 @@ class DisburseForm(forms.ModelForm):
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
     class Meta:
         model = Disbursement
-        fields = ('user_field', 'item_field', 'total_quantity', 'comment')
+        fields = ('user_field', 'item_field', 'total_quantity', 'comment', 'type')
 
 class DisburseSpecificForm(forms.Form):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
