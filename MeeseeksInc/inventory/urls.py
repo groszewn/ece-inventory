@@ -26,7 +26,7 @@ urlpatterns = [
     url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.check_in_loan, name='check_in_loan'), 
     url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.edit_loan, name='edit_loan'), 
     url(r'^loan/detail/(?P<pk>[\w\-\ ]+)$', views.LoanDetailView.as_view(), name='loan_detail'),
-   
+
     ################################### API URLS #######################################
     url(r'^api/items/$', inventory.api.APIItemList.as_view(), name='api_item_list'),
     url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIItemDetail.as_view(), name='api_item_detail'),
@@ -47,5 +47,5 @@ urlpatterns = [
     url(r'^api/loan/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoan.as_view(), name='api_loan'),
     url(r'^api/loan/$', inventory.api.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
-    
+    url(r'^api/upload/$', inventory.api.ItemUpload.as_view(), name='upload'),    
 ]

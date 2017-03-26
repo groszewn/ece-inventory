@@ -8,19 +8,23 @@ from django.contrib.auth.models import User
 from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
+from django.core.mail import EmailMessage
 from django.forms.formsets import formset_factory
 from django.forms.models import inlineformset_factory, modelformset_factory, ModelMultipleChoiceField
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
 from django.test import Client
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
 import django_filters
-from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter, \
+    DateTimeFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
 import rest_framework
@@ -40,7 +44,8 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+from django.core.exceptions import ObjectDoesNotExist
 
 urlToUse = 'http://localhost:8000/' 
 #urlToUse = 
@@ -52,6 +57,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url = "/login/"
     template_name = 'inventory/index.html'
     context_object_name = 'item_list'
+    model = Tag
     
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
@@ -77,14 +83,13 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['current_user'] = self.request.user.username
         context['tags'] = Tag.objects.distinct('tag')
         return context
-    
+
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
-    
+        return Instance.objects.order_by('item')[:5] 
     def test_func(self):
         return self.request.user.is_active
-                  
+                          
 class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     login_url = "/login/"
     template_name = 'inventory/detail.html'
@@ -184,6 +189,12 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
             return self.form_invalid(formset)
 
     def form_valid(self, formset):
+        """
+        Called if all forms are valid. Creates a Recipe instance along with
+        associated Ingredients and Instructions and then redirects to a
+        success page.
+        """
+        request_list = []
         for idx,form in enumerate(formset):
             if idx<len(self.get_queryset()):
                 quantity = form.cleaned_data['quantity']
@@ -193,8 +204,26 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
                 item = cart_instance.item
                 item_request = Request(item_name = item, user_id=self.request.user.username, type=type, request_quantity=quantity, status="Pending", reason = reason, time_requested=timezone.now())
                 item_request.save()
+                request_list.append((item, quantity))
                 Log.objects.create(request_id=item_request.request_id, item_id=item.item_id, item_name=item.item_name, initiating_user=str(item_request.user_id), nature_of_event='Request', 
-                        affected_user=None, change_occurred="Requested " + str(item_request.request_quantity))
+                        affected_user='', change_occurred="Requested " + str(item_request.request_quantity))
+        # SEND EMAIL
+        try:
+            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+        except (ObjectDoesNotExist, IndexError) as e:
+            prepend = ''
+        subject = prepend + 'Request confirmation'
+        to = [self.request.user.email]
+        from_email='noreply@duke.edu'
+        ctx = {
+            'user':self.request.user,
+            'request':request_list,
+        }
+        for user in SubscribedUsers.objects.all():
+            to.append(user.email)
+        message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+        EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+         
         # DELETE ALL CART INSTANCES
         for cart_instance in self.get_queryset():
             cart_instance.delete()
@@ -379,4 +408,3 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
-    

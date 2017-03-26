@@ -7,17 +7,22 @@ from django import forms
 from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers
 
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
     class Meta:
         model = Disbursement
-        fields = ('user_field', 'item_field', 'total_quantity', 'comment')
+        fields = ('user_field', 'item_field', 'total_quantity', 'comment', 'type')
 
 class DisburseSpecificForm(forms.Form):
     user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
@@ -188,7 +193,7 @@ class DeleteFieldForm(forms.Form):
           
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30, required = True)
-    email = forms.EmailField(label='Email', required = False)
+    email = forms.EmailField(label='Email', required = True)
     password1 = forms.CharField(label='Password',
                                 widget=forms.PasswordInput(), required = True )
     password2 = forms.CharField(label='Confirm Password',
@@ -210,4 +215,14 @@ class RegistrationForm(forms.Form):
         except User.DoesNotExist:
             return self.cleaned_data['username']
         raise forms.ValidationError(("The username already exists. Please try another one."))
-     
+    
+class SubscribeForm(forms.Form):  
+    subscribed = forms.BooleanField(label = 'Click to subscribe to email notifications.',
+                               widget = forms.CheckboxInput, required=False)
+    
+class ChangeEmailPrependForm(forms.Form):
+    text = forms.CharField(label='Write text to be prepended to all emails.', required=False)
+    
+class ChangeLoanReminderBodyForm(forms.Form):
+    body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
+    send_dates = forms.CharField()

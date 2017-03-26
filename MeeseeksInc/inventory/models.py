@@ -143,5 +143,17 @@ class Log(models.Model):
     time_occurred = models.DateTimeField(default=timezone.now)
     affected_user = models.CharField(max_length=200, null=True, default='')
     change_occurred = models.CharField(max_length=200, null=False)
-
-
+    
+class SubscribedUsers(models.Model):
+    user = models.CharField(max_length=200)
+    email = models.CharField(max_length=200)
+    
+class EmailPrependValue(models.Model):
+    prepend_text = models.CharField(max_length=200, default='')
+   
+class LoanReminderEmailBody(models.Model):
+    body = models.TextField() 
+    
+class LoanSendDates(models.Model):
+    date = models.DateField()
+    

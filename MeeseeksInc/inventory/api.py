@@ -42,7 +42,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan
 
-########################################## Item ###########################################
+
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     def filter(self, qs, value): # way to pass through data
         return qs
@@ -119,7 +119,7 @@ class APIItemList(ListCreateAPIView):
             item_id=data['item_id']
             item_name=data['item_name']
             Log.objects.create(request_id=None, item_id=item_id, item_name = item_name, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user=None, change_occurred="Created item " + str(item_name))
+                       affected_user='', change_occurred="Created item " + str(item_name))
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
@@ -196,10 +196,10 @@ class APIItemDetail(APIView):
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user=None, change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
+                                         affected_user='', change_occurred="Change quantity from " + str(starting_quantity) + ' to ' + str(quantity))
             else:
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited " + str(item.item_name))
+                                         affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
@@ -240,7 +240,7 @@ class APIItemDetail(APIView):
     def delete(self, request, pk, format=None):
         item = self.get_object(pk)
         Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Deleted item " + str(item.item_name))
+                       affected_user='', change_occurred="Deleted item " + str(item.item_name))
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -273,7 +273,7 @@ class APIRequestDetail(APIView):
     """
     Retrieve, update or delete a request instance (for yourself if user, all if admin/manager)
     """
-    permission_classes = (IsAtLeastUser,)
+    permission_classes = (IsAdminOrUser,)
     serializer_class = RequestUpdateSerializer
     
     def get_object(self, pk):
@@ -293,19 +293,52 @@ class APIRequestDetail(APIView):
         indiv_request = self.get_object(pk)
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
+            change_list=[]
+            if int(serializer.data['request_quantity']) != int(indiv_request.request_quantity):
+                change_list.append(('request quantity', indiv_request.request_quantity, serializer.data['request_quantity']))
+            if serializer.data['reason'] != indiv_request.reason:
+                change_list.append(('reason', indiv_request.reason, serializer.data['reason']))
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
-                                         affected_user=None, change_occurred="Edited request for " + str(indiv_request.item_name))
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                                         affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request edit'
+                to = [User.objects.get(username=indiv_request.user_id).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':request.user,
+                    'changes':change_list,
+                }
+                message=render_to_string('inventory/request_edit_email.txt', ctx)
+                if len(change_list)>0:
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         indiv_request = self.get_object(pk)
-        if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_superuser:
+        if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user=None, change_occurred="Cancelled request for " + str(indiv_request.item_name))
+                       affected_user='', change_occurred="Cancelled request for " + str(indiv_request.item_name))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request cancel'
+            to = [User.objects.get(username=indiv_request.user_id).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+            }
+            message=render_to_string('inventory/request_cancel_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             indiv_request.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
@@ -322,14 +355,31 @@ class APIRequestThroughItem(APIView):
             "request": self.request,
         }
         serializer = RequestPostSerializer(data=request.data, context=context)
+        request_list=[]
         if serializer.is_valid():
             serializer.save(item_name=Item.objects.get(item_id=pk))
             item = Item.objects.get(item_id=pk)
             data=serializer.data
             id=data['request_id']
             quantity=data['request_quantity']
+            request_list.append((item.item_name, quantity))
             Log.objects.create(request_id=id, item_id=pk, item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                       affected_user=None, change_occurred="Requested " + str(quantity))
+                       affected_user='', change_occurred="Requested " + str(quantity))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -355,6 +405,7 @@ class APIMultipleRequests(APIView):
                     request.data[i]['item_name']=item_id
         print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
+        request_list=[]
         if serializer.is_valid():
             serializer.save()
             dataDict=serializer.data
@@ -362,8 +413,24 @@ class APIMultipleRequests(APIView):
                 id=data['request_id']
                 quantity=data['request_quantity']
                 item = Item.objects.get(item_id=data['item_name'])
+                request_list.append((item.item_name, quantity))
                 Log.objects.create(request_id=id, item_id=data['item_name'], item_name = item.item_name, initiating_user=request.user, nature_of_event="Request", 
-                            affected_user=None, change_occurred="Requested " + str(quantity))
+                            affected_user='', change_occurred="Requested " + str(quantity))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request confirmation'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'request':request_list,
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -395,7 +462,7 @@ class APIApproveRequest(APIView):
                 # add new disbursement item to table
                 disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
                                             total_quantity=indiv_request.request_quantity, comment=comment, time_disbursed=timezone.localtime(timezone.now()))
-                disbursement.save()   
+                disbursement.save() 
                 Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
             elif indiv_request.type == "Loan":
@@ -408,6 +475,22 @@ class APIApproveRequest(APIView):
             # change status of request to approved
             if serializer.is_valid():
                 serializer.save(status="Approved")
+                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
+                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [self.request.user.email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':self.request.user,
+                    'item':item.item_name,
+                    'quantity':indiv_request.request_quantity,
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -435,6 +518,20 @@ class APIDenyRequest(APIView):
             serializer.save(status="Denied")
             Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name_id, item_name = indiv_request.item_name, initiating_user=request.user, nature_of_event="Deny", 
                        affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Request cancel'
+            to = [self.request.user.email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':self.request.user,
+                'item':indiv_request.item_name,
+                'quantity':indiv_request.request_quantity,
+            }
+            message=render_to_string('inventory/request_denial_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -485,6 +582,22 @@ class APIDirectDisbursement(APIView):
                 quantity = data['total_quantity']
                 Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
                        affected_user=recipient, change_occurred="Disbursed " + str(quantity))
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct Dispersal'
+                to = [User.objects.get(username=recipient).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':recipient,
+                    'item':item_to_disburse.item_name,
+                    'quantity':item_to_disburse.quantity,
+                    'disburser':request.user.username,
+                    'type': 'disbursed',
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
@@ -508,7 +621,7 @@ class APIUserList(APIView):
         if serializer.is_valid():
             serializer.save()
             username=serializer.data['username']
-            Log.objects.create(request_id=None, item_id=None, item_name = None, initiating_user=request.user, nature_of_event="Create", 
+            Log.objects.create(request_id=None, item_id=None, item_name = '', initiating_user=request.user, nature_of_event="Create", 
                        affected_user=username, change_occurred="Created user")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -537,7 +650,7 @@ class APIUserDetail(APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            Log.objects.create(request_id=None, item_id=None, item_name=None, initiating_user=request.user, nature_of_event="Edit",
+            Log.objects.create(request_id=None, item_id=None, item_name='', initiating_user=request.user, nature_of_event="Edit",
                                affected_user=serializer.data['username'], change_occurred="Changed permissions for " + str(serializer.data['username']))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -566,21 +679,35 @@ class APITagDetail(APIView):
         return Response(serializer.data)
 
 ########################################### Logs ##################################################
-class APILogList(APIView):
+class LogFilter(FilterSet):
+    item_name = ModelChoiceFilter(
+        queryset = Item.objects.all(),
+        name="item_name", 
+    )
+#     time_occurred = DateTimeFilter(
+#         name="time_occurred"
+#     )
+    class Meta:
+        model = Log
+        fields = ['item_name', 'initiating_user', 'nature_of_event', 'time_occurred', 'affected_user', 'change_occurred']
+        
+class APILogList(ListAPIView):
     """
     List all Logs (admin / manager)
     """
     permission_classes = (IsAdminOrManager,)
 #     pagination_class = rest_framework.pagination.PageNumberPagination
     pagination_class = rest_framework.pagination.LimitOffsetPagination
-    
+    model = Log
+    filter_class = LogFilter
+    queryset = Log.objects.all()
+    serializer_class = LogSerializer
+     
     def get(self, request, format=None):
-#         if(User.objects.get(username=request.user).is_staff) 
-        page = self.paginate_queryset(Log.objects.all())
+        page = self.paginate_queryset(self.filter_queryset(Log.objects.all()))
         if page is not None:
             serializer = LogSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-
         serializer = LogSerializer(Log.objects.all(), many=True)
         return Response(serializer.data)
     
@@ -635,8 +762,8 @@ class APICustomField(APIView):
             serializer.save()
             data=serializer.data
             field=data['field_name']
-            Log.objects.create(request_id=None, item_id=None, item_name="ALL", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user=None, change_occurred='Added custom field ' + str(field))
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added custom field ' + str(field))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -666,16 +793,124 @@ class APICustomFieldModify(APIView):
         
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
-        Log.objects.create(request_id=None, item_id=None,  item_name="ALL", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user=None, change_occurred='Deleted custom field ' + str(field.field_name))
+        Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+########################################## Bulk Upload ########################################### 
+class ItemUpload(APIView):
+    """
+    Uploading items via API
+    """
+    def errorHandling(self, request, message, createdItems):
+        for createdItem in createdItems:
+            createdItem.delete()
+        messages.error(request._request, message)
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        
+    def post(self, request, *args, **kwargs):
+        csvData = request.POST.getlist('data[]')
+        headerMap = {}
+        customFieldMap = {}
+        headers = csvData[0].split(',')
+        custom_fields = Custom_Field.objects.all()
+        for i, header in enumerate(headers):
+            if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
+                # ERROR CHECK, make sure the custom field names are correct 
+                if not any(field.field_name == header for field in custom_fields):
+                    messages.error(request._request, 
+                                 'field ' + header + ' does not exist')
+                    return Response('field ' + header + ' does not exist', status=status.HTTP_400_BAD_REQUEST) 
+                customFieldMap[header.lower()] = i
+            else:
+                headerMap[header.lower()] = i    
+            
+        # ERROR CHECK, make sure that item name and quantity headers exist
+        if not "item name" in headerMap:
+            messages.error(request._request, 
+                                 'Item Name does not exist in header')
+            return Response("Make sure item name exists in header", status=status.HTTP_400_BAD_REQUEST) 
+        if not "quantity" in headerMap:
+            messages.error(request._request, 
+                                 'Quantity does not exist in header')
+            return Response("Make sure quantity exists in header", status=status.HTTP_400_BAD_REQUEST) 
+        
+        createdItems = []
+        for i, csvRow in enumerate(csvData[1:]):
+            row = csvRow.split(',')
+            if row[headerMap["item name"]]=='':
+                messages.error(request._request, 
+                                 'item name does not exist in row ' + str(i+1))
+                return Response('item name does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
+            if row[headerMap["quantity"]]=='':
+                messages.error(request._request, 
+                                 'quantity does not exist in row ' + str(i+1))
+                return Response('quantity does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
+            item, created = Item.objects.get_or_create(item_name=row[headerMap["item name"]], quantity=row[headerMap["quantity"]], model_number=row[headerMap["model number"]], description=row[headerMap["description"]])
+            if not created:
+                return self.errorHandling(request, "Item " + row[headerMap["item name"]] + " already exists", createdItems)
+
+            item.save()
+            createdItems.append(item)
+            # add to tags
+            for tag in row[headerMap["tags"]].split('/'):
+                t = Tag(tag=tag)
+                t.save(force_insert=True)
+                item.tags.add(t)
+                item.save()
+            # add custom fields
+            for custom_field, j in customFieldMap.items():
+                actual_field = next((x for x in custom_fields if x.field_name.lower() == custom_field), None)
+                if actual_field.field_type == "Short":
+                    if len(row[j])<=400:
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
+                        value.save()
+                    else:
+                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
+                elif actual_field.field_type == "Long":
+                    if len(row[j])<=1000:
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_long_text=row[j])
+                        value.save()
+                    else:
+                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
+                elif actual_field.field_type == "Int":
+                    try:
+                        int(row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_integer=int(row[j]))
+                        value.save()
+                    except ValueError:
+                        if row[j] == "":
+                            continue
+                        else:
+                            return self.errorHandling(request,"custom_field at row " + str(i+1) + " is not a int", createdItems) 
+                elif actual_field.field_type == "Float":
+                    try:
+                        float(row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, field_value_floating=float(row[j]))
+                        value.save()
+                    except ValueError:
+                        if row[j] == "":
+                            continue
+                        else:
+                            return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not a float", createdItems)
+        items = {}
+#         pk_list = [5, 7, 1, 3, 4]  
+#         clauses = ' '.join(['WHEN id=%s THEN %s' % (pk, i) for i, pk in enumerate(pk_list)])  
+#         ordering = 'CASE %s END' % clauses  
+#         items = Article.objects.filter(pk__in=pk_list).extra(  
+#                    select={'ordering': ordering}, order_by=('ordering',))
+        serializer = ItemSerializer(items, many=True)
+        messages.success(request._request, 
+                                 'CSV file successfully uploaded')
+        return Response(serializer.data)
+
 
 ########################################## LOAN ###########################################    
 class APILoanList(APIView):
     permission_classes = (IsAdminOrUser,)
     
-    def get(self, request, format=None): #Loan Get
+    def get(self, request, format=None):
         if 'item_name' in request.data: # these nested ifs allow for a user to filter based on a regular item_name string (not an item_id) using the item_name field, use item_name_id to filter by id
             request.data['item_name'] = Item.objects.get(item_name=request.data['item_name'])
         loans = Loan.objects.filter(**request.data)
@@ -684,13 +919,12 @@ class APILoanList(APIView):
         serializer = FullLoanSerializer(loans, many=True)
         return Response(serializer.data)
 
-class APILoan(APIView): 
+class APILoan(APIView):
     permission_classes = (IsAdmin,)
     serializer_class = LoanSerializer
     
-    def put(self, request, pk, format=None): #Loan Edit
-        print ("things")
-        loan = Loan.objects.get(loan_id=pk) 
+    def put(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
         orig_quant = loan.total_quantity
         new_quant = int(request.data['total_quantity'])
         item = loan.item_name
@@ -708,7 +942,7 @@ class APILoan(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-    def delete(self, request, pk, format=None): #Loan Check In
+    def delete(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
         requested_quant = int(request.data['check_in'])   
         if requested_quant > 0 and requested_quant <= loan.total_quantity:
@@ -727,7 +961,7 @@ class APILoan(APIView):
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
-    def post(self, request, pk, format=None): #Loan Convert
+    def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
         admin_name = request.user.username
         user_name = loan.user_name
@@ -749,6 +983,3 @@ class APILoan(APIView):
                 serializer.save()
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
-            
-
-        
