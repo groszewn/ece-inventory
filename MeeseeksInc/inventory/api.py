@@ -16,6 +16,9 @@ from django.shortcuts import render, redirect, render_to_response
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+from django.core.mail import EmailMessage
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.views import generic
 from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
@@ -38,9 +41,13 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
+    SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates
+from custom_admin.tasks import loan_reminder_email as task_email
+
 
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -379,6 +386,7 @@ class APIRequestThroughItem(APIView):
             for user in SubscribedUsers.objects.all():
                 to.append(user.email)
             message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+            print(to)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -522,13 +530,14 @@ class APIDenyRequest(APIView):
                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
             except (ObjectDoesNotExist, IndexError) as e:
                 prepend = ''
-            subject = prepend + 'Request cancel'
+            subject = prepend + 'Request denial'
             to = [self.request.user.email]
             from_email='noreply@duke.edu'
             ctx = {
                 'user':self.request.user,
                 'item':indiv_request.item_name,
                 'quantity':indiv_request.request_quantity,
+                'comment': serializer.data.get('comment'),
             }
             message=render_to_string('inventory/request_denial_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
@@ -983,8 +992,7 @@ class APILoan(APIView):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
-    
+        
 ########################################## Subscription ###########################################    
 
 class APISubscriptionDetail(APIView):
@@ -1001,7 +1009,7 @@ class APISubscriptionDetail(APIView):
     
     def post(self, request, pk, format=None):
         user, created = self.get_object(pk)
-        serializer = SubscribeSerializer(user, data=request.data, partial=True)
+        serializer = SubscribeSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1047,6 +1055,8 @@ class APILoanSendDates(APIView):
         serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
+            for date in serializer.data:
+                print(date['date'])
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
   
@@ -1055,8 +1065,5 @@ class APILoanSendDates(APIView):
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
-    
-            
-
     
     

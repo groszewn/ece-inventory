@@ -50,16 +50,18 @@
 	{% endblock requestEdit %}
 	
 	{% if user.is_staff %}
+	
 	{% block comment_accept %}
 			<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve This Request</a>
 	{% endblock comment_accept %}
+	
 	{% block comment_deny %}
 			<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny This Request</a>	
 	{% endblock comment_deny %}
 	{% endif %}
 	
 	{% if request.user_id == current_user%}
-		<button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to CANCEL this request?')" value="Cancel" name="cancel">Cancel Request</button>
+		<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel Request</a>
 	{% endif %}
 	
 	{%endif%}

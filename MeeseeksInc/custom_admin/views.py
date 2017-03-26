@@ -27,13 +27,10 @@ from custom_admin.tasks import loan_reminder_email as task_email
 from MeeseeksInc.celery import app
 import requests, json, urllib, subprocess
 from rest_framework.authtoken.models import Token
-
-
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from inventory.forms import RequestForm, SearchForm
+from inventory.forms import RequestForm
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
-
 
 def staff_check(user):
     return user.is_staff
@@ -47,9 +44,6 @@ def active_check(user):
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
 
-# from inventory.models import Instance, Request, Item, Disbursement
-# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
-################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
@@ -57,9 +51,6 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     model = Tag
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
-
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.all()
         context['approved_request_list'] = Request.objects.filter(status="Approved")
         context['pending_request_list'] = Request.objects.filter(status="Pending")
@@ -406,21 +397,14 @@ def convert_loan(request, pk):
     if request.method == "POST":
         form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
-            admin_name = request.user.username
-            user_name = loan.user_name
-            item = loan.item_name
-            comment = loan.comment
-            time_disbursed = timezone.localtime(timezone.now())
-            quantity_disbursed = int(form['items_to_convert'].value())
-            loan.total_quantity = loan.total_quantity - quantity_disbursed
-            loan.save()
-            if loan.total_quantity == 0:
-                loan.delete()
-            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
-            disbursement.save()
-            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
-            messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
+            payload = {'convert':form['items_to_convert'].value()}
+            header = get_header(request)
+            response = requests.post(url, headers = header, data=json.dumps(payload))
+            if response.status_code == 201:
+               messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            else:
+                messages.errors(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
         form = ConvertLoanForm(loan.total_quantity) 
@@ -1275,7 +1259,7 @@ def loan_reminder_body(request):
     except (ObjectDoesNotExist, IndexError) as e:
         body = LoanReminderEmailBody.objects.create(body='')
     try:
-        start_dates = [x.date for x in LoanSendDates.objects.all()]
+        start_dates = [str(x.date) for x in LoanSendDates.objects.all()]
         selected_dates = []
         for d in start_dates:
             selected_dates.append(d)
@@ -1284,17 +1268,14 @@ def loan_reminder_body(request):
     if request.method == "POST":
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
-#             try:
-#                 body.delete()
-#             except (ObjectDoesNotExist) as e:
-#                 pass
             input_date_list = form['send_dates'].value().split(',')
-#             output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
             payload_send_dates=[]
             for date in input_date_list:
                 lst = date.split('/')
                 formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
                 payload_send_dates.append({'date':formatted})
+              
                 #LoanSendDates.objects.create(date=date)
                 #task_email.apply_async(eta=date+timedelta(hours=3))
             #LoanReminderEmailBody.objects.create(body=form['body'].value())
@@ -1313,8 +1294,6 @@ def loan_reminder_body(request):
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
     return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
             
- 
-
 def delay_email(request):
     #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
     task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=5))
@@ -1417,3 +1396,17 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
 
         return qs  
 ################################################################
+
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')    
+def get_token(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    return token.key
+
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def get_header(request):
+    token = get_token(request)
+    header = {'Authorization': 'Token ' + token,"Accept": "application/json", "Content-type":"application/json"}
+    return header
