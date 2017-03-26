@@ -52,7 +52,6 @@ def loan_reminder_email():
             'body':body,
             'item_list':loan_dict[user],
         }
-        print(datetime.now())
         message=render_to_string('inventory/loan_reminder_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     return

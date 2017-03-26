@@ -1061,7 +1061,7 @@ class APILoanEmailConfigureDates(APIView):
             serializer.save()
             for date in serializer.data:
                 day = datetime.strptime(date['date'], "%Y-%m-%d")
-                task_email.apply_async(eta=day+timedelta(hours=5, minutes=30))
+                task_email.apply_async(eta=day+timedelta(hours=12))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1071,12 +1071,7 @@ class APILoanEmailClearDates(APIView):
     Clear all loan dates
     """
     def delete(self, request, format=None):
-        from MeeseeksInc.celery import app as celery_app
         celery_app.control.purge()
-#         import celery.bin.amqp
-#         amqp = celery.bin.amqp.amqp(app = celery_app)
-#         print(celery_app)
-#         amqp.run('queue.purge', 'name_of_your_queue')
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
