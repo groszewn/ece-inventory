@@ -54,14 +54,18 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
+    SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
 
 from .forms import RequestForm, RequestSpecificForm, SearchForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates
 
 from .models import Tag
 from django.core.exceptions import ObjectDoesNotExist
+from MeeseeksInc.celery import app
+
 
 def active_check(user):
     return user.is_active
@@ -1697,4 +1701,76 @@ class APILoan(APIView):
                 serializer.save()
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+########################################## Subscription ###########################################    
+
+class APISubscriptionDetail(APIView):
+    """
+    Subscribe to emails
+    """
+    permission_classes = (IsAdminOrManager,)
+    
+    def get_object(self, pk):
+        try:
+            return SubscribedUsers.objects.get_or_create(user=pk)
+        except User.DoesNotExist:
+            raise Http404
+    
+    def post(self, request, pk, format=None):
+        user, created = self.get_object(pk)
+        serializer = SubscribeSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, format=None):
+        user, created = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+########################################## Email Body ###########################################    
+
+class APILoanEmailBody(APIView):
+    """
+    Loan body 
+    """
+    permission_classes = (IsAdminOrManager,)
+    
+    def post(self, request, format=None):
+        LoanReminderEmailBody.objects.all().delete()
+        serializer = LoanReminderBodySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, format=None):
+        LoanReminderEmailBody.objects.all().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class APILoanSendDates(APIView):
+    """
+    Loan send dates 
+    """
+    permission_classes = (IsAdminOrManager,)
+    
+    def get(self, request, format=None):
+        serializer = LoanSendDatesSerializer(LoanSendDates.objects.all(), many=True)
+        return Response(serializer.data)
+    
+    def post(self, request, format=None):
+        LoanSendDates.objects.all().delete()
+        serializer = LoanSendDatesSerializer(data=request.data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+  
+    def delete(self, request, format=None):
+        app.control.purge()
+        LoanSendDates.objects.all().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+    
             

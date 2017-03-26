@@ -52,4 +52,7 @@ urlpatterns = [
     url(r'^api/loan/$', views.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
     url(r'^api/upload/$', views.ItemUpload.as_view(), name='upload'),    
+    url(r'^api/subscribe/(?P<pk>[\w\-\ ]+)/$', views.APISubscriptionDetail.as_view(), name='subscribe'),
+    url(r'^api/loan/email/body/$', views.APILoanEmailBody.as_view(), name='email_body'),
+    url(r'^api/loan/email/dates/$', views.APILoanSendDates.as_view(), name='email_send_dates'),
 ]

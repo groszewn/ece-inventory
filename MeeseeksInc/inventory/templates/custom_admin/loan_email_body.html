@@ -15,7 +15,7 @@
 <h3>Selected dates</h3>
 {% if selected_dates %}
 	{% for date in selected_dates %}
-		<li>{{ date.date }}</li>
+		<li>{{ date }}</li>
 	{% endfor %}
 {% else %}
 	<div>No dates selected</div>
@@ -34,10 +34,14 @@
 <script type="text/javascript" src="/static/js/jquery.datepick.js"></script>
 
 <script>
+
 $(function() {
 	$('#id_send_dates').datepick({
-		multiSelect:999
+		multiSelect:999, 
+		minDate:0,
+		addDates: [new Date('3/28/2017')]
 	});
+	console.log({{selected_dates|safe}});
 });
 
 </script>

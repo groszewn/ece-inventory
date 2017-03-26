@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log, Loan
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(allow_blank = True)
@@ -266,3 +266,18 @@ class FullLoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned')
+        
+class SubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscribedUsers
+        fields = ('user','email',)
+        
+class LoanReminderBodySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanReminderEmailBody
+        fields = ('body',)
+        
+class LoanSendDatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanSendDates
+        fields = ('date',)
