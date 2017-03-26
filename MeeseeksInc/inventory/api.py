@@ -294,11 +294,13 @@ class APIRequestDetail(APIView):
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             change_list=[]
-            if int(serializer.data['request_quantity']) != int(indiv_request.request_quantity):
-                change_list.append(('request quantity', indiv_request.request_quantity, serializer.data['request_quantity']))
-            if serializer.data['reason'] != indiv_request.reason:
-                change_list.append(('reason', indiv_request.reason, serializer.data['reason']))
             if serializer.is_valid():
+                
+                if int(serializer.data['request_quantity']) != int(indiv_request.request_quantity):
+                    change_list.append(('request quantity', indiv_request.request_quantity, serializer.data['request_quantity']))
+                if serializer.data['reason'] != indiv_request.reason:
+                    change_list.append(('reason', indiv_request.reason, serializer.data['reason']))
+            
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
