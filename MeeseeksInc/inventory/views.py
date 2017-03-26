@@ -42,10 +42,17 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
+    SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
+
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
+from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates
+
 from django.core.exceptions import ObjectDoesNotExist
+from MeeseeksInc.celery import app
+
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')

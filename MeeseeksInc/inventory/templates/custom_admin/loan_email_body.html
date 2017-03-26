@@ -15,7 +15,7 @@
 <h3>Selected dates</h3>
 {% if selected_dates %}
 	{% for date in selected_dates %}
-		<li>{{ date.date }}</li>
+		<li>{{ date }}</li>
 	{% endfor %}
 {% else %}
 	<div>No dates selected</div>
@@ -32,12 +32,17 @@
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.datepick.css"> 
 <script type="text/javascript" src="/static/js/jquery.plugin.js"></script> 
 <script type="text/javascript" src="/static/js/jquery.datepick.js"></script>
+<script type="text/javascript" src="/static/js/jquery-ui.multidatespicker.js"></script>
 
 <script>
+var date = new Date();
 $(function() {
 	$('#id_send_dates').datepick({
-		multiSelect:999
+		multiSelect:999, 
+		minDate:0,
+		addDates: [date.setDate(30)]
 	});
+	console.log({{selected_dates|safe}});
 });
 
 </script>

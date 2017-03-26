@@ -48,4 +48,7 @@ urlpatterns = [
     url(r'^api/loan/$', inventory.api.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
     url(r'^api/upload/$', inventory.api.ItemUpload.as_view(), name='upload'),    
+    url(r'^api/subscribe/(?P<pk>[\w\-\ ]+)/$', inventory.api.APISubscriptionDetail.as_view(), name='subscribe'),
+    url(r'^api/loan/email/body/$', inventory.api.APILoanEmailBody.as_view(), name='email_body'),
+    url(r'^api/loan/email/dates/$', inventory.api.APILoanSendDates.as_view(), name='email_send_dates'),
 ]

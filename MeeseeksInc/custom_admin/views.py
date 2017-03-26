@@ -1233,18 +1233,19 @@ def subscribe(request):
     exists = SubscribedUsers.objects.filter(user=request.user.username).exists()
     if request.method == "POST":
         form = SubscribeForm(request.POST or None, initial = {'subscribed': exists})
-        if form.is_valid():  
+        if form.is_valid(): 
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/subscribe/'+user.username+'/'
+            payload = {'user':user.username, 'email':user.email}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"} 
             if form['subscribed'].value():
-                try:
-                    SubscribedUsers.objects.get(user=request.user.username)
-                except ObjectDoesNotExist:
-                    SubscribedUsers.objects.create(user=request.user.username, email=request.user.email)
+                requests.post(url, headers = header, data = json.dumps(payload))
+                #SubscribedUsers.objects.get_or_create(user=request.user.username)
             else:
-                try:
-                    subscribeduser = SubscribedUsers.objects.get(user=request.user.username)
-                except ObjectDoesNotExist:
-                    return redirect('/customadmin')
-                subscribeduser.delete()
+                requests.delete(url, headers=header, data=json.dumps(payload))
             return redirect('/customadmin')
     else:
         form = SubscribeForm(initial = {'subscribed': exists})
@@ -1258,27 +1259,36 @@ def loan_reminder_body(request):
     except (ObjectDoesNotExist, IndexError) as e:
         body = LoanReminderEmailBody.objects.create(body='')
     try:
-        selected_dates = LoanSendDates.objects.all()
+        start_dates = [str(x.date) for x in LoanSendDates.objects.all()]
+        selected_dates = []
+        for d in start_dates:
+            selected_dates.append(d)
     except ObjectDoesNotExist:
         selected_dates = None
     if request.method == "POST":
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
-            app.control.purge()
-            try:
-                body.delete()
-            except (ObjectDoesNotExist) as e:
-                pass
             input_date_list = form['send_dates'].value().split(',')
             output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
-            try:
-                LoanSendDates.objects.all().delete()
-            except ObjectDoesNotExist as e:
-                pass
-            for date in output_date_list:
-                LoanSendDates.objects.create(date=date)
-                task_email.apply_async(eta=date+timedelta(hours=3))
-            LoanReminderEmailBody.objects.create(body=form['body'].value())
+            payload_send_dates=[]
+            for date in input_date_list:
+                lst = date.split('/')
+                formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
+                payload_send_dates.append({'date':formatted})
+              
+                #LoanSendDates.objects.create(date=date)
+                #task_email.apply_async(eta=date+timedelta(hours=3))
+            #LoanReminderEmailBody.objects.create(body=form['body'].value())
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url_send_dates=http_host+'/api/loan/email/dates/'
+            url_loan_body = http_host+'/api/loan/email/body/'
+            payload_loan_body = {'body':form['body'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"} 
+            requests.post(url_loan_body, headers = header, data = json.dumps(payload_loan_body))
+            requests.post(url_send_dates, headers = header, data = json.dumps(payload_send_dates))
             return redirect('/customadmin')
     else:
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
