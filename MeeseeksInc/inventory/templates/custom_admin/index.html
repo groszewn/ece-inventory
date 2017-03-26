@@ -465,6 +465,7 @@
 {% endblock js-convert %}
 
  <script>
+ var csrftoken = $.cookie('csrftoken');
 	$(document).ready(function(){
 		//var inventory_item_table = $('#inventory-item').DataTable();
 	    $('#inventory-request-all').dataTable({
@@ -493,11 +494,35 @@
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
 var editor; // use a global for the submit and return data rendering in the examples
+var table;
 editor = new $.fn.dataTable.Editor( {
-	    ajax: function ( method, url, d, successCallback, errorCallback ) {
-	        console.log(method);
-	        console.log(url);
-	        console.log(d);
+		ajax: function ( method, url, d, successCallback, errorCallback ) {
+			for(id in d.data) {
+		    	d.data[id].id = id;
+		    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
+		    	for(changedColumn in d.data[id]) {
+		    		result[changedColumn] = d.data[id][changedColumn];
+		    	}
+		    	var output = { data: [] };
+		    	output.data.push(result);
+		    	var data = JSON.stringify(d.data[id]);
+		    	$.ajax({
+		    		beforeSend: function(xhr, settings) {
+				    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				    },
+					type:"PUT",
+					url: "http://127.0.0.1:8000/api/items/"+id+"/",
+					contentType: 'application/json',
+					dataType: 'json',
+			        data: data,
+			        success: function(json) {
+			        	successCallback(output);
+			        },
+			        error: function(error) {
+			        	errorCallback();
+			        }
+				});
+		    }
 	    },
 	    table: "#inventory-search",
 	    idSrc:  'item_id',
@@ -523,7 +548,6 @@ $('#search-form').on('submit', function(event){
     console.log("form submitted!")  // sanity check
     get_search_data();
 });
-var table;
    
 function get_search_data() {
 	var data = '';

@@ -898,15 +898,15 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
-        tag_ids = request.data.getlist('tags')
-        tags = Tag.objects.filter(id__in=tag_ids)
-        item.tags.set(tags)
+        if 'tag' in request.data:
+            tag_ids = request.data['tags']
+            tags = Tag.objects.filter(id__in=tag_ids)
+            item.tags.set(tags)
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
-            
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
