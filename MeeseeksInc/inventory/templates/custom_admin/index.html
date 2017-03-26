@@ -32,7 +32,7 @@
 </form>
 
 
-<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
 	<th>Item Name</th>
@@ -497,31 +497,73 @@ var editor; // use a global for the submit and return data rendering in the exam
 var table;
 editor = new $.fn.dataTable.Editor( {
 		ajax: function ( method, url, d, successCallback, errorCallback ) {
-			for(id in d.data) {
-		    	d.data[id].id = id;
-		    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
-		    	for(changedColumn in d.data[id]) {
-		    		result[changedColumn] = d.data[id][changedColumn];
-		    	}
-		    	var output = { data: [] };
-		    	output.data.push(result);
-		    	var data = JSON.stringify(d.data[id]);
-		    	$.ajax({
-		    		beforeSend: function(xhr, settings) {
-				    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-				    },
-					type:"PUT",
-					url: "http://127.0.0.1:8000/api/items/"+id+"/",
-					contentType: 'application/json',
-					dataType: 'json',
-			        data: data,
-			        success: function(json) {
-			        	successCallback(output);
-			        },
-			        error: function(error) {
-			        	errorCallback();
-			        }
-				});
+			if(d.action === 'create') {
+				for(id in d.data) {
+			    	var output = { data: [] };
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"POST",
+						url: "http://127.0.0.1:8000/api/items/",
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	d.data[id].id = json.item_id;
+				        	d.data[id]['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
+				        	output.data.push(d.data[id]);
+				        	console.log(output);
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+			} else if(d.action==='edit') {
+				for(id in d.data) {
+			    	d.data[id].id = id;
+			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
+			    	for(changedColumn in d.data[id]) {
+			    		result[changedColumn] = d.data[id][changedColumn];
+			    	}
+			    	var output = { data: [] };
+			    	output.data.push(result);
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"PUT",
+						url: "http://127.0.0.1:8000/api/items/"+id+"/",
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+		    } else if(d.action==='remove') {
+		    	for(id in d.data) {
+		    		var output = { data: [] };
+		    		console.log(id);
+		    		$.ajax({
+		    			beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"DELETE",
+						url: "http://127.0.0.1:8000/api/items/"+id+"/",
+				        success: function(result) {
+				        	successCallback(output);
+				        }
+					});
+				}
 		    }
 	    },
 	    table: "#inventory-search",
@@ -542,14 +584,14 @@ editor
     .on( 'close', function () {
         table.keys.enable();
     } );
-get_search_data(); // initialize item data
+get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
     console.log("form submitted!")  // sanity check
-    get_search_data();
+    get_search_data(false);
 });
-   
-function get_search_data() {
+
+function get_search_data(first) {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
 	var excluded_tags = $('#excluded-tags').select2('val')
@@ -570,10 +612,12 @@ function get_search_data() {
 	var djangoCustomFieldNameList = [];
 	{% for field in custom_fields %} 
 		djangoCustomFieldNameList.push("{{ field.field_name }}");
-		editor.add( {
-		    label: "{{ field.field_name }}",
-		    name: "{{ field.field_name }}"
-		} );
+		if(first) {
+			editor.add( {
+			    label: "{{ field.field_name }}",
+			    name: "{{ field.field_name }}"
+			} );
+		}
 		columns.push({ data: "{{ field.field_name }}" });
 	{% endfor %}
 	table = $('#inventory-search').DataTable({
@@ -585,7 +629,6 @@ function get_search_data() {
 		    dataSrc: function ( json ) {
 		      $('#item_name').val(''); // remove the value from the input
 	        	var numCustomFields = {{ custom_fields|length }}
-	        	
 	         	for(i in json) {
 	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
 	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
@@ -622,12 +665,12 @@ function get_search_data() {
 		  },
 		columns: columns,
 		keys: {
-	        columns: ':not(:first-child)',
+	        columns: ':nth-child(2),:nth-child(3),:nth-child(4)',
 	        editor:  editor
 	    },
 	    select: {
 	        style:    'os',
-	        selector: 'td:first-child',
+	        //selector: 'td:first-child',
 	        blurable: true
 	    },
 	    buttons: [
