@@ -475,10 +475,10 @@
 	var instActive;
 
 	$.multiDatesPicker = {version: false};
-	$.multiDatesPicker = new MultiDatesPicker(); // singleton instance
+	//$.multiDatesPicker = new MultiDatesPicker(); // singleton instance
 	$.multiDatesPicker.initialized = false;
 	$.multiDatesPicker.uuid = new Date().getTime();
-	$.multiDatesPicker.version = $.ui.multiDatesPicker.version;
+	//$.multiDatesPicker.version = $.ui.multiDatesPicker.version;
 	
 	// allows MDP not to hide everytime a date is picked
 	$.multiDatesPicker._hideDatepicker = $.datepicker._hideDatepicker;
