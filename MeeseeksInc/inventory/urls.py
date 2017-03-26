@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
 import custom_admin.views
+import inventory.api
 
 from . import views
 
@@ -14,41 +15,37 @@ urlpatterns = [
     # b/c we use it to load these urls later in the html files
     # this allows us to change the url of a page without changing it in the HTML files
      
-    url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.check_in_loan, name='check_in_loan'), 
-    url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.edit_loan, name='edit_loan'), 
-    url(r'^loan/detail/(?P<pk>[\w\-\ ]+)$', views.loan_detail, name='loan_detail'),
-    url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^item/(?P<pk>[\w\-\ ]+)/$', views.DetailView.as_view(), name='detail'),
-    url(r'^search/$', views.search_view, name='search_setup'),
-    url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.request_specific_item, name='request_specific_item'),
-    url(r'^post/request/$', views.post_new_request, name='post_new_request'),
-    url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.request_detail.as_view(), name='request_detail'),
-    url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.edit_request, name='request_edit'),
-    url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.cancel_request, name='request_cancel'),
-    url(r'^(?P<pk>[\w\-\ ]+)/approve/$', views.approve_request, name='request_approve'),
-    url(r'^inventory_cart/delete/(?P<pk>[\w\-\ ]+)/$', views.delete_cart_instance, name='delete_cart_instance'),
-    url(r'^request_edit_from_main/(?P<pk>[\w\-\ ]+)$', views.edit_request_main_page, name='request_edit_from_main'),
-    
+    url(r'^inventory_cart$', views.CartListView.as_view(), name='inventory_cart'),
+    url(r'^inventory_cart/delete/(?P<pk>[\w\-\ ]+)/$', views.CartListView.delete_cart_instance, name='delete_cart_instance'),
+    url(r'^post/request/(?P<pk>[\w\-\ ]+)/$', views.RequestDetailView.request_specific_item, name='request_specific_item'),
+    url(r'^request_edit/(?P<pk>[\w\-\ ]+)$', views.RequestDetailView.edit_request, name='request_edit'),
+    url(r'^request_detail/(?P<pk>[\w\-\ ]+)$', views.RequestDetailView.as_view(), name='request_detail'),
+    url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.RequestDetailView.cancel_request, name='request_cancel'),
+    url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.check_in_loan, name='check_in_loan'), 
+    url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)$', custom_admin.views.edit_loan, name='edit_loan'), 
+    url(r'^loan/detail/(?P<pk>[\w\-\ ]+)$', views.LoanDetailView.as_view(), name='loan_detail'),
+   
     ################################### API URLS #######################################
-    url(r'^api/items/$', views.APIItemList.as_view(), name='api_item_list'),
-    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', views.APIItemDetail.as_view(), name='api_item_detail'),
-    url(r'^api/requests/$', views.APIRequestList.as_view()),
-    url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', views.APIRequestThroughItem.as_view()),
-    url(r'^api/requests/multiple_create/(?P<item_list>[\w\-\ (\,)?]+)$', views.APIMultipleRequests.as_view()),
-    url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', views.APIRequestDetail.as_view()),
-    url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', views.APIApproveRequest.as_view()),
-    url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', views.APIDenyRequest.as_view()),
-    url(r'^api/disbursements/$', views.APIDisbursementList.as_view()),
-    url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', views.APIDirectDisbursement.as_view()),
-    url(r'^api/users/$', views.APIUserList.as_view()),
-    url(r'^api/users/(?P<pk>[\w\-\ ]+)/$', views.APIUserDetail.as_view()),
-    url(r'^api/custom/field/$', views.APICustomField.as_view()),
-    url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', views.APICustomFieldModify.as_view()),
-    url(r'^api/tags/$', views.APITagList.as_view(), name='api_tag_list'),
-    url(r'^api/logs/$', views.APILogList.as_view(), name='api_log_list'),
-    url(r'^api/loan/(?P<pk>[\w\-\ ]+)/$', views.APILoan.as_view(), name='api_loan'),
-    url(r'^api/loan/$', views.APILoanList.as_view(), name='api_loan_list'),
+    url(r'^api/items/$', inventory.api.APIItemList.as_view(), name='api_item_list'),
+    url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIItemDetail.as_view(), name='api_item_detail'),
+    url(r'^api/requests/$', inventory.api.APIRequestList.as_view()),
+    url(r'^api/requests/create/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIRequestThroughItem.as_view()),
+    url(r'^api/requests/multiple_create/(?P<item_list>[\w\-\ (\,)?]+)$', inventory.api.APIMultipleRequests.as_view()),
+    url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIRequestDetail.as_view()),
+    url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveRequest.as_view()),
+    url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyRequest.as_view()),
+    url(r'^api/disbursements/$', inventory.api.APIDisbursementList.as_view()),
+    url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDirectDisbursement.as_view()),
+    url(r'^api/users/$', inventory.api.APIUserList.as_view()),
+    url(r'^api/users/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIUserDetail.as_view()),
+    url(r'^api/custom/field/$', inventory.api.APICustomField.as_view()),
+    url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICustomFieldModify.as_view()),
+    url(r'^api/tags/$', inventory.api.APITagList.as_view(), name='api_tag_list'),
+    url(r'^api/logs/$', inventory.api.APILogList.as_view(), name='api_log_list'),
+    url(r'^api/loan/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoan.as_view(), name='api_loan'),
+    url(r'^api/loan/$', inventory.api.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
     
 ]

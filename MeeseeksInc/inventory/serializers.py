@@ -166,7 +166,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
     request_id = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id','type')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id', 'type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive

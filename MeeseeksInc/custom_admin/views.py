@@ -16,9 +16,9 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-
+import requests
 from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan
-from inventory.forms import RequestForm, SearchForm
+from inventory.forms import RequestForm
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm
 
 
@@ -31,17 +31,12 @@ def admin_check(user):
 def active_check(user):
     return user.is_active
 
-# from inventory.models import Instance, Request, Item, Disbursement
-# from .forms import DisburseForm, ItemEditForm, RegistrationForm, AddCommentRequestForm, LogForm
-################ DEFINE VIEWS AND RESPECTIVE FILES ##################
 class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
     template_name = 'custom_admin/index.html'
     context_object_name = 'instance_list'
     def get_context_data(self, **kwargs):
         context = super(AdminIndexView, self).get_context_data(**kwargs)
-        tags = Tag.objects.all()
-        context['form'] = SearchForm(tags)
         context['request_list'] = Request.objects.all()
         context['approved_request_list'] = Request.objects.filter(status="Approved")
         context['pending_request_list'] = Request.objects.filter(status="Pending")
@@ -57,9 +52,11 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
         context['tags'] = Tag.objects.distinct('tag')
         return context
+    
     def get_queryset(self):
         """Return the last five published questions."""
         return Instance.objects.order_by('item')[:5]
+    
     def test_func(self):
         return self.request.user.is_staff
     
@@ -343,20 +340,11 @@ def edit_loan(request, pk):
     if request.method == "POST":
         form = EditLoanForm(request.POST, instance=loan) 
         if form.is_valid():
-            post = form.save(commit=False)
-            loan = Loan.objects.get(loan_id=pk)
-            item = loan.item_name
-            quantity_changed = post.total_quantity - loan.total_quantity 
-            new_quantity = item.quantity - quantity_changed
-            if new_quantity < 0:
-                messages.error(request, ('You cannot loan more items than the quantity available.'))
-                return redirect('/customadmin')
-            item.quantity = new_quantity
-            item.save()
-            post.save()
-            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            #token, create = Token.objects.get_or_create(user=user)
+            url = "http://localhost:8000/api/loan/" + pk + "/"
+            returnDict = requests.put(url, headers=form.data)
+            
+            
             return redirect('/customadmin')
     else:
         form = EditLoanForm(instance=loan) # blank request form with no data yet
