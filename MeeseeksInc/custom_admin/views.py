@@ -397,21 +397,14 @@ def convert_loan(request, pk):
     if request.method == "POST":
         form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
-            admin_name = request.user.username
-            user_name = loan.user_name
-            item = loan.item_name
-            comment = loan.comment
-            time_disbursed = timezone.localtime(timezone.now())
-            quantity_disbursed = int(form['items_to_convert'].value())
-            loan.total_quantity = loan.total_quantity - quantity_disbursed
-            loan.save()
-            if loan.total_quantity == 0:
-                loan.delete()
-            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
-            disbursement.save()
-            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
-            messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
+            payload = {'convert':form['items_to_convert'].value()}
+            header = get_header(request)
+            response = requests.post(url, headers = header, data=json.dumps(payload))
+            if response.status_code == 201:
+               messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+            else:
+                messages.errors(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             return redirect(reverse('custom_admin:index'))  
     else:
         form = ConvertLoanForm(loan.total_quantity) 
@@ -1291,8 +1284,6 @@ def loan_reminder_body(request):
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
     return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
             
- 
-
 def delay_email(request):
     #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
     task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=5))
@@ -1395,3 +1386,17 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
 
         return qs  
 ################################################################
+
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')    
+def get_token(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    return token.key
+
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def get_header(request):
+    token = get_token(request)
+    header = {'Authorization': 'Token ' + token,"Accept": "application/json", "Content-type":"application/json"}
+    return header

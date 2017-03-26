@@ -923,7 +923,7 @@ class APILoan(APIView):
     permission_classes = (IsAdmin,)
     serializer_class = LoanSerializer
     
-    def put(self, request, pk, format=None):
+    def put(self, request, pk, format=None): # edit loan
         loan = Loan.objects.get(loan_id=pk)
         orig_quant = loan.total_quantity
         new_quant = int(request.data['total_quantity'])
@@ -942,7 +942,7 @@ class APILoan(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-    def delete(self, request, pk, format=None):
+    def delete(self, request, pk, format=None): # check in loan
         loan = Loan.objects.get(loan_id=pk)
         requested_quant = int(request.data['check_in'])   
         if requested_quant > 0 and requested_quant <= loan.total_quantity:
@@ -961,7 +961,7 @@ class APILoan(APIView):
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
-    def post(self, request, pk, format=None):
+    def post(self, request, pk, format=None): # convert loan
         loan = Loan.objects.get(loan_id=pk)
         admin_name = request.user.username
         user_name = loan.user_name
@@ -981,5 +981,7 @@ class APILoan(APIView):
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    
