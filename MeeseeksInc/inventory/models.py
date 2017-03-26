@@ -4,13 +4,24 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+class SubscribedUsers(models.Model):
+    user = models.CharField(max_length=200)
+    email = models.CharField(max_length=200)
+    
+class EmailPrependValue(models.Model):
+    prepend_text = models.CharField(max_length=200, default='')
+   
+class LoanReminderEmailBody(models.Model):
+    body = models.TextField() 
+    
+class LoanSendDates(models.Model):
+    date = models.DateField()
 
 class Tag(models.Model):
     tag = models.CharField(max_length=200)
     def __str__(self):
         return self.tag
     
-
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     item_name = models.CharField(unique=True, max_length=200)
@@ -143,17 +154,4 @@ class Log(models.Model):
     time_occurred = models.DateTimeField(default=timezone.now)
     affected_user = models.CharField(max_length=200, null=True, default='')
     change_occurred = models.CharField(max_length=200, null=False)
-    
-class SubscribedUsers(models.Model):
-    user = models.CharField(max_length=200)
-    email = models.CharField(max_length=200)
-    
-class EmailPrependValue(models.Model):
-    prepend_text = models.CharField(max_length=200, default='')
-   
-class LoanReminderEmailBody(models.Model):
-    body = models.TextField() 
-    
-class LoanSendDates(models.Model):
-    date = models.DateField()
     
