@@ -785,6 +785,7 @@ class APIItemList(ListCreateAPIView):
     serializer_class = ItemSerializer
     custom_value_serializer = CustomValueSerializer
     filter_class = ItemFilter
+    pagination_class = rest_framework.pagination.PageNumberPagination
     
     def get_queryset(self):
         """ allow rest api to filter by submissions """
@@ -820,6 +821,10 @@ class APIItemList(ListCreateAPIView):
             "request": self.request,
         }
         serializer = ItemSerializer(items, many=True, context=context)
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
     def post(self, request, format=None):
