@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, time, datetime, timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -47,6 +47,8 @@ from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditF
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
 from custom_admin.tasks import loan_reminder_email as task_email
+from MeeseeksInc.celery import app
+
 
 
 
@@ -1040,7 +1042,7 @@ class APILoanEmailBody(APIView):
         LoanReminderEmailBody.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-class APILoanSendDates(APIView):
+class APILoanEmailConfigureDates(APIView):
     """
     Loan send dates 
     """
@@ -1051,15 +1053,22 @@ class APILoanSendDates(APIView):
         return Response(serializer.data)
     
     def post(self, request, format=None):
-        LoanSendDates.objects.all().delete()
+        app.control.purge()
+        #LoanSendDates.objects.all().delete()
         serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
-                print(date['date'])
+                day = datetime.strptime(date['date'], "%Y-%m-%d")
+                task_email.apply_async(eta=day+timedelta(hours=3))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-  
+
+
+class APILoanEmailClearDates(APIView):
+    """
+    Clear all loan dates
+    """
     def delete(self, request, format=None):
         app.control.purge()
         LoanSendDates.objects.all().delete()

@@ -1269,7 +1269,7 @@ def loan_reminder_body(request):
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
             input_date_list = form['send_dates'].value().split(',')
-            output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            #output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
             payload_send_dates=[]
             for date in input_date_list:
                 lst = date.split('/')
@@ -1282,17 +1282,29 @@ def loan_reminder_body(request):
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
-            url_send_dates=http_host+'/api/loan/email/dates/'
+            url_send_dates=http_host+'/api/loan/email/dates/configure/'
             url_loan_body = http_host+'/api/loan/email/body/'
             payload_loan_body = {'body':form['body'].value()}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"} 
             requests.post(url_loan_body, headers = header, data = json.dumps(payload_loan_body))
             requests.post(url_send_dates, headers = header, data = json.dumps(payload_send_dates))
-            return redirect('/customadmin')
+            return redirect(reverse('custom_admin:change_loan_body'))
     else:
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
     return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def delete_task_queue(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    http_host = get_host(request)
+    url=http_host+'/api/loan/email/dates/delete/'
+    header = {'Authorization': 'Token '+ str(token), 
+              "Accept": "application/json", "Content-type":"application/json"} 
+    requests.delete(url, headers = header)#, data = json.dumps(payload_loan_body))
+    return loan_reminder_body(request)
             
 def delay_email(request):
     #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))

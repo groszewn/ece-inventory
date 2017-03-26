@@ -481,18 +481,18 @@
 	//$.multiDatesPicker.version = $.ui.multiDatesPicker.version;
 	
 	// allows MDP not to hide everytime a date is picked
-	$.multiDatesPicker._hideDatepicker = $.datepicker._hideDatepicker;
-	$.datepicker._hideDatepicker = function(){
-		var target = this._curInst.input[0];
-		var mdp = target.multiDatesPicker;
-		if(!mdp || (this._curInst.inline === false && !mdp.changed)) {
-			return $.multiDatesPicker._hideDatepicker.apply(this, arguments);
-		} else {
-			mdp.changed = false;
-			$.datepicker._refreshDatepicker(target);
-			return;
-		}
-	};
+	//$.multiDatesPicker._hideDatepicker = $.datepicker._hideDatepicker;
+	//$.datepicker._hideDatepicker = function(){
+	//	var target = this._curInst.input[0];
+	//	var mdp = target.multiDatesPicker;
+	//	if(!mdp || (this._curInst.inline === false && !mdp.changed)) {
+	//		return $.multiDatesPicker._hideDatepicker.apply(this, arguments);
+	//	} else {
+	//		mdp.changed = false;
+	//		$.datepicker._refreshDatepicker(target);
+	//		return;
+	//	}
+	//};
 
 	// Workaround for #4055
 	// Add another global to avoid noConflict issues with inline event handlers
