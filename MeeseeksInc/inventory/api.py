@@ -47,7 +47,7 @@ from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditF
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
 from custom_admin.tasks import loan_reminder_email as task_email
-from MeeseeksInc.celery import app
+from MeeseeksInc.celery import app as celery_app
 
 
 
@@ -1053,14 +1053,13 @@ class APILoanEmailConfigureDates(APIView):
         return Response(serializer.data)
     
     def post(self, request, format=None):
-        app.control.purge()
         #LoanSendDates.objects.all().delete()
         serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
                 day = datetime.strptime(date['date'], "%Y-%m-%d")
-                task_email.apply_async(eta=day+timedelta(hours=3))
+                task_email.apply_async(eta=day+timedelta(hours=5, minutes=30))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1070,7 +1069,12 @@ class APILoanEmailClearDates(APIView):
     Clear all loan dates
     """
     def delete(self, request, format=None):
-        app.control.purge()
+        from MeeseeksInc.celery import app as celery_app
+        celery_app.control.purge()
+#         import celery.bin.amqp
+#         amqp = celery.bin.amqp.amqp(app = celery_app)
+#         print(celery_app)
+#         amqp.run('queue.purge', 'name_of_your_queue')
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
