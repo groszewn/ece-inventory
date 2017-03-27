@@ -43,7 +43,7 @@
 	<script src={% static 'js/select2.min.js' %}></script>
 	<script src={% static 'js/jquery.csv.min.js' %}></script>
 	<script src={% static 'js/jquery.cookie.js' %}></script>
-	{% if user.is_staff %}
+	{% if user.is_superuser %}
 		<script src={% static 'js/dataTables.buttons.min.js' %}></script>
 	{% endif %}
 	<script src={% static 'js/dataTables.select.min.js' %}></script>

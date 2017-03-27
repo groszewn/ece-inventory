@@ -625,7 +625,9 @@ editor = new $.fn.dataTable.Editor( {
 	    table: "#inventory-search",
 	    idSrc:  'item_id',
 	    fields: [ { label: "Item Name", name: "item_name" },
-	        { label: "Quantity", name: "quantity" },
+	    	{% if user.is_superuser %}
+	        	{ label: "Quantity", name: "quantity" },
+	        {% endif %}
 	        { label: "Model Number", name: "model_number" },
 	        { label: "Description", name: "description" }
 	        ]
@@ -729,11 +731,13 @@ function get_search_data(first) {
 		        //selector: 'td:first-child',
 		        blurable: true
 		    },
+		    {% if user.is_superuser %}
 		    buttons: [
 		        { extend: "create", editor: editor },
 		        //{ extend: "edit",   editor: editor },
 		        { extend: "remove", editor: editor }
 		    ]
+		    {% endif %}
 	    {% endif %}
 	});
 };
