@@ -187,7 +187,7 @@ class MultipleRequestPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'type', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
