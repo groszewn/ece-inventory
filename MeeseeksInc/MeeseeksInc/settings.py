@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
+    'django_extensions',
     'custom_admin.tasks',
     'dal',
     'dal_select2',
@@ -153,6 +154,10 @@ USE_I18N = True
 USE_L10N = True
 
 
+GRAPH_MODELS = {
+  'all_applications': True,
+  'group_models': True,
+}
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 '''
