@@ -26,7 +26,7 @@ SECRET_KEY = 'x6s74m_9(u*#)ntmwf0g&1xpwh^7#x4m$07-*xzq4=l^qg!rhw'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['colab-sbx-48.oit.duke.edu','meeseeksinc.colab.duke.edu', '127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
+ALLOWED_HOSTS = ['colab-sbx-48.oit.duke.edu', 'colab-sbx-248.oit.duke.edu','meeseeksinc.colab.duke.edu', '127.0.0.1','localhost','colab-sbx-134.oit.duke.edu', 'meeseeks.colab.duke.edu','152.3.53.138']
 
 # Application definition
 
@@ -36,7 +36,6 @@ INSTALLED_APPS = [
 #     'admin_tools.menu',
 #     'admin_tools.dashboard',
 #     'bootstrap3',
-    'django_extensions',
     'custom_admin.tasks',
     'dal',
     'dal_select2',

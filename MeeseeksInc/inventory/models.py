@@ -6,28 +6,17 @@ from django.db.models.query import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
 
-class SubscribedUsers(models.Model):
-    user = models.CharField(max_length=200)
-    email = models.CharField(max_length=200)
-    
-class EmailPrependValue(models.Model):
-    prepend_text = models.CharField(max_length=200, default='')
-   
-class LoanReminderEmailBody(models.Model):
-    body = models.TextField() 
-    
-class LoanSendDates(models.Model):
-    date = models.DateField()
 
 class Tag(models.Model):
     tag = models.CharField(max_length=200)
     def __str__(self):
         return self.tag
     
+
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
     item_name = models.CharField(unique=True, max_length=200)
-    quantity = models.IntegerField(null=False)
+    quantity = models.SmallIntegerField(null=False)
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=1000, null=True)
     tags = models.ManyToManyField(Tag, related_name='items', blank=True)
@@ -156,7 +145,6 @@ class Log(models.Model):
     time_occurred = models.DateTimeField(default=timezone.now)
     affected_user = models.CharField(max_length=200, null=True, default='')
     change_occurred = models.CharField(max_length=200, null=False)
-    
     def as_dict(self):
         """
         Create data for datatables ajax call.
