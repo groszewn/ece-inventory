@@ -9,9 +9,6 @@
 {% csrf_token %}
 <h3>{{ form.body.label }}</h3>
 <div>{{ form.body }}</div>
-<h3>{{ form.send_dates.label }}</h3>
-<div>{{ form.send_dates }}</div>
-
 <h3>Selected dates</h3>
 {% if selected_dates %}
 	{% for date in selected_dates %}
@@ -20,6 +17,8 @@
 {% else %}
 	<div>No dates selected</div>
 {% endif %}
+<h3>{{ form.send_dates.label }}</h3>
+<div>{{ form.send_dates }}</div>
 <br>
 <input type="hidden" value="Submit" />
 <button type="submit" class="btn btn-success">Submit</button>

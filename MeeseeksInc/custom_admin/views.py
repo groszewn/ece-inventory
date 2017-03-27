@@ -1261,7 +1261,7 @@ def loan_reminder_body(request):
             return redirect(reverse('custom_admin:change_loan_body'))
     else:
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
-    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':sorted(selected_dates)})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
