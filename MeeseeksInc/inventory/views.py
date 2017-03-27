@@ -44,12 +44,9 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
-
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
-
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 
@@ -266,7 +263,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
     
     def test_func(self):
         return self.request.user.is_active
-
+    
     def edit_request(request, pk): 
         instance = Request.objects.get(request_id=pk)
         if request.method == "POST":
@@ -277,8 +274,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                 payload = {'request_quantity':post.request_quantity,'type':post.type, 'reason':post.reason, 'status':'Pending'}
                 header = get_header(request)
                 response = requests.put(url, headers = header, data=json.dumps(payload))
-                if response.status_code == 201:
-                    messages.success(request, 'You just edited the request successfully.')
+                if response.status_code == 200:
+                    messages.success(request, 'You edited the request successfully.')
                     return redirect('/request_detail/' + instance.request_id )
                 else:
                     messages.error(request, 'An error occurred.')

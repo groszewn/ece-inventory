@@ -405,33 +405,6 @@
 </script>
 {% endblock js-requestEdit %}
 
-{############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
-<div id="form-modal" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Direct Disbursement</h4>
-            </div>
-            <div id="form-modal-body" class="modal-body">
-                <p>One fine body&hellip;</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
-{% block js %}
-<script>
-    $('#comment-button').click(function() {
-        $('#form-modal-body').load('disburse/item', function () {
-            $('#form-modal').modal('toggle');
-        });
-    });
-</script>
-{% endblock js %}
-
 {############################# CHECK IN MODAL LOGIC ##############################}
 <div id="form-modal-checkIn" class="modal fade">
     <div class="modal-dialog">
