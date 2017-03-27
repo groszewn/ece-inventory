@@ -9,6 +9,7 @@
 <h2>All Inventory Items</h2>
 {% if user.is_staff %}
 	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+	<a href="{% url 'inventory:csv_help' %}">Help</a>
 {% endif %}
 
 <form id="search-form">
