@@ -844,6 +844,7 @@ def edit_permission(request, pk):
     if request.method == "POST":
         form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
         if form.is_valid():    
+            print("VALID")
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
