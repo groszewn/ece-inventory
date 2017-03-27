@@ -266,13 +266,13 @@ def edit_item_module(request, pk):
         form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
             values_custom_field = []
-#             if int(form['quantity'].value())!=original_quantity:    
-#                 Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-#                                          affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
-#             else:
-#                 Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-#                                          affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
-#             form.save()
+            if int(form['quantity'].value())!=original_quantity:    
+                Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+            else:
+                Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
+            form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
                 if Custom_Field_Value.objects.filter(item = item, field = field).exists():
@@ -294,16 +294,16 @@ def edit_item_module(request, pk):
                     else:
                         custom_val.field_value_floating = None
                 custom_val.save()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/items/'+pk+'/'
-            payload = {'item_name':form['item_name'].value(), 'quantity':int(form['quantity'].value()), 
-                       'model_number':form['model_number'].value(), 'description':form['description'].value(), 
-                       'values_custom_field': values_custom_field}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.put(url, headers = header, data = json.dumps(payload))
+#             user = request.user
+#             token, create = Token.objects.get_or_create(user=user)
+#             http_host = get_host(request)
+#             url=http_host+'/api/items/'+pk+'/'
+#             payload = {'item_name':form['item_name'].value(), 'quantity':int(form['quantity'].value()), 
+#                        'model_number':form['model_number'].value(), 'description':form['description'].value(), 
+#                        'values_custom_field': values_custom_field}
+#             header = {'Authorization': 'Token '+ str(token), 
+#                       "Accept": "application/json", "Content-type":"application/json"}
+#             requests.put(url, headers = header, data = json.dumps(payload))
             messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
             return redirect('/item/' + pk)
     else:
