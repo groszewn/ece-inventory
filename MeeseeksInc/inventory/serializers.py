@@ -8,7 +8,7 @@ from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Cus
     Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(allow_blank = True)
+    email = serializers.CharField(allow_blank = False)
     class Meta:
         model = User
         fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')

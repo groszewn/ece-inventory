@@ -122,15 +122,27 @@ class ItemEditForm(forms.ModelForm):
         fields = ('item_name', 'quantity', 'model_number', 'description')
         
 class UserPermissionEditForm(forms.ModelForm):
+    email = forms.EmailField(label='Email', required = True)
     class Meta:
         model = User
-        fields = ('username', 'is_superuser', 'is_staff', 'is_active')
+        fields = ('username', 'is_superuser', 'is_staff', 'is_active', 'email')
         
-    def clean(self):
+    def clean_manager(self):
         cleaned_data = super(UserPermissionEditForm, self).clean()
         if cleaned_data['is_superuser']:
             cleaned_data['is_staff'] = True
         return cleaned_data
+    
+    def validate_email(self):
+        """
+        Check that the email is valid
+        """
+        pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+        
+        if 'email' in self.cleaned_data:
+            if not pattern.match(value):
+                raise forms.ValidationError("Enter a valid email address.")
+            return value
        
 class AddTagForm(forms.Form):
     def __init__(self, tags, item_tags, *args, **kwargs):

@@ -390,7 +390,6 @@ class APIRequestThroughItem(APIView):
             for user in SubscribedUsers.objects.all():
                 to.append(user.email)
             message=render_to_string('inventory/request_confirmation_email.txt', ctx)
-            print(to)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
