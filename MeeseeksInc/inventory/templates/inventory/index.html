@@ -235,7 +235,7 @@
 {% endif %}
 	
 {########################## LOANS #####################}	
-{% if loan_list %}
+{#% if loan_list %#}
 		<h2>Loans</h2>
 		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <col>
@@ -270,8 +270,8 @@
 								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
 								  {{ loan.time_loaned }}
 							</td>
-							<td>
 							{% if user.is_staff %}
+							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 								{% endblock checkIn %}
@@ -281,13 +281,13 @@
 								{% block  editLoan %}
 								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
 								{% endblock editLoan %}
-							{% endif %}
 							</td>
+							{% endif %}
 						</tr>
 					{% endfor %}
 		        </tbody>
 		    </table>
-{% endif %}
+	{#% endif %#}
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -321,7 +321,9 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
-{% endif %}
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No disbursements.</p>
+	{% endif %}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -373,7 +375,7 @@
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
-        $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
+        $('#form-modal-body-accept').load(('../../request/accept/addcomment/'+request_id), function () {
         	$('#formID-comment-accept').attr("request-comment", request_id);
             $('#form-modal-accept').modal('toggle');
         });
