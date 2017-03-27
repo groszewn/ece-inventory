@@ -414,3 +414,12 @@ def check_login(request):
         return  HttpResponseRedirect(reverse('custom_admin:index'))
     else:
         return  HttpResponseRedirect(reverse('inventory:index'))
+
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def csv_guide_page(request):
+    if(not request.user.is_staff):
+        my_template = 'inventory/base.html'
+    else:
+        my_template = 'custom_admin/base.html'
+    return render(request, 'custom_admin/csv_guide.html', {'my_template':my_template})

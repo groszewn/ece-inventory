@@ -9,6 +9,10 @@
 <h2>All Inventory Items</h2>
 {% if user.is_staff %}
 	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+	{% block csvHelp %}
+	<a id="csvHelp" class="csvHelp btn btn-primary">Help</a>
+	{% endblock csvHelp %}
+	
 {% endif %}
 
 <form id="search-form">
@@ -495,6 +499,32 @@
 </script> 
 {% endblock js-convert %}
 
+{############################# CSV HELP PAGE MODAL ##############################}
+<div id="form-modal-csv" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">CSV Help</h4>
+            </div>
+            <div id="form-modal-body-csv" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-csv %}
+<script>
+    $('.csvHelp').click(function() {
+        $('#form-modal-body-csv').load(('csv/guide/'), function () {
+            $('#form-modal-csv').modal('toggle');
+        });
+    });
+</script> 
+{% endblock js-csv %}
 <script>
 var csrftoken = $.cookie('csrftoken');
 $(document).ready(function(){
