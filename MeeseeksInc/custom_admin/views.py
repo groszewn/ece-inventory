@@ -250,7 +250,9 @@ def add_comment_to_request_accept(request, pk):
                     messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             else:
                     messages.error(request, ('Not enough ' + indiv_request.item_name.item_name + ' remaining to approve this request.'))
-            return redirect(reverse('custom_admin:index'))  
+            if "request_detail" in request.META.get('HTTP_REFERER'):
+                return redirect(reverse('custom_admin:index'))
+            return redirect(request.META.get('HTTP_REFERER'))  
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk})
@@ -315,37 +317,19 @@ def add_comment_to_request_deny(request, pk):
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.put(url, headers = header, data = json.dumps(payload))
             indiv_request = Request.objects.get(request_id=pk)
-#             indiv_request.status = "Denied"
-#             indiv_request.comment = comment
-#             indiv_request.save()
-#             id = indiv_request.item_name.item_id
-#             Log.objects.create(request_id=indiv_request.request_id, item_id=id, item_name=indiv_request.item_name, initiating_user=request.user, nature_of_event='Deny', 
-#                                          affected_user=indiv_request.user_id, change_occurred="Denied request for " + str(indiv_request.item_name))
             messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-#             try:
-#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-#             except (ObjectDoesNotExist, IndexError) as e:
-#                 prepend = ''
-#             subject = prepend + 'Request denial'
-#             to = [User.objects.get(username=indiv_request.user_id).email]
-#             from_email='noreply@duke.edu'
-#             ctx = {
-#                 'user':User.objects.get(username=indiv_request.user_id),
-#                 'item':indiv_request.item_name,
-#                 'quantity':indiv_request.request_quantity,
-#                 'comment':comment,
-#             }
-#             message=render_to_string('inventory/request_denial_email.txt', ctx)
-#             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            return redirect(reverse('custom_admin:index'))  
+            if "request_detail" in request.META.get('HTTP_REFERER'):
+                return redirect(reverse('custom_admin:index'))
+            return redirect(request.META.get('HTTP_REFERER')) 
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def convert_loan(request, pk):
+def convert_loan(request, pk): #redirect to main if deleted
     loan = Loan.objects.get(loan_id=pk)
+    loan_orig_quantity = loan.total_quantity
     if request.method == "POST":
         form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
@@ -357,17 +341,20 @@ def convert_loan(request, pk):
                messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             else:
                 messages.errors(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
-            return redirect(reverse('custom_admin:index'))  
+            if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
+                return redirect('/customadmin')
+            return redirect(request.META.get('HTTP_REFERER')) 
     else:
         form = ConvertLoanForm(loan.total_quantity) 
-    return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk})
+    return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity})
     
 @login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/') #redirect to main if deleted
 def check_in_loan(request, pk):
     loan = Loan.objects.get(loan_id=pk)
     if request.method == "POST":
         loan = Loan.objects.get(loan_id=pk)
+        loan_orig_quantity = loan.total_quantity
         form = CheckInLoanForm(loan.total_quantity, request.POST) 
         if form.is_valid():
             item = loan.item_name
@@ -380,16 +367,10 @@ def check_in_loan(request, pk):
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.delete(url, headers = header, data = json.dumps(payload))
-#             loan.total_quantity = loan.total_quantity - int(items_checked_in)
-#             item.quantity = item.quantity + int(items_checked_in)
-#             loan.save()
-#             item.save()
-#             if loan.total_quantity == 0:
-#                 loan.delete()
-#             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-#                                    nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + items_checked_in + " instances.")
             messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
-            return redirect('/customadmin')
+            if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0:
+                 return redirect('/customadmin')
+            return redirect(request.META.get('HTTP_REFERER'))
     else:
         form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
     return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity})
@@ -412,14 +393,9 @@ def edit_loan(request, pk):
             response = requests.put(url, headers = header, data=json.dumps(payload))
             if response.status_code == 304:
                 messages.error(request, ('You cannot loan more items than the quantity available.'))
-                return redirect('/customadmin')
-            #item.quantity = new_quantity
-            #item.save()
-            #post.save()
-            #Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-            #                       nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+                return redirect(request.META.get('HTTP_REFERER'))
             messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
-            return redirect('/customadmin')
+            return redirect(request.META.get('HTTP_REFERER'))
     else:
         form = EditLoanForm(instance=loan) # blank request form with no data yet
     return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk})
@@ -600,7 +576,10 @@ def post_new_disburse_specific(request, pk):
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.post(url, headers = header, data=json.dumps(payload))
             if item.quantity >= int(form['total_quantity'].value()):
-                pass
+                if form['type'].value() == "Loan":
+                    messages.success(request, "Directly disbursed " + item.item_name + " as loan.")
+                if form['type'].value() == "Dispersal":
+                    messages.success(request, "Directly disbursed " + item.item_name + " as dispersal.")
                 # decrement quantity in item
 #                 quant_change = int(form['total_quantity'].value())
 #                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
@@ -1099,7 +1078,7 @@ def create_new_item(request):
             messages.error(request, ("An error occurred while trying to create " + form['item_name'].value() + "."))
     else:
         form = CreateItemForm(tags, custom_fields)
-    return render(request, 'custom_admin/item_create.html', {'form':form,})
+    return render(request, 'custom_admin/item_create.html', {'form':form,'tags':tags})
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -1172,7 +1151,7 @@ def deny_all_request(request):
 #         }
 #         message=render_to_string('inventory/request_denial_email.txt', ctx)
 #         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-    messages.success(request, ('Denied all disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+    messages.success(request, ('Denied all pending requests.'))
     return redirect(reverse('custom_admin:index'))
  
 @login_required(login_url='/login/')

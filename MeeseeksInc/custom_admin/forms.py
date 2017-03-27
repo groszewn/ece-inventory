@@ -11,7 +11,7 @@ from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, R
 
 
 class DisburseForm(forms.ModelForm):
-    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    user_field = forms.ModelChoiceField(queryset=User.objects.all())
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
@@ -25,7 +25,7 @@ class DisburseForm(forms.ModelForm):
         fields = ('user_field', 'item_field', 'total_quantity', 'comment', 'type')
 
 class DisburseSpecificForm(forms.Form):
-    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    user_field = forms.ModelChoiceField(queryset=User.objects.all()) 
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
     TYPES = (
@@ -158,7 +158,7 @@ class CreateItemForm(forms.ModelForm):
         for myTag in tags:
             if [myTag.tag,myTag.tag] not in choices:
                 choices.append([myTag.tag,myTag.tag])
-        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...(Hold command to select multiple tags.)')
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...')
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    

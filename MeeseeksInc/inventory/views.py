@@ -263,7 +263,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
     
     def test_func(self):
         return self.request.user.is_active
-    
+        
     def edit_request(request, pk): 
         instance = Request.objects.get(request_id=pk)
         if request.method == "POST":
@@ -275,11 +275,11 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                 header = get_header(request)
                 response = requests.put(url, headers = header, data=json.dumps(payload))
                 if response.status_code == 200:
-                    messages.success(request, 'You edited the request successfully.')
-                    return redirect('/request_detail/' + instance.request_id )
+                    messages.success(request, 'You edited the request successfully.')                    
+                    return redirect(request.META.get('HTTP_REFERER'))
                 else:
                     messages.error(request, 'An error occurred.')
-                    return redirect('/request_detail/' + instance.request_id ) 
+                    return redirect(request.META.get('HTTP_REFERER')) 
         else:
             form = RequestEditForm(instance=instance)
         return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
@@ -293,6 +293,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             messages.success(request, ('Successfully deleted request for ' + str(instance.item_name)))
         else:
             messages.error(request, ('Failed to delete request for ' + str(instance.item_name)))
+        if "item" in request.META.get('HTTP_REFERER'):
+            return redirect(request.META.get('HTTP_REFERER'))
         if request.user.is_staff:
             return redirect(reverse('custom_admin:index'))
         else:

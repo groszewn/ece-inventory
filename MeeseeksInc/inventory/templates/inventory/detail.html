@@ -160,7 +160,7 @@
 										<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
 									{% endblock requestEdit %}
 									
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:item_detail_request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
 							</td>
 						</tr>
@@ -198,7 +198,9 @@
 					<th>Loaned By</th>
 					<th>Quantity</th>
 					<th>Admin Comment</th>
+					{% if user.is_staff %}
 					<th>Actions</th>
+					{% endif %}
 				</tr>
 		        </thead>
 		        <tbody>
@@ -213,8 +215,8 @@
 							<td>{{ loan.admin_name }}</td>
 							<td>{{ loan.total_quantity }}</td>
 							<td>{{ loan.comment }}</td>
-							<td>
 							{% if user.is_staff %}
+							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 								{% endblock checkIn %}
@@ -223,9 +225,9 @@
 								{% endblock convert %}
 								{% block  editLoan %}
 								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
-								{% endblock editLoan %}
-							{% endif %}	
+								{% endblock editLoan %}	
 							</td>
+							{% endif %}
 						</tr>
 					{% endfor %}
 		        </tbody>

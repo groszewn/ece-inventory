@@ -3,6 +3,7 @@
 
 <h3>How many items from this loan do you want to permanently disburse?</h3>
 <div class="row">
+	Total items currently loaned: {{num_loaned}}
     <form id="formID-convert" action="{% url 'custom_admin:convert_loan' pk %}" class="form-horizontal" method="post">
 {#        {% crispy form %}#}
 		{% csrf_token %}
