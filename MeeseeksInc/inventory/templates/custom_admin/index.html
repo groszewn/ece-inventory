@@ -1,4 +1,4 @@
-{% extends 'custom_admin/base.html' %} 
+{% extends my_template %} 
 
 {% load rest_framework %}
 {% load static %}
@@ -48,10 +48,7 @@
 </tbody>
 </table>
 
-{# <a class="btn btn-info" href="{% url 'custom_admin:post_new_request' %}" role="button">Request An Item</a> #}
-
 {########################## ALL REQUESTS, SORTED BY ITEM #####################}
-
 <h2>Requests made by users</h2>
 
 	{% if request_list %}
@@ -133,6 +130,14 @@
 	        
 	        <div class="tab-pane active" id="pending">
 				<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="170">
 		        <thead>
 		            <tr>
 					<th>Request for</th>
@@ -219,6 +224,13 @@
 {% if loan_list %}
 		<h2>Loaned by you</h2>
 		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="308">
 		        <thead>
 		            <tr>
 					<th>Loan for</th>
@@ -290,10 +302,6 @@
 		        </tbody>
 		    </table>
 {% endif %}
-
-{#		{% block modal %} #}
-{#			<button id="comment-button" class="btn btn-primary btn-large">Directly Disburse Items Here</button> #}
-{#		{% endblock modal %} #}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -414,7 +422,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Check In Loan</h4>
+                <h4 class="modal-title">Edit Loan</h4>
             </div>
             <div id="form-modal-body-editLoan" class="modal-body">
                 <p>One fine body&hellip;</p>

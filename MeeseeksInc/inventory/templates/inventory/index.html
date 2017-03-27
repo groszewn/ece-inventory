@@ -1,11 +1,16 @@
-{% extends 'inventory/base.html' %} 
-{#put this at the top so that the base template is "base.html"#}
+{% extends my_template %} 
+
 {% load rest_framework %}
 {% load static %}
 {% load index %}
 {% block content %}
 
+{########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
+{% if user.is_staff %}
+	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+{% endif %}
+
 <form id="search-form">
     <label>Included Tags:</label>
     <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
@@ -22,7 +27,7 @@
     <input type="submit"/>
 </form>
 
-<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
 	<th>Item Name</th>
@@ -38,8 +43,9 @@
 </tbody>
 </table>
 
+{########################## ALL REQUESTS #####################}
 {% if request_list %}
-	<h2>Requests made by you</h2>
+	<h2>Requests</h2>
 	<ul class="nav nav-tabs">
 	  <li><a href="#all" data-toggle="tab">All Requests</a></li>
 	  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
@@ -55,6 +61,9 @@
 				<th>Quantity</th>
 				<th>Type</th>
 				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
 				<th>Time Requested</th>
@@ -67,6 +76,9 @@
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
 						<td>
@@ -86,6 +98,9 @@
 				<th>Quantity</th>
 				<th>Type</th>
 				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
 				<th>Time Requested</th>
@@ -98,6 +113,9 @@
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
 						<td>
@@ -111,12 +129,23 @@
         </div>
         <div class="tab-pane active" id="pending">
 			<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        	<col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="170">
 	        <thead>
 	            <tr>
 				<th>Request for</th>
 				<th>Quantity</th>
 				<th>Type</th>
 				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
 				<th>Student Reason</th>
 				<th>Time Requested</th>
 				<th>Actions</th>
@@ -129,14 +158,29 @@
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
 						<td>{{ request.reason}}</td>
 						<td>
 						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
 								  {{ request.time_requested }}
 						</td>
 						<td>
-							<a href="{% url 'inventory:request_edit_from_main' request.request_id %}" class="btn btn-primary">Edit</a>
+						{% if user.is_staff %}
+							{% block comment_accept %}
+								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
+							{% endblock comment_accept %}
+							{% block comment_deny %}
+								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
+							{% endblock comment_deny %}
+						{% endif %}
+						{% if not user.is_staff %}
+							{% block requestEdit %}
+								<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
+							{% endblock requestEdit %}
 							<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+						{% endif %}
 						</td>
 					</tr>
 				{% endfor %}
@@ -151,6 +195,9 @@
 				<th>Quantity</th>
 				<th>Type</th>
 				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
 				<th>Student Reason</th>
 				<th>Admin Comment</th>
 				<th>Time Requested</th>
@@ -163,6 +210,9 @@
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
 						<td>{{ request.reason}}</td>
 						<td>{{ request.comment }}</td>
 						<td>
@@ -175,14 +225,26 @@
 	    </table>
         </div>
 	</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
+	{% endif %}
+
+{% if user.is_staff %}
+	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 {% endif %}
-
-{# <a class="btn btn-info" href="{% url 'inventory:post_new_request' %}" role="button">Request an Item</a> #}
-
+	
 {########################## LOANS #####################}	
 {% if loan_list %}
-		<h2>Loaned to you</h2>
+		<h2>Loans</h2>
 		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="308">
 		        <thead>
 		            <tr>
 					<th>Loan for</th>
@@ -191,6 +253,9 @@
 					<th>User Reason</th>
 					<th>Admin Comment</th>
 					<th>Time Loaned</th>
+					{% if user.is_staff %}
+					<th>Actions</th>
+					{% endif %}
 				</tr>
 		        </thead>
 		        <tbody>
@@ -205,20 +270,34 @@
 								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
 								  {{ loan.time_loaned }}
 							</td>
+							<td>
+							{% if user.is_staff %}
+								{% block checkIn %}
+								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+								{% endblock checkIn %}
+								{% block convert %}
+								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+								{% endblock convert %}
+								{% block  editLoan %}
+								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+								{% endblock editLoan %}
+							{% endif %}
+							</td>
 						</tr>
 					{% endfor %}
 		        </tbody>
 		    </table>
 {% endif %}
 
-
+{########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
-	<h2>Disbursed to you</h2>
+	<h2>Disbursements</h2>
 	<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 	        <thead>
 	            <tr>
 				<th>Item Name</th>
 				<th>Quantity</th>
+				<th>Disbursed to</th>
 				<th>Disbursed by</th>
 				<th>User Reason</th>
 				<th>Admin Comment</th>
@@ -230,6 +309,7 @@
 	        		<tr>
 						<td>{{ disbursed.item_name }}</td>
 						<td>{{ disbursed.total_quantity }}</td>
+						<td>{{ disbursed.user_name }}</td>
 						<td>{{ disbursed.admin_name }}</td>
 						<td>{{ disbursed.orig_request.reason}}</td>
 						<td>{{ disbursed.comment}}</td>
@@ -242,41 +322,331 @@
 	        </tbody>
 	    </table>
 {% endif %}
-	
+
+{############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Deny</h4>
+            </div>
+            <div id="form-modal-body-deny" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-deny %}
 <script>
+    $('.deny').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny').load(('request/deny/addcomment/'+request_id), function () {
+        	$('#formID-comment-deny').attr("request-comment", request_id);
+            $('#form-modal-deny').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny %}
+
+{############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-approve %}
+<script>
+    $('.accept').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
+        	$('#formID-comment-accept').attr("request-comment", request_id);
+            $('#form-modal-accept').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve %}
+
+{############################# REQUEST EDIT MODAL LOGIC ##############################}
+<div id="form-modal-requestEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Request</h4>
+            </div>
+            <div id="form-modal-body-requestEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-requestEdit %}
+<script>
+    $('.requestEdit').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-requestEdit').load(('../../request_edit/'+request_id), function () {
+            $('#form-modal-requestEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-requestEdit %}
+
+{############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
+<div id="form-modal" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Direct Disbursement</h4>
+            </div>
+            <div id="form-modal-body" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js %}
+<script>
+    $('#comment-button').click(function() {
+        $('#form-modal-body').load('disburse/item', function () {
+            $('#form-modal').modal('toggle');
+        });
+    });
+</script>
+{% endblock js %}
+
+{############################# CHECK IN MODAL LOGIC ##############################}
+<div id="form-modal-checkIn" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-checkIn" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-checkIn %}
+<script>
+    $('.checkIn').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-checkIn').load(('checkIn/loan/'+loan_id), function () {
+            $('#form-modal-checkIn').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-checkIn %}
+
+{############################# EDIT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-editLoan" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Loan</h4>
+            </div>
+            <div id="form-modal-body-editLoan" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-editLoan %}
+<script>
+    $('.editLoan').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-editLoan').load(('edit/loan/'+loan_id), function () {
+            $('#form-modal-editLoan').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-editLoan %}
+
+{############################# CONVERT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-convert" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Convert Loan</h4>
+            </div>
+            <div id="form-modal-body-convert" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-convert %}
+<script>
+    $('.convert').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-convert').load(('convert/loan/'+loan_id), function () {
+            $('#form-modal-convert').modal('toggle');
+        });
+    });
+</script> 
+{% endblock js-convert %}
+
+<script>
+var csrftoken = $.cookie('csrftoken');
 $(document).ready(function(){
-	$('#inventory-item').dataTable();
+	//var inventory_item_table = $('#inventory-item').DataTable();
     $('#inventory-request-all').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-approved').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-pending').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-denied').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-disbursed').dataTable({
         "order": [[ 5, "desc" ]]
     });
+    $('#user-table').dataTable();
+    //inventory_item_table.MakeCellsEditable({
+	//    "onUpdate": myCallbackFunction
+	//});
     $('#inventory-loaned').dataTable({
-        "order": [[ 5, "desc" ]]
-    });
+    "order": [[ 5, "desc" ]]
 });
-</script>
-<script>
+});
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
-get_search_data(); // initialize item data
+var editor; // use a global for the submit and return data rendering in the examples
+var table;
+editor = new $.fn.dataTable.Editor( {
+		ajax: function ( method, url, d, successCallback, errorCallback ) {
+			if(d.action === 'create') {
+				for(id in d.data) {
+			    	var output = { data: [] };
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"POST",
+						url: '{% url 'inventory:api_item_list' %}',
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	d.data[id].id = json.item_id;
+				        	d.data[id]['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
+				        	output.data.push(d.data[id]);
+				        	console.log(output);
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+			} else if(d.action==='edit') {
+				for(id in d.data) {
+			    	d.data[id].id = id;
+			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
+			    	for(changedColumn in d.data[id]) {
+			    		result[changedColumn] = d.data[id][changedColumn];
+			    	}
+			    	var output = { data: [] };
+			    	output.data.push(result);
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"PUT",
+						url: '{% url 'inventory:api_item_list'%}' + id+'/',
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+		    } else if(d.action==='remove') {
+		    	for(id in d.data) {
+		    		var output = { data: [] };
+		    		console.log(id);
+		    		$.ajax({
+		    			beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"DELETE",
+						url: '{% url 'inventory:api_item_list' %}' + id+'/',
+				        success: function(result) {
+				        	successCallback(output);
+				        }
+					});
+				}
+		    }
+	    },
+	    table: "#inventory-search",
+	    idSrc:  'item_id',
+	    fields: [ { label: "Item Name", name: "item_name" },
+	        { label: "Quantity", name: "quantity" },
+	        { label: "Model Number", name: "model_number" },
+	        { label: "Description", name: "description" }
+	        ]
+	} ); 
+	// Disable KeyTable while the main editing form is open
+editor
+    .on( 'open', function ( e, mode, action ) {
+        if ( mode === 'main' ) {
+            table.keys.disable();
+        }
+    } )
+    .on( 'close', function () {
+        table.keys.enable();
+    } );
+get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
     console.log("form submitted!")  // sanity check
-    get_search_data();
+    get_search_data(false);
 });
-
-function get_search_data() {
+function get_search_data(first) {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
 	var excluded_tags = $('#excluded-tags').select2('val')
@@ -290,69 +660,182 @@ function get_search_data() {
 			data += 'excluded_tags=' + excluded_tags[i] + '&';
 		}
 	}
-	console.log(data);
-    $.ajax({
-        url : '{% url 'inventory:api_item_list' %}',
-        type : "GET", // http method
-        data : data,
-        success : function(json) {
-            $('#item_name').val(''); // remove the value from the input
-            console.log(json); // log the returned json to the console
-        	$('#inventory-search').dataTable().fnClearTable();
-        	var numCustomFields = {{ custom_fields|length }}
-        	var djangoCustomFieldNameList = [];
-			{% for field in custom_fields %} 
-				djangoCustomFieldNameList.push("{{ field.field_name }}");
-			{% endfor %}
-			
-         	for(i in json) {
-         		var dataTableData = [
-			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
-			        json[i].quantity,
-			        json[i].model_number,
-			        json[i].description
-			         ];
-			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
-			    if(numCustomFieldsAvailable === 0) {
-			    	for(count = 0; count<numCustomFields; count++) {
-			    		dataTableData.push('');
-			    	}
-			    } else {
-			    	var customFieldArr = Array(numCustomFields).fill('');
-			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
-			    		var custom_field_object = json[i].values_custom_field[count];
-			    		var field = custom_field_object.field;
-						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
-						if(indexOfField == -1) {
-			    			continue;
-			    		}
-			    		if (field.field_type == "Short") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
-						} else if(field.field_type == "Long") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
-						} else if(field.field_type == "Int") {
-							if(custom_field_object.field_value_integer) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+	columns = [{ data: "item_name" },
+	        { data: "quantity" },
+	        { data: "model_number" },
+	        { data: "description" }];
+	var djangoCustomFieldNameList = [];
+	{% for field in custom_fields %} 
+		djangoCustomFieldNameList.push("{{ field.field_name }}");
+		if(first) {
+			editor.add( {
+			    label: "{{ field.field_name }}",
+			    name: "{{ field.field_name }}"
+			} );
+		}
+		columns.push({ data: "{{ field.field_name }}" });
+	{% endfor %}
+	table = $('#inventory-search').DataTable({
+		destroy: true,
+		dom: "Bfrtip",
+		ajax: {
+		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
+		    type: "GET",
+		    dataSrc: function ( json ) {
+		      $('#item_name').val(''); // remove the value from the input
+	        	var numCustomFields = {{ custom_fields|length }}
+	         	for(i in json) {
+	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
+	         			json[i][djangoCustomFieldNameList[p]] = "";
+	         		}
+				    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+				    if(numCustomFieldsAvailable !== 0) {
+				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+				    		var custom_field_object = json[i].values_custom_field[count];
+				    		var field = custom_field_object.field;
+							var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+							if(indexOfField == -1) {
+				    			continue;
+				    		}
+				    		if (field.field_type == "Short") {
+								json[i][field.field_name] = custom_field_object.field_value_short_text;
+							} else if(field.field_type == "Long") {
+								json[i][field.field_name] = custom_field_object.field_value_long_text;
+							} else if(field.field_type == "Int") {
+								if(custom_field_object.field_value_integer) {
+									json[i][field.field_name] = custom_field_object.field_value_integer;
+								}
+							} else if(field.field_type == "Float") {
+								if(custom_field_object.field_value_floating) {
+									json[i][field.field_name] = custom_field_object.field_value_floating;
+								}
 							}
-						} else if(field.field_type == "Float") {
-							if(custom_field_object.field_value_floating) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
-							}
-						}
-			    	}
-			    	dataTableData.push.apply(dataTableData, customFieldArr);
-			    }
-         		$('#inventory-search').dataTable().fnAddData(dataTableData);
-        	}
-        },
-        error : function(xhr,errmsg,err) {
-            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
-        }
-    });
-};
-
-$(document).ready(function(){
-	    $('#inventory-search').dataTable();
+				    	}
+				    }
+	        	}
+	        	console.log(json);
+	        	return json;
+		    }
+		  },
+		columns: columns,
+		{% if user.is_staff %}
+			keys: {
+		        columns: ':nth-child(2),:nth-child(3),:nth-child(4)',
+		        editor:  editor
+		    },
+		    select: {
+		        style:    'os',
+		        //selector: 'td:first-child',
+		        blurable: true
+		    },
+		    buttons: [
+		        { extend: "create", editor: editor },
+		        //{ extend: "edit",   editor: editor },
+		        { extend: "remove", editor: editor }
+		    ]
+	    {% endif %}
 	});
+};
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+$(document).ready(function(){
+	 // The event listener for the file upload
+    document.getElementById('txtFileUpload').addEventListener('change', upload, false);
+    // Method that checks that the browser supports the HTML5 File API
+    function browserSupportFileUpload() {
+        var isCompatible = false;
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+        isCompatible = true;
+        }
+        return isCompatible;
+    }
+    
+	var csrftoken = $.cookie('csrftoken');
+	
+    // Method that reads and processes the selected file
+    function upload(evt) {
+    if (!browserSupportFileUpload()) {
+        alert('The File APIs are not fully supported in this browser!');
+        } else {
+            var data = null;
+            var file = evt.target.files[0];
+            var reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(event) {
+                var csvData = event.target.result;
+                data = $.csv.toArrays(csvData);
+                console.log(data)
+                if (data && data.length > 0) {
+                  $.ajax({
+				       url: '/api/upload/',
+				       //Ajax events
+				       beforeSend: function (xhr,settings) {
+				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				         alert('Are you sure you want to upload document.');
+				       },
+				       success: function (e) {
+				         //alert('Upload completed');
+				         window.location.reload();
+				       },
+				       error: function (e) {
+				         //alert('ERROR: ' + e.responseText);
+				          window.location.reload();
+				       },
+				       // Form data
+				       data: {'data[]' : data},
+				       type: 'POST',
+				    });
+                } else {
+                    alert('No data to import!');
+                }
+            };
+            reader.onerror = function() {
+                alert('Unable to read ' + file.fileName);
+            };
+        }
+    }
+});
+$('#submit').click(function (event) {
+    event.preventDefault()
+   var file = $('#CSV').get(0).files[0];
+  $.get(file, function(data) {
+	   console.log(data);
+	}, 'text');
+   var formData = new FormData();
+   formData.append('file', file);
+   console.log(formData);
+   console.log("HI CSV");
+   $.ajax({
+       url: '/api/upload',
+       //Ajax events
+       beforeSend: function (e) {
+         alert('Are you sure you want to upload document.');
+       },
+       success: function (e) {
+         alert('Upload completed');
+       },
+       error: function (e) {
+         alert('error ' + e.message);
+       },
+       // Form data
+       data: formData,
+       type: 'POST',
+       //Options to tell jQuery not to process data or worry about content-type.
+       cache: false,
+       contentType: false,
+       processData: false
+    });
+    return false;
+});
+	
+	
 </script>
 {% endblock %}

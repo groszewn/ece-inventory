@@ -4,7 +4,6 @@
 <h3>Add a comment to the user (optional)</h3>
 <div class="row">
     <form id="formID-comment-accept" request-comment="" action="{% url 'custom_admin:add_comment_to_request_accept' pk %}" class="form-horizontal" method="post">
-{#        {% crispy form %}#}
 		{% csrf_token %}
        	{{form.as_p}}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
