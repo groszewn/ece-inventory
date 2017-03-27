@@ -45,7 +45,7 @@ def loan_reminder_email():
         except (ObjectDoesNotExist, IndexError) as e:
             prepend = ''
         subject = prepend + 'Loan Reminder'
-        to = [User.objects.get(username=loan.user_name).email]
+        to = [User.objects.get(username=user).email]
         from_email='noreply@duke.edu'
         ctx = {
             'user': user,

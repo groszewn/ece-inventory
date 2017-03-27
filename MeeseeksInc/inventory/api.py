@@ -49,11 +49,13 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
-    SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
-
+    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
+from custom_admin.tasks import loan_reminder_email as task_email
+from MeeseeksInc.celery import app as celery_app
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -287,7 +289,7 @@ class APIRequestDetail(APIView):
     """
     Retrieve, update or delete a request instance (for yourself if user, all if admin/manager)
     """
-    permission_classes = (IsAdminOrUser,)
+    permission_classes = (IsAtLeastUser,)
     serializer_class = RequestUpdateSerializer
     
     def get_object(self, pk):
@@ -308,11 +310,14 @@ class APIRequestDetail(APIView):
         if indiv_request.user_id == request.user.username or User.objects.get(username=request.user.username).is_staff:
             serializer = RequestUpdateSerializer(indiv_request, data=request.data, partial=True)
             change_list=[]
-            if int(serializer.data['request_quantity']) != int(indiv_request.request_quantity):
-                change_list.append(('request quantity', indiv_request.request_quantity, serializer.data['request_quantity']))
-            if serializer.data['reason'] != indiv_request.reason:
-                change_list.append(('reason', indiv_request.reason, serializer.data['reason']))
             if serializer.is_valid():
+                
+                if int(serializer.validated_data['request_quantity']) != int(indiv_request.request_quantity):
+                    change_list.append(('request quantity', indiv_request.request_quantity, serializer.validated_data['request_quantity']))
+                if serializer.validated_data['reason'] != indiv_request.reason:
+                    change_list.append(('reason', indiv_request.reason, serializer.validated_data['reason']))
+                if serializer.validated_data['type'] != indiv_request.type:
+                    change_list.append(('type', indiv_request.type, serializer.validated_data['type']))
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
@@ -381,7 +386,7 @@ class APIRequestThroughItem(APIView):
                        affected_user='', change_occurred="Requested " + str(quantity))
             try:
                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
+            except (ObjectDoesNotExist, IndexError):
                 prepend = ''
             subject = prepend + 'Request confirmation'
             to = [self.request.user.email]
@@ -393,7 +398,6 @@ class APIRequestThroughItem(APIView):
             for user in SubscribedUsers.objects.all():
                 to.append(user.email)
             message=render_to_string('inventory/request_confirmation_email.txt', ctx)
-            print(to)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -586,18 +590,26 @@ class APIDirectDisbursement(APIView):
             "request": self.request,
         }
         item_to_disburse = self.get_object(pk)
-        serializer = DisbursementPostSerializer(data=request.data, context=context)
+        serializer = None
+        if request.data.get('type') == "Dispersal":
+            serializer = DisbursementPostSerializer(data=request.data, context=context)
+        if request.data.get('type') == "Loan":
+            serializer = LoanPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
             if item_to_disburse.quantity >= int(request.data.get('total_quantity')):
                 # decrement quantity in item
-                item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
+                item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
                 recipient=data['user_name']
                 quantity = data['total_quantity']
-                Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
-                       affected_user=recipient, change_occurred="Disbursed " + str(quantity))
+                if request.data.get('type') == "Dispersal":
+                    Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                                       affected_user=recipient, change_occurred="Disbursed " + str(quantity))
+                if request.data.get('type') == "Loan":
+                    Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name=item_to_disburse.item_name, initiating_user=request.user, nature_of_event='Loan', 
+                                       affected_user=recipient, change_occurred="Loaned " + str(quantity))
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
@@ -608,7 +620,7 @@ class APIDirectDisbursement(APIView):
                 ctx = {
                     'user':recipient,
                     'item':item_to_disburse.item_name,
-                    'quantity':item_to_disburse.quantity,
+                    'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
                     'disburser':request.user.username,
                     'type': 'disbursed',
                 }
@@ -948,14 +960,14 @@ class APILoan(APIView):
         item_quant = item.quantity - quantity_changed
         serializer = LoanSerializer(loan, data=request.data, partial=True)
         if item_quant < 0 or new_quant < 1:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_304_NOT_MODIFIED)
         item.quantity = item_quant
         item.save()
         if serializer.is_valid():
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def delete(self, request, pk, format=None): # check in loan
@@ -967,13 +979,13 @@ class APILoan(APIView):
             item.quantity = item.quantity + requested_quant
             loan.save()
             item.save()
-            if loan.total_quantity == 0:
-                loan.delete()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(requested_quant) + " instances.")
             serializer = LoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                if loan.total_quantity == 0:
+                    loan.delete()
                 return Response(serializer.data)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
@@ -1058,14 +1070,13 @@ class APILoanEmailConfigureDates(APIView):
         return Response(serializer.data)
     
     def post(self, request, format=None):
-        app.control.purge()
         #LoanSendDates.objects.all().delete()
         serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
                 day = datetime.strptime(date['date'], "%Y-%m-%d")
-                task_email.apply_async(eta=day+timedelta(hours=3))
+                task_email.apply_async(eta=day+timedelta(hours=12))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1075,7 +1086,7 @@ class APILoanEmailClearDates(APIView):
     Clear all loan dates
     """
     def delete(self, request, format=None):
-        app.control.purge()
+        celery_app.control.purge()
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
   

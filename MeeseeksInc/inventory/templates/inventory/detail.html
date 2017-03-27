@@ -156,7 +156,9 @@
 									{% endif %}
 									
 								{% else %}
-									<a href="{% url 'inventory:request_edit' request.request_id %}" class="btn btn-primary">Edit</a>
+									{% block requestEdit %}
+										<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
+									{% endblock requestEdit %}
 									
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
@@ -439,6 +441,34 @@
     });
 </script>
 {% endblock js-specifictag %}
+
+{############################# REQUEST EDIT MODAL LOGIC ##############################}
+<div id="form-modal-requestEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Request</h4>
+            </div>
+            <div id="form-modal-body-requestEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-requestEdit %}
+<script>
+    $('.requestEdit').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-requestEdit').load(('../../request_edit/'+request_id), function () {
+            $('#form-modal-requestEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-requestEdit %}
 
 {############################# CHECK IN MODAL LOGIC ##############################}
 <div id="form-modal-checkIn" class="modal fade">

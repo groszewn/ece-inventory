@@ -8,7 +8,7 @@ from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Cus
     Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(allow_blank = True)
+    email = serializers.CharField(allow_blank = False)
     class Meta:
         model = User
         fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')
@@ -243,7 +243,7 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         """
         Check that the request is positive
         """
-        if value<0:
+        if value<=0:
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
     def validate_user_name(self, value):
@@ -261,6 +261,39 @@ class LoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ('total_quantity', 'comment',)
+        
+class LoanPostSerializer(serializers.ModelSerializer):
+    time_loaned = serializers.DateTimeField(
+        default=timezone.localtime(timezone.now()),
+        read_only=True
+    )
+    admin_name = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+    item_name = ItemSerializer(read_only=True)
+    
+    comment = serializers.CharField(required=False, allow_blank=True)
+    
+    class Meta:
+        model = Loan
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')    
+    def validate_total_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<=0:
+            raise serializers.ValidationError("Request quantity needs to be greater than 0")
+        return value
+    def validate_user_name(self, value):
+        """
+        Check that the user is real
+        """
+        try:
+            return User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value
         
 class FullLoanSerializer(serializers.ModelSerializer):
     class Meta:

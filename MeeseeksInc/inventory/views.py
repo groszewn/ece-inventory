@@ -44,18 +44,15 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
-
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value
-from .models import Instance, Request, Item, Disbursement, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
-
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 
 
-urlToUse = 'http://localhost:8000/' 
-#urlToUse = 
+def get_host(request):
+    return 'http://' + request.META.get('HTTP_HOST')
 
 def active_check(user):
     return user.is_active
@@ -273,12 +270,12 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             form = RequestEditForm(request.POST, instance=instance)
             if form.is_valid():
                 post = form.save(commit=False)
-                url = urlToUse + 'api/requests/' + instance.request_id + '/'
+                url = get_host(request) + '/api/requests/' + instance.request_id + '/'
                 payload = {'request_quantity':post.request_quantity,'type':post.type, 'reason':post.reason, 'status':'Pending'}
                 header = get_header(request)
                 response = requests.put(url, headers = header, data=json.dumps(payload))
-                if response.status_code == 201:
-                    messages.success(request, 'You just edited the request successfully.')
+                if response.status_code == 200:
+                    messages.success(request, 'You edited the request successfully.')
                     return redirect('/request_detail/' + instance.request_id )
                 else:
                     messages.error(request, 'An error occurred.')
@@ -289,7 +286,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
  
     def cancel_request(self,request, pk):
         instance = Request.objects.get(request_id=pk)
-        url = urlToUse + 'api/requests/' + instance.request_id + '/'
+        url = get_host(request) + '/api/requests/' + instance.request_id + '/'
         header = get_header(request)
         response = requests.delete(url, headers = header)
         if response.status_code == 204:
@@ -305,7 +302,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
         if request.method == "POST":
             form = RequestSpecificForm(request.POST) # create request-form with the data from the request
             if form.is_valid():
-                url = urlToUse + 'api/requests/create/' + pk + '/'
+                url = get_host(request) + '/api/requests/create/' + pk + '/'
                 payload = {'request_quantity':form['quantity'].value(),'type':form['type'].value(), 'reason':form['reason'].value(), 'status':'Pending'}
                 header = get_header(request)
                 response = requests.post(url, headers = header, data=json.dumps(payload))

@@ -1,12 +1,26 @@
  {% load crispy_forms_tags %}
  {% load static %}
+ {% load template_filters %}
  
 <h3>Change the fields to edit this item.</h3>
 <div class="row">
     <form id="formID-specific-item" request-comment ="" action="{% url 'custom_admin:edit_item_module' pk %}" class="form-horizontal" method="post">
 {#        {% crispy form %}#}
 		{% csrf_token %}
-       	{{form.as_p}}
+       	{% for field in form %}
+        <div class="fieldWrapper">
+            {{ field.errors }}
+            {% if field.field.widget|klass == 'Textarea' %}
+            	<div>{{ field.label_tag }}</div>
+				<div>{{ field }}</div>
+			{% elif field.label == 'Tags to include...(Hold command to select multiple tags.)' %}
+				<div>{{field.label_tag }}</div>
+				<div>{{ field }}</div>
+            {% else %}
+            	{{ field.label_tag }} {{ field }}
+            {% endif %}
+        </div>
+    {% endfor %}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div> 
