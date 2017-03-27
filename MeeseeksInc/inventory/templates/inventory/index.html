@@ -7,6 +7,10 @@
 
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
+{% if user.is_staff %}
+	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+{% endif %}
+
 <form id="search-form">
     <label>Included Tags:</label>
     <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
@@ -23,7 +27,7 @@
     <input type="submit"/>
 </form>
 
-<table id="inventory-search" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
 	<th>Item Name</th>
@@ -488,42 +492,134 @@
     });
 </script> 
 {% endblock js-convert %}
-	
+
 <script>
+var csrftoken = $.cookie('csrftoken');
 $(document).ready(function(){
-	$('#inventory-item').dataTable();
+	//var inventory_item_table = $('#inventory-item').DataTable();
     $('#inventory-request-all').dataTable({
-        "order": [[ 7, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-approved').dataTable({
-        "order": [[ 7, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-pending').dataTable({
         "order": [[ 6, "desc" ]]
     });
     $('#inventory-request-denied').dataTable({
-        "order": [[ 7, "desc" ]]
+        "order": [[ 6, "desc" ]]
     });
     $('#inventory-disbursed').dataTable({
         "order": [[ 6, "desc" ]]
     });
+    $('#user-table').dataTable();
+    //inventory_item_table.MakeCellsEditable({
+	//    "onUpdate": myCallbackFunction
+	//});
     $('#inventory-loaned').dataTable({
-        "order": [[ 5, "desc" ]]
-    });
+    "order": [[ 5, "desc" ]]
 });
-</script>
-
-<script>
+});
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
-get_search_data(); // initialize item data
+var editor; // use a global for the submit and return data rendering in the examples
+var table;
+editor = new $.fn.dataTable.Editor( {
+		ajax: function ( method, url, d, successCallback, errorCallback ) {
+			if(d.action === 'create') {
+				for(id in d.data) {
+			    	var output = { data: [] };
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"POST",
+						url: '{% url 'inventory:api_item_list' %}',
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	d.data[id].id = json.item_id;
+				        	d.data[id]['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
+				        	output.data.push(d.data[id]);
+				        	console.log(output);
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+			} else if(d.action==='edit') {
+				for(id in d.data) {
+			    	d.data[id].id = id;
+			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
+			    	for(changedColumn in d.data[id]) {
+			    		result[changedColumn] = d.data[id][changedColumn];
+			    	}
+			    	var output = { data: [] };
+			    	output.data.push(result);
+			    	var data = JSON.stringify(d.data[id]);
+			    	$.ajax({
+			    		beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"PUT",
+						url: '{% url 'inventory:api_item_list'%}' + id+'/',
+						contentType: 'application/json',
+						dataType: 'json',
+				        data: data,
+				        success: function(json) {
+				        	successCallback(output);
+				        },
+				        error: function(error) {
+				        	errorCallback();
+				        }
+					});
+			    }
+		    } else if(d.action==='remove') {
+		    	for(id in d.data) {
+		    		var output = { data: [] };
+		    		console.log(id);
+		    		$.ajax({
+		    			beforeSend: function(xhr, settings) {
+					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    },
+						type:"DELETE",
+						url: '{% url 'inventory:api_item_list' %}' + id+'/',
+				        success: function(result) {
+				        	successCallback(output);
+				        }
+					});
+				}
+		    }
+	    },
+	    table: "#inventory-search",
+	    idSrc:  'item_id',
+	    fields: [ { label: "Item Name", name: "item_name" },
+	        { label: "Quantity", name: "quantity" },
+	        { label: "Model Number", name: "model_number" },
+	        { label: "Description", name: "description" }
+	        ]
+	} ); 
+	// Disable KeyTable while the main editing form is open
+editor
+    .on( 'open', function ( e, mode, action ) {
+        if ( mode === 'main' ) {
+            table.keys.disable();
+        }
+    } )
+    .on( 'close', function () {
+        table.keys.enable();
+    } );
+get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
     console.log("form submitted!")  // sanity check
-    get_search_data();
+    get_search_data(false);
 });
-
-function get_search_data() {
+function get_search_data(first) {
 	var data = '';
 	var included_tags = $('#included-tags').select2('val');
 	var excluded_tags = $('#excluded-tags').select2('val')
@@ -537,70 +633,182 @@ function get_search_data() {
 			data += 'excluded_tags=' + excluded_tags[i] + '&';
 		}
 	}
-	console.log(data);
-    $.ajax({
-        url : '{% url 'inventory:api_item_list' %}',
-        type : "GET", // http method
-        data : data,
-        success : function(json) {
-            $('#item_name').val(''); // remove the value from the input
-            console.log(json); // log the returned json to the console
-        	$('#inventory-search').dataTable().fnClearTable();
-        	var numCustomFields = {{ custom_fields|length }}
-        	var djangoCustomFieldNameList = [];
-			{% for field in custom_fields %} 
-				djangoCustomFieldNameList.push("{{ field.field_name }}");
-			{% endfor %}
-			
-         	for(i in json) {
-         		var dataTableData = [
-			        "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>",
-			        json[i].quantity,
-			        json[i].model_number,
-			        json[i].description
-			         ];
-			    var numCustomFieldsAvailable = json[i].values_custom_field.length;
-			    if(numCustomFieldsAvailable === 0) {
-			    	for(count = 0; count<numCustomFields; count++) {
-			    		dataTableData.push('');
-			    	}
-			    } else {
-			    	var customFieldArr = Array(numCustomFields).fill('');
-			    	for(count = 0; count<numCustomFieldsAvailable; count++) {
-			    		var custom_field_object = json[i].values_custom_field[count];
-			    		var field = custom_field_object.field;
-						var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
-						if(indexOfField == -1) {
-			    			continue;
-			    		}
-			    		if (field.field_type == "Short") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_short_text;
-						} else if(field.field_type == "Long") {
-							customFieldArr[indexOfField] = custom_field_object.field_value_long_text;
-						} else if(field.field_type == "Int") {
-							if(custom_field_object.field_value_integer) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_integer;
+	columns = [{ data: "item_name" },
+	        { data: "quantity" },
+	        { data: "model_number" },
+	        { data: "description" }];
+	var djangoCustomFieldNameList = [];
+	{% for field in custom_fields %} 
+		djangoCustomFieldNameList.push("{{ field.field_name }}");
+		if(first) {
+			editor.add( {
+			    label: "{{ field.field_name }}",
+			    name: "{{ field.field_name }}"
+			} );
+		}
+		columns.push({ data: "{{ field.field_name }}" });
+	{% endfor %}
+	table = $('#inventory-search').DataTable({
+		destroy: true,
+		dom: "Bfrtip",
+		ajax: {
+		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
+		    type: "GET",
+		    dataSrc: function ( json ) {
+		      $('#item_name').val(''); // remove the value from the input
+	        	var numCustomFields = {{ custom_fields|length }}
+	         	for(i in json) {
+	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
+	         			json[i][djangoCustomFieldNameList[p]] = "";
+	         		}
+				    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+				    if(numCustomFieldsAvailable !== 0) {
+				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+				    		var custom_field_object = json[i].values_custom_field[count];
+				    		var field = custom_field_object.field;
+							var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+							if(indexOfField == -1) {
+				    			continue;
+				    		}
+				    		if (field.field_type == "Short") {
+								json[i][field.field_name] = custom_field_object.field_value_short_text;
+							} else if(field.field_type == "Long") {
+								json[i][field.field_name] = custom_field_object.field_value_long_text;
+							} else if(field.field_type == "Int") {
+								if(custom_field_object.field_value_integer) {
+									json[i][field.field_name] = custom_field_object.field_value_integer;
+								}
+							} else if(field.field_type == "Float") {
+								if(custom_field_object.field_value_floating) {
+									json[i][field.field_name] = custom_field_object.field_value_floating;
+								}
 							}
-						} else if(field.field_type == "Float") {
-							if(custom_field_object.field_value_floating) {
-								customFieldArr[indexOfField] = custom_field_object.field_value_floating;
-							}
-						}
-			    	}
-			    	dataTableData.push.apply(dataTableData, customFieldArr);
-			    }
-         		$('#inventory-search').dataTable().fnAddData(dataTableData);
-        	}
-        },
-        error : function(xhr,errmsg,err) {
-            console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
-        }
-    });
-};
-
-$(document).ready(function(){
-	    $('#inventory-search').dataTable();
+				    	}
+				    }
+	        	}
+	        	console.log(json);
+	        	return json;
+		    }
+		  },
+		columns: columns,
+		{% if user.is_staff %}
+			keys: {
+		        columns: ':nth-child(2),:nth-child(3),:nth-child(4)',
+		        editor:  editor
+		    },
+		    select: {
+		        style:    'os',
+		        //selector: 'td:first-child',
+		        blurable: true
+		    },
+		    buttons: [
+		        { extend: "create", editor: editor },
+		        //{ extend: "edit",   editor: editor },
+		        { extend: "remove", editor: editor }
+		    ]
+	    {% endif %}
 	});
+};
+function getIndexOfFieldName(list, name) {
+	var index = -1;
+	for(i in list) {
+		if(list[i].field_name == name) {
+			index = i;
+		}
+	}
+	return index;
+}
+$(document).ready(function(){
+	 // The event listener for the file upload
+    document.getElementById('txtFileUpload').addEventListener('change', upload, false);
+    // Method that checks that the browser supports the HTML5 File API
+    function browserSupportFileUpload() {
+        var isCompatible = false;
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+        isCompatible = true;
+        }
+        return isCompatible;
+    }
+    
+	var csrftoken = $.cookie('csrftoken');
+	
+    // Method that reads and processes the selected file
+    function upload(evt) {
+    if (!browserSupportFileUpload()) {
+        alert('The File APIs are not fully supported in this browser!');
+        } else {
+            var data = null;
+            var file = evt.target.files[0];
+            var reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(event) {
+                var csvData = event.target.result;
+                data = $.csv.toArrays(csvData);
+                console.log(data)
+                if (data && data.length > 0) {
+                  $.ajax({
+				       url: '/api/upload/',
+				       //Ajax events
+				       beforeSend: function (xhr,settings) {
+				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				         alert('Are you sure you want to upload document.');
+				       },
+				       success: function (e) {
+				         //alert('Upload completed');
+				         window.location.reload();
+				       },
+				       error: function (e) {
+				         //alert('ERROR: ' + e.responseText);
+				          window.location.reload();
+				       },
+				       // Form data
+				       data: {'data[]' : data},
+				       type: 'POST',
+				    });
+                } else {
+                    alert('No data to import!');
+                }
+            };
+            reader.onerror = function() {
+                alert('Unable to read ' + file.fileName);
+            };
+        }
+    }
+});
+$('#submit').click(function (event) {
+    event.preventDefault()
+   var file = $('#CSV').get(0).files[0];
+  $.get(file, function(data) {
+	   console.log(data);
+	}, 'text');
+   var formData = new FormData();
+   formData.append('file', file);
+   console.log(formData);
+   console.log("HI CSV");
+   $.ajax({
+       url: '/api/upload',
+       //Ajax events
+       beforeSend: function (e) {
+         alert('Are you sure you want to upload document.');
+       },
+       success: function (e) {
+         alert('Upload completed');
+       },
+       error: function (e) {
+         alert('error ' + e.message);
+       },
+       // Form data
+       data: formData,
+       type: 'POST',
+       //Options to tell jQuery not to process data or worry about content-type.
+       cache: false,
+       contentType: false,
+       processData: false
+    });
+    return false;
+});
+	
+	
 </script>
-
 {% endblock %}

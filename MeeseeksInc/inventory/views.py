@@ -241,7 +241,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         return self.render_to_response(
             self.get_context_data(formset=formset))
         
-    def delete_cart_instance(request, pk):
+    def delete_cart_instance(self, request, pk):
         ShoppingCartInstance.objects.get(cart_id=pk).delete()
         messages.success(request, 'You have successfully removed item from cart.')
         return redirect('/inventory_cart')
@@ -263,8 +263,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
     
     def test_func(self):
         return self.request.user.is_active
-    
-    def edit_request(request, pk): 
+
+    def edit_request(self,request, pk): 
         instance = Request.objects.get(request_id=pk)
         if request.method == "POST":
             form = RequestEditForm(request.POST, instance=instance)
@@ -284,7 +284,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             form = RequestEditForm(instance=instance)
         return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
  
-    def cancel_request(request, pk):
+    def cancel_request(self,request, pk):
         instance = Request.objects.get(request_id=pk)
         url = get_host(request) + '/api/requests/' + instance.request_id + '/'
         header = get_header(request)
@@ -298,7 +298,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
         else:
             return redirect(reverse('inventory:index'))
 
-    def request_specific_item(request, pk):
+    def request_specific_item(self,request, pk):
         if request.method == "POST":
             form = RequestSpecificForm(request.POST) # create request-form with the data from the request
             if form.is_valid():

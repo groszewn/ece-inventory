@@ -629,14 +629,23 @@ function get_search_data(first) {
 		columns.push({ data: "{{ field.field_name }}" });
 	{% endfor %}
 	table = $('#inventory-search').DataTable({
+		processing:true,
+		serverSide: true,
 		destroy: true,
 		dom: "Bfrtip",
 		ajax: {
-		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
+		    url: '{% url 'inventory:api_item_list' %}'+'?'+ data,
 		    type: "GET",
+		    data: function(d) {
+		         d.page = Math.min(
+		            Math.max(0, Math.round(d.start / api.page.len())),
+		            api.page.info().pages
+		         );
+		    },
 		    dataSrc: function ( json ) {
 		      $('#item_name').val(''); // remove the value from the input
 	        	var numCustomFields = {{ custom_fields|length }}
+	        	json = json.results;
 	         	for(i in json) {
 	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
 	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {

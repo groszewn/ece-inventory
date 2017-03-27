@@ -1,10 +1,13 @@
 from datetime import date, time, datetime, timedelta
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
 from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
@@ -13,12 +16,11 @@ from django.forms.models import inlineformset_factory, modelformset_factory, Mod
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
 from django.shortcuts import render, redirect, render_to_response
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from django.core.mail import EmailMessage
-from django.template import Context
-from django.template.loader import render_to_string, get_template
 from django.views import generic
 from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
@@ -26,14 +28,17 @@ import django_filters
 from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
-import rest_framework
 from rest_framework import status, permissions, viewsets
+import rest_framework
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from MeeseeksInc.celery import app
 from custom_admin.forms import AdminRequestEditForm, DisburseForm
+from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
@@ -192,9 +197,10 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
-        tag_ids = request.data.getlist('tags')
-        tags = Tag.objects.filter(id__in=tag_ids)
-        item.tags.set(tags)
+        if 'tag' in request.data:
+            tag_ids = request.data['tags']
+            tags = Tag.objects.filter(id__in=tag_ids)
+            item.tags.set(tags)
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
