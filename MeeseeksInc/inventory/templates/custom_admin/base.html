@@ -74,30 +74,46 @@
         </div>
  
       <ul class="nav navbar-nav navbar-right">
-       <li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
-       <li>
-	      	<a href="{% url 'inventory:inventory_cart' %}" class="btn btn-default">
-	          <span class="glyphicon glyphicon-shopping-cart"></span>
-	        </a>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">API<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{% url 'inventory:api_token' %}"> Get Access Token </a></li>
+            <li><a href="{% url 'inventory:api_guide' %}"> API Guide </a></li>
+          </ul>
         </li>
        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Administration<span class="caret"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Item<span class="caret"></span></a>
           <ul class="dropdown-menu">
             <li><a href="{% url 'custom_admin:create_new_item' %}?next=/">Create New Item</a></li>
             <li><a href="{% url 'custom_admin:log_item' %}?next=/">Report Loss/Acquisition</a></li>
-{#            <li><a href="{% url 'inventory:search_setup' %}"> Search Parameters </a></li>#}
-            <li><a href="{% url 'custom_admin:log' %}">View Log</a></li>
-            <li><a href="{% url 'inventory:api_guide' %}"> API Guide </a></li>
-            <li><a href="{% url 'custom_admin:subscribe' %}">Subscribe</a></li>
-            <li><a href="{% url 'custom_admin:change_email_prepend' %}">Change Email Prepended Text</a></li>
-            <li><a href="{% url 'custom_admin:change_loan_body' %}">Change Loan Body</a></li>
+	      {% if user.is_superuser %}
+	            <li><a href="{% url 'custom_admin:add_custom_field' %}"> Add Custom Item Field </a></li>
+	            <li><a href="{% url 'custom_admin:delete_custom_field' %}"> Delete Custom Item Field </a></li>
+          {% endif %}
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">User<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{% url 'custom_admin:subscribe' %}">Subscribe to emails</a></li>
             {% if user.is_superuser %}
             	<li><a href="{% url 'custom_admin:register_page' %}?next=/">Register New User</a></li>
             	<li><a href="{% url 'custom_admin:user_page' %}">User List</a></li>
-	            <li><a href="{% url 'custom_admin:add_custom_field' %}"> Add Custom Item Field </a></li>
-	            <li><a href="{% url 'custom_admin:delete_custom_field' %}"> Delete Custom Item Field </a></li>
             {% endif %}
           </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Manage<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{% url 'custom_admin:log' %}">View Log</a></li>
+            <li><a href="{% url 'custom_admin:change_email_prepend' %}">Change Email Prepended Text</a></li>
+            <li><a href="{% url 'custom_admin:change_loan_body' %}">Change Loan Body</a></li>
+          </ul>
+        </li>
+        <li>
+	      	<a href="{% url 'inventory:inventory_cart' %}" class="btn btn-default">
+	          <span class="glyphicon glyphicon-shopping-cart"></span>
+	        </a>
         </li>
         <li><a href="{% url 'logout' %}?next=/">Log out, {{user.username}}</a></li>
         

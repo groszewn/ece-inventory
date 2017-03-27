@@ -305,6 +305,16 @@ class SubscribeSerializer(serializers.ModelSerializer):
         model = SubscribedUsers
         fields = ('user','email',)
         
+    def validate_email(self, value):
+        """
+        Check that the email is valid
+        """
+        pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+        
+        if not pattern.match(value):
+            raise serializers.ValidationError("Enter a valid email address.")
+        return value
+        
 class LoanReminderBodySerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanReminderEmailBody
