@@ -487,14 +487,23 @@ def edit_request_main_page(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
-        change_list=[]
-        if int(form['request_quantity'].value()) != int(instance.request_quantity):
-            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
-        if form['reason'].value() != instance.reason:
-            change_list.append(('reason', instance.reason, form['reason'].value()))
-        if form['type'].value() != instance.type:
-            change_list.append(('type', instance.type, form['type'].value()))
+#         change_list=[]
+#         if int(form['request_quantity'].value()) != int(instance.request_quantity):
+#             change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+#         if form['reason'].value() != instance.reason:
+#             change_list.append(('reason', instance.reason, form['reason'].value()))
+#         if form['type'].value() != instance.type:
+#             change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/requests/'+pk+'/'
+            payload = {'request_quantity': form['request_quantity'].value(),'type':form['type'].value(), 
+                       'reason':form['reason'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data=json.dumps(payload))
 #             user = request.user
 #             token, create = Token.objects.get_or_create(user=user)
 #             http_host = get_host(request)
@@ -504,29 +513,29 @@ def edit_request_main_page(request, pk):
 #                       "Accept": "application/json", "Content-type":"application/json"}
 #             requests.post(url, headers = header, data=json.dumps(payload))
 #             messages.success(request, 'You just edited the request successfully.')
-            post = form.save(commit=False)
+            #post = form.save(commit=False)
 #             post.item_id = form['item_field'].value()
 #             post.item_name = Item.objects.get(item_id = post.item_id)
-            post.status = "Pending"
-            post.time_requested = timezone.now()
-            post.save()
-            Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Request edit'
-            to = [User.objects.get(username=instance.user_id).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':instance.user_id,
-                'changes':change_list,
-            }
-            message=render_to_string('inventory/request_edit_email.txt', ctx)
-            if len(change_list)>0:
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            #post.status = "Pending"
+            #post.time_requested = timezone.now()
+            #post.save()
+#             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+#                                          affected_user='', change_occurred="Edited request for " + str(post.item_name))
+#             item = instance.item_name
+#             try:
+#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#             except (ObjectDoesNotExist, IndexError) as e:
+#                 prepend = ''
+#             subject = prepend + 'Request edit'
+#             to = [User.objects.get(username=instance.user_id).email]
+#             from_email='noreply@duke.edu'
+#             ctx = {
+#                 'user':instance.user_id,
+#                 'changes':change_list,
+#             }
+#             message=render_to_string('inventory/request_edit_email.txt', ctx)
+#             if len(change_list)>0:
+#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
