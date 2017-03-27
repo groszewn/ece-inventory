@@ -596,7 +596,7 @@ class APIDirectDisbursement(APIView):
         if serializer.is_valid():
             if item_to_disburse.quantity >= int(request.data.get('total_quantity')):
                 # decrement quantity in item
-                item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
+                item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
