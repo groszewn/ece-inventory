@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
@@ -39,7 +40,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from MeeseeksInc.celery import app
+from MeeseeksInc.celery import app as celery_app
 from custom_admin.forms import AdminRequestEditForm, DisburseForm
+from custom_admin.tasks import loan_reminder_email as task_email
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
@@ -50,12 +53,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
+
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
-from custom_admin.tasks import loan_reminder_email as task_email
-from MeeseeksInc.celery import app as celery_app
-from django.core.exceptions import ObjectDoesNotExist
 
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -264,7 +265,7 @@ class APIItemDetail(APIView):
 class RequestFilter(FilterSet):
     class Meta:
         model = Request
-        fields = ['status']
+        fields = ['status', 'type']
        
 class APIRequestList(ListAPIView):  
     """
