@@ -308,7 +308,8 @@ class APIRequestDetail(APIView):
                     change_list.append(('request quantity', indiv_request.request_quantity, serializer.validated_data['request_quantity']))
                 if serializer.validated_data['reason'] != indiv_request.reason:
                     change_list.append(('reason', indiv_request.reason, serializer.validated_data['reason']))
-            
+                if serializer.validated_data['type'] != indiv_request.type:
+                    change_list.append(('type', indiv_request.type, serializer.validated_data['type']))
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
