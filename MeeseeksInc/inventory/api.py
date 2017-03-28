@@ -979,8 +979,6 @@ class APILoan(APIView):
         item.save()
         change_list=[]
         if serializer.is_valid():
-            print(serializer.validated_data['total_quantity'], loan.total_quantity)
-            print(serializer.validated_data['comment'], loan.comment)
             if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
                 change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
             if serializer.validated_data['comment'] != loan.comment:
@@ -1052,14 +1050,13 @@ class APILoan(APIView):
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()
             disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
-            disbursement.save()
+            #disbursement.save()
             Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
             if loan.total_quantity == 0:
                 loan.delete()
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
-                print("VALID")
                 serializer.save()
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '

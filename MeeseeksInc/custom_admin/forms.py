@@ -127,7 +127,7 @@ class UserPermissionEditForm(forms.ModelForm):
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active', 'email')
         
-    def clean_manager(self):
+    def clean(self):
         cleaned_data = super(UserPermissionEditForm, self).clean()
         if cleaned_data['is_superuser']:
             cleaned_data['is_staff'] = True
@@ -181,7 +181,7 @@ class CreateItemForm(forms.ModelForm):
             if field.field_type == 'Float':
                 self.fields["%s" % field.field_name] = forms.FloatField(required=False)
         
-    new_tags = forms.CharField(required=False, label = 'New tags: (Enter multiple new tags in a comma separated list.)')
+    new_tags = forms.CharField(required=False, label = 'New tags')
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
