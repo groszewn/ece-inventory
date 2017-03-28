@@ -920,6 +920,9 @@ class ItemUpload(APIView):
                         else:
                             return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not a float", createdItems)
         items = {}
+        for item in createdItems:
+            Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user='', change_occurred="Created item " + str(item.item_name))
 #         pk_list = [5, 7, 1, 3, 4]  
 #         clauses = ' '.join(['WHEN id=%s THEN %s' % (pk, i) for i, pk in enumerate(pk_list)])  
 #         ordering = 'CASE %s END' % clauses  
