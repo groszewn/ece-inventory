@@ -237,4 +237,4 @@ class ChangeEmailPrependForm(forms.Form):
     
 class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
-    send_dates = forms.CharField()
+    send_dates = forms.CharField(required=False)

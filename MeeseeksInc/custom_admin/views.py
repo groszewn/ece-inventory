@@ -1230,9 +1230,10 @@ def loan_reminder_body(request):
             #output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
             payload_send_dates=[]
             for date in input_date_list:
-                lst = date.split('/')
-                formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
-                payload_send_dates.append({'date':formatted})
+                if date != '':
+                    lst = date.split('/')
+                    formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
+                    payload_send_dates.append({'date':formatted})
               
                 #LoanSendDates.objects.create(date=date)
                 #task_email.apply_async(eta=date+timedelta(hours=3))
