@@ -2,6 +2,12 @@
  {% load static %}
 
 <h3>Add a comment to the user (optional)</h3>
+
+Request for <b>{{num_requested}}</b> instance(s) of <b>{{item_name}}</b>.
+<br>
+Quantity of <b>{{item_name}}</b> available: {{num_available}}
+<br>
+
 <div class="row">
     <form id="formID-comment-deny" request-comment="" action="{% url 'custom_admin:add_comment_to_request_deny' pk %}" class="form-horizontal" method="post">
 		{% csrf_token %}

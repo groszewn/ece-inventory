@@ -1,7 +1,13 @@
  {% load crispy_forms_tags %}
  {% load static %}
-
+ 
 <h3>Add a comment to the user (optional)</h3>
+
+Request for <b>{{num_requested}}</b> instance(s) of <b>{{item_name}}</b>.
+<br>
+Quantity of <b>{{item_name}}</b> available: {{num_available}}
+<br>
+
 <div class="row">
     <form id="formID-comment-accept" request-comment="" action="{% url 'custom_admin:add_comment_to_request_accept' pk %}" class="form-horizontal" method="post">
 		{% csrf_token %}
@@ -9,3 +15,4 @@
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div>
+

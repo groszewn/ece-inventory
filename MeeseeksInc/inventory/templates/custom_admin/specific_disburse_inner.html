@@ -2,12 +2,12 @@
 
 <h3>Fill in the following fields to disburse an item directly to a user.</h3>
 
+Quantity of <b>{{item_name}}</b> available: {{amount_left}}
+	<br/>
+	<br/>
+
 <div class="row">
-	Quantity of item available: {{amount_left}}
-	<br/>
-	<br/>
     <form id="formID" class="form-horizontal" action="{% url 'custom_admin:post_specific_disburse' pk %}" method="post">
-{#        {% crispy form %}#}
 		{% csrf_token %}
        	{{form.as_p}}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">

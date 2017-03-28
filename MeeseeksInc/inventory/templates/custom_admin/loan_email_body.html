@@ -9,7 +9,7 @@
 {% csrf_token %}
 <h3>{{ form.body.label }}</h3>
 <div>{{ form.body }}</div>
-<h3>Selected dates</h3>
+<h3>Selected dates:</h3>
 {% if selected_dates %}
 	{% for date in selected_dates %}
 		<li>{{ date }}</li>
@@ -17,7 +17,7 @@
 {% else %}
 	<div>No dates selected</div>
 {% endif %}
-<h3>{{ form.send_dates.label }}</h3>
+<h3>{{ form.send_dates.label }}:</h3>
 <div>{{ form.send_dates }}</div>
 <br>
 <input type="hidden" value="Submit" />
@@ -44,7 +44,7 @@ $(function() {
 
 </script>
 
-
+<br>
 <a class="btn btn-primary" onclick="return confirm('Are you sure you want to remove all dates?')" href="{% url 'custom_admin:delete_task_queue' %}" role="button">Remove all dates</a>
 
 {% endblock js %}

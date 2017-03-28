@@ -284,7 +284,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                     return redirect(request.META.get('HTTP_REFERER')) 
         else:
             form = RequestEditForm(instance=instance)
-        return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
+        return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk, 'item_name':instance.item_name.item_name, 'num_left':instance.item_name.quantity})
  
     def cancel_request(request, pk):
         instance = Request.objects.get(request_id=pk)
@@ -317,8 +317,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                     messages.error(request, ('Could not request ' + item.item_name + ' (' + request.user.username +')'))
                 return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
         else:
-            form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
-        return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
+            form = RequestSpecificForm() # blank request form with no data yet
+        return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk, 'num_available':Item.objects.get(item_id=pk).quantity, 'item_name':Item.objects.get(item_id=pk).item_name})
 
 
 class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):

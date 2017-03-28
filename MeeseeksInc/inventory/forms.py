@@ -28,7 +28,6 @@ class RequestEditForm(forms.ModelForm):
         fields = ('request_quantity','type','reason')
 
 class RequestSpecificForm(forms.Form):  
-    available_quantity = forms.IntegerField(disabled=True, required=False)
     quantity = forms.IntegerField(min_value=1)
     TYPES = (
         ( 'Dispersal','Dispersal'),
@@ -38,7 +37,7 @@ class RequestSpecificForm(forms.Form):
     reason = forms.CharField(max_length=200)
     def __init__(self, *args, **kwargs):
         super(RequestSpecificForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = ['available_quantity','quantity','type','reason']
+        self.fields.keyOrder = ['quantity','type','reason']
       
 class AddToCartForm(forms.Form):
     def __init__(self, *args, **kwargs):
