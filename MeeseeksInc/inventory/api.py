@@ -962,7 +962,7 @@ class APILoanList(APIView):
         return Response(serializer.data)
 
 class APILoan(APIView):
-    permission_classes = (IsAdmin,)
+    permission_classes = (IsAdminOrManager,)
     serializer_class = LoanSerializer
     
     def put(self, request, pk, format=None): # edit loan
