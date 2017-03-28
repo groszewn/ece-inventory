@@ -966,8 +966,6 @@ class APILoan(APIView):
         item.save()
         change_list=[]
         if serializer.is_valid():
-            print(serializer.validated_data['total_quantity'], loan.total_quantity)
-            print(serializer.validated_data['comment'], loan.comment)
             if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
                 change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
             if serializer.validated_data['comment'] != loan.comment:
@@ -1046,7 +1044,6 @@ class APILoan(APIView):
                 loan.delete()
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
-                print("VALID")
                 serializer.save()
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '

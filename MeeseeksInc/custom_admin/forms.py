@@ -127,7 +127,7 @@ class UserPermissionEditForm(forms.ModelForm):
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active', 'email')
         
-    def clean_manager(self):
+    def clean(self):
         cleaned_data = super(UserPermissionEditForm, self).clean()
         if cleaned_data['is_superuser']:
             cleaned_data['is_staff'] = True

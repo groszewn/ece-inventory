@@ -844,13 +844,13 @@ def edit_permission(request, pk):
     if request.method == "POST":
         form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
         if form.is_valid():    
-            print("VALID")
+            print(form.cleaned_data)
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
             url=http_host+'/api/users/'+form['username'].value()+'/'
-            payload = {'username':form['username'].value(), 'is_superuser':form['is_superuser'].value(),
-                       'is_staff':form['is_staff'].value(), 'is_active':form['is_active'].value(), 
+            payload = {'username':form['username'].value(), 'is_superuser':form.cleaned_data.get('is_superuser'),
+                       'is_staff':form.cleaned_data.get('is_staff'), 'is_active':form['is_active'].value(), 
                        'email':form['email'].value()}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
