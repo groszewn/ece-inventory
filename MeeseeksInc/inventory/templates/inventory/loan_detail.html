@@ -154,7 +154,7 @@
 <script>
     $('.convert').click(function() {
     	loan_id = $(this).attr("loan-id"); 
-        $('#form-modal-body-convert').load(('../../customadmin/convert/loan/'+loan_id), function () {
+        $('#form-modal-body-convert').load(('convert/loan/'+loan_id), function () {
             $('#form-modal-convert').modal('toggle');
         });
     });
