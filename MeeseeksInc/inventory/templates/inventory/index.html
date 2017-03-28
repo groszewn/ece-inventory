@@ -563,6 +563,7 @@ editor = new $.fn.dataTable.Editor( {
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"POST",
 						url: '{% url 'inventory:api_item_list' %}',
@@ -594,6 +595,7 @@ editor = new $.fn.dataTable.Editor( {
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"PUT",
 						url: '{% url 'inventory:api_item_list'%}' + id+'/',
