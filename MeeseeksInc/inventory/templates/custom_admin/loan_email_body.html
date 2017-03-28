@@ -1,0 +1,53 @@
+{% extends 'custom_admin/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+{% load static %}
+
+
+{% block content %}
+<h2>Create Loan Body</h2>
+<form method="post" action=".">
+{% csrf_token %}
+<h3>{{ form.body.label }}</h3>
+<div>{{ form.body }}</div>
+<h3>Selected dates</h3>
+{% if selected_dates %}
+	{% for date in selected_dates %}
+		<li>{{ date }}</li>
+	{% endfor %}
+{% else %}
+	<div>No dates selected</div>
+{% endif %}
+<h3>{{ form.send_dates.label }}</h3>
+<div>{{ form.send_dates }}</div>
+<br>
+<input type="hidden" value="Submit" />
+<button type="submit" class="btn btn-success">Submit</button>
+
+</form>
+
+
+{% block js %}
+{#<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>#}
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.datepick.css"> 
+<script type="text/javascript" src="/static/js/jquery.plugin.js"></script> 
+<script type="text/javascript" src="/static/js/jquery.datepick.js"></script>
+<script type="text/javascript" src="/static/js/jquery-ui.multidatespicker.js"></script>
+
+<script>
+var date = new Date();
+$(function() {
+	$('#id_send_dates').datepick({
+		multiSelect:999, 
+		minDate:0,
+	});
+});
+
+</script>
+
+
+<a class="btn btn-primary" onclick="return confirm('Are you sure you want to remove all dates?')" href="{% url 'custom_admin:delete_task_queue' %}" role="button">Remove all dates</a>
+
+{% endblock js %}
+
+
+{% endblock %}

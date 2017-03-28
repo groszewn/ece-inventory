@@ -1,0 +1,13 @@
+Hello {{user}}, 
+
+{{ body }}
+
+Items due back:
+
+{% for item, quantity in item_list %}
+	{{ item }} (Quantity: {{ quantity }})
+{% endfor %}
+
+Best, 
+
+ECE inventory

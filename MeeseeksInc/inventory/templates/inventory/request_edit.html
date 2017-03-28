@@ -1,12 +1,5 @@
-{% extends 'inventory/base.html' %} 
-{#put this at the top so that the base template is "base.html"#}
+{% extends 'inventory/index.html' %} 
 
-{% block content %}
-
- <h2>Edit Request For Item</h2>
- <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.as_p }}
-	<button type="submit" class="save btn btn-default">Save</button>
-</form>
- 	
-{% endblock %}
+{% block requestEdit %}
+{% include 'inventory/request_edit_inner.html' %}
+{% endblock requestEdit %}

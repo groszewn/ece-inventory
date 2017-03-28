@@ -1,0 +1,11 @@
+Hello {{ user }}, 
+
+The following changes have been made:
+
+{% for type, original, new in changes %}
+	{{type}} changed from {{ original }} to {{new}}.
+{% endfor %}
+
+Best, 
+
+ECE inventory

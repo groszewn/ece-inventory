@@ -5,11 +5,10 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log
-
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(allow_blank = True)
+    email = serializers.CharField(allow_blank = False)
     class Meta:
         model = User
         fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')
@@ -145,7 +144,7 @@ class RequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
+        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason', 'type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -167,7 +166,7 @@ class RequestPostSerializer(serializers.ModelSerializer):
     request_id = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id', 'type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -188,7 +187,7 @@ class MultipleRequestPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'type', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -204,7 +203,7 @@ class RequestUpdateSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Request
-        fields = ('time_requested', 'request_quantity', 'reason')    
+        fields = ('time_requested', 'request_quantity', 'reason','type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -244,7 +243,7 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         """
         Check that the request is positive
         """
-        if value<0:
+        if value<=0:
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
     def validate_user_name(self, value):
@@ -256,3 +255,72 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist")
         return value
+    
+class LoanSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(required=False, allow_blank=True)
+    class Meta:
+        model = Loan
+        fields = ('total_quantity', 'comment',)
+        
+class LoanPostSerializer(serializers.ModelSerializer):
+    time_loaned = serializers.DateTimeField(
+        default=timezone.localtime(timezone.now()),
+        read_only=True
+    )
+    admin_name = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+    item_name = ItemSerializer(read_only=True)
+    
+    comment = serializers.CharField(required=False, allow_blank=True)
+    
+    class Meta:
+        model = Loan
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')    
+    def validate_total_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<=0:
+            raise serializers.ValidationError("Request quantity needs to be greater than 0")
+        return value
+    def validate_user_name(self, value):
+        """
+        Check that the user is real
+        """
+        try:
+            return User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value
+        
+class FullLoanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Loan
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned')
+        
+class SubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscribedUsers
+        fields = ('user','email',)
+        
+    def validate_email(self, value):
+        """
+        Check that the email is valid
+        """
+        pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+        
+        if not pattern.match(value):
+            raise serializers.ValidationError("Enter a valid email address.")
+        return value
+        
+class LoanReminderBodySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanReminderEmailBody
+        fields = ('body',)
+        
+class LoanSendDatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanSendDates
+        fields = ('date',)
