@@ -960,16 +960,38 @@ class APILoan(APIView):
             return Response(status=status.HTTP_304_NOT_MODIFIED)
         item.quantity = item_quant
         item.save()
+        change_list=[]
         if serializer.is_valid():
+            print(serializer.validated_data['total_quantity'], loan.total_quantity)
+            print(serializer.validated_data['comment'], loan.comment)
+            if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
+                change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
+            if serializer.validated_data['comment'] != loan.comment:
+                change_list.append(('comment', loan.comment, serializer.validated_data['comment']))
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan edit'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def delete(self, request, pk, format=None): # check in loan
         loan = Loan.objects.get(loan_id=pk)
         requested_quant = int(request.data['check_in'])   
+        original_quantity = loan.total_quantity
         if requested_quant > 0 and requested_quant <= loan.total_quantity:
             loan.total_quantity = loan.total_quantity - requested_quant
             item = loan.item_name
@@ -981,6 +1003,20 @@ class APILoan(APIView):
             serializer = LoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan checkin'
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, requested_quant, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'checked_in':checked_in,
+                }
+                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 if loan.total_quantity == 0:
                     loan.delete()
                 return Response(serializer.data)
@@ -994,6 +1030,7 @@ class APILoan(APIView):
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         quantity_disbursed = int(request.data['convert'])
+        original_quantity = loan.total_quantity
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()
@@ -1005,7 +1042,23 @@ class APILoan(APIView):
                 loan.delete()
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
+                print("VALID")
                 serializer.save()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan convert'
+                convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, quantity_disbursed, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'convert':checked_in,
+                }
+                message=render_to_string('inventory/convert_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         

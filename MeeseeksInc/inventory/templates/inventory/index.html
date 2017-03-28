@@ -379,7 +379,7 @@
 <script>
     $('.accept').click(function() {
     	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
-        $('#form-modal-body-accept').load(('../../request/accept/addcomment/'+request_id), function () {
+        $('#form-modal-body-accept').load(('request/accept/addcomment/'+request_id), function () {
         	$('#formID-comment-accept').attr("request-comment", request_id);
             $('#form-modal-accept').modal('toggle');
         });

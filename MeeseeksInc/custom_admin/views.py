@@ -351,7 +351,7 @@ def convert_loan(request, pk): #redirect to main if deleted
             if response.status_code == 201:
                messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             else:
-                messages.errors(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
                 return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER')) 

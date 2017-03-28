@@ -1,9 +1,9 @@
 Hello {{ user }}, 
 
-You have made the following change to your request:
+The following changes have been made:
 
 {% for type, original, new in changes %}
-	You changed {{type}} from {{ original }} to {{new}}.
+	{{type}} changed from {{ original }} to {{new}}.
 {% endfor %}
 
 Best, 

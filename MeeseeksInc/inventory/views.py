@@ -284,7 +284,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             form = RequestEditForm(instance=instance)
         return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
  
-    def cancel_request(self,request, pk):
+    def cancel_request(request, pk):
         instance = Request.objects.get(request_id=pk)
         url = get_host(request) + '/api/requests/' + instance.request_id + '/'
         header = get_header(request)
@@ -300,7 +300,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
         else:
             return redirect(reverse('inventory:index'))
 
-    def request_specific_item(self,request, pk):
+    def request_specific_item(request, pk):
         if request.method == "POST":
             form = RequestSpecificForm(request.POST) # create request-form with the data from the request
             if form.is_valid():
