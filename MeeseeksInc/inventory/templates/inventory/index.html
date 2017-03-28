@@ -7,13 +7,6 @@
 
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
-{% if user.is_staff %}
-	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
-	{% block csvHelp %}
-	<a id="csvHelp" class="csvHelp btn btn-primary">Help</a>
-	{% endblock csvHelp %}
-	
-{% endif %}
 
 <form id="search-form">
     <label>Included Tags:</label>

@@ -994,6 +994,15 @@ def api_guide_page(request):
         my_template = 'custom_admin/base.html'
     return render(request, 'custom_admin/api_guide.html', {'my_template':my_template})
 
+@login_required(login_url='/login/')    
+@user_passes_test(active_check, login_url='/login/')
+def upload_page(request):
+    if(not request.user.is_staff):
+        my_template = 'inventory/base.html'
+    else:
+        my_template = 'custom_admin/base.html'
+    return render(request, 'custom_admin/upload.html', {'my_template':my_template})
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def edit_tag(request, pk, item):

@@ -89,6 +89,7 @@
 	      {% if user.is_superuser %}
 	            <li><a href="{% url 'custom_admin:add_custom_field' %}"> Add Custom Item Field </a></li>
 	            <li><a href="{% url 'custom_admin:delete_custom_field' %}"> Delete Custom Item Field </a></li>
+	            <li><a href="{% url 'custom_admin:upload_page'%}">Upload from CSV</a></li>
           {% endif %}
           </ul>
         </li>
