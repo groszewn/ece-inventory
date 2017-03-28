@@ -558,6 +558,7 @@ editor = new $.fn.dataTable.Editor( {
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"POST",
 						url: '{% url 'inventory:api_item_list' %}',
@@ -589,6 +590,7 @@ editor = new $.fn.dataTable.Editor( {
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"PUT",
 						url: '{% url 'inventory:api_item_list'%}' + id+'/',
@@ -604,6 +606,7 @@ editor = new $.fn.dataTable.Editor( {
 					});
 			    }
 		    } else if(d.action==='remove') {
+		    	console.log(d.data);
 		    	for(id in d.data) {
 		    		var output = { data: [] };
 		    		console.log(id);
@@ -614,6 +617,7 @@ editor = new $.fn.dataTable.Editor( {
 						type:"DELETE",
 						url: '{% url 'inventory:api_item_list' %}' + id+'/',
 				        success: function(result) {
+				        	console.log("DELETING ONCE");
 				        	successCallback(output);
 				        }
 					});
@@ -731,9 +735,9 @@ function get_search_data(first) {
 		    },
 		    {% if user.is_superuser %}
 		    buttons: [
-		        { extend: "create", editor: editor },
+		        //{ extend: "create", editor: editor },
 		        //{ extend: "edit",   editor: editor },
-		        { extend: "remove", editor: editor }
+		        //{ extend: "remove", editor: editor }
 		    ]
 		    {% endif %}
 	    {% endif %}
