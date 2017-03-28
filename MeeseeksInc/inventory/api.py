@@ -850,7 +850,9 @@ class ItemUpload(APIView):
             if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
                 # ERROR CHECK, make sure the custom field names are correct 
                 if not any(field.field_name == header for field in custom_fields):
-                    return self.errorHandling(request, 'field ' + header + ' does not exist', [])
+                    if header=='':
+                        return self.errorHandling(request, 'field (empty string) does not exist. make sure you don\'t have an extra comma', [])
+                    return self.errorHandling(request, 'field ' + header + ' does not exist. check the header', [])
                 customFieldMap[header.lower()] = i
             else:
                 headerMap[header.lower()] = i    
@@ -864,14 +866,19 @@ class ItemUpload(APIView):
         createdItems = []
         for i, csvRow in enumerate(csvData[1:]):
             row = csvRow.split(',')
-            if row[headerMap["item name"]]=='':
+            if headerMap["item name"] >= len(row) or row[headerMap["item name"]]=='':
                 return self.errorHandling(request, 'value of "Item Name" does not exist in row ' + str(i+1), createdItems)
-            if row[headerMap["quantity"]]=='':
+            if headerMap["quantity"] >= len(row) or row[headerMap["quantity"]]=='':
                 return self.errorHandling(request, 'value of "Quantity" does not exist in row ' + str(i+1), createdItems)
             if not row[headerMap["quantity"]].isdigit():
                 return self.errorHandling(request, 'value of "Quantity" is not an integer in row' + str(i+1), createdItems)          
             if int(row[headerMap["quantity"]])<0:
                 return self.errorHandling(request, 'value of "Quantity" is less than 0 in row ' + str(i+1), createdItems)           
+            if "model number" in headerMap and headerMap["model number"] >= len(row):
+                return self.errorHandling(request, 'value of "Model Number" does not exist in row ' + str(i+1), createdItems)
+            if "description" in headerMap and headerMap["description"] >= len(row):
+                return self.errorHandling(request, 'value of "Description" does not exist in row ' + str(i+1), createdItems)
+            
             existingItem = Item.objects.filter(item_name=row[headerMap["item name"]]).count()
             if existingItem>0:
                 return self.errorHandling(request, "Item " + row[headerMap["item name"]] + " already exists", createdItems)
@@ -880,14 +887,20 @@ class ItemUpload(APIView):
             item.save()
             createdItems.append(item)
             # add to tags
-            for tag in row[headerMap["tags"]].split('/'):
-                t = Tag(tag=tag)
-                t.save(force_insert=True)
-                item.tags.add(t)
-                item.save()
+            if "tags" in headerMap:
+                if headerMap["tags"] >= len(row):
+                    return self.errorHandling(request, 'value of "tags" does not exist in row ' + str(i+1), createdItems)
+                for tag in row[headerMap["tags"]].split('/'):
+                    if not tag == '':
+                        t = Tag(tag=tag)
+                        t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             # add custom fields
             for custom_field, j in customFieldMap.items():
                 actual_field = next((x for x in custom_fields if x.field_name.lower() == custom_field), None)
+                if j >= len(row):
+                    return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), createdItems)
                 if actual_field.field_type == "Short":
                     if len(row[j])<=400:
                         value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
