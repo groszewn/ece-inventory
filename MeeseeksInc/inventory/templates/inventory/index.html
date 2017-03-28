@@ -231,7 +231,7 @@
 {% endif %}
 	
 {########################## LOANS #####################}	
-{#% if loan_list %#}
+{% if loan_list %}
 		<h2>Loans</h2>
 		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <col>
@@ -283,7 +283,7 @@
 					{% endfor %}
 		        </tbody>
 		    </table>
-	{#% endif %#}
+	{% endif %}
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -317,8 +317,8 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
-	{% else %}
-		<p class="lead" style="padding: 15px 15px">No disbursements.</p>
+	{#% else %#}
+		{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
 	{% endif %}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}

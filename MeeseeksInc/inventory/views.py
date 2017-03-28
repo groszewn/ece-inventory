@@ -71,7 +71,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['approved_request_list'] = Request.objects.filter(status="Approved")
             context['pending_request_list'] = Request.objects.filter(status="Pending")
             context['denied_request_list'] = Request.objects.filter(status="Denied")
-            context['disbursed_list'] = Disbursement.objects.filter()
+            context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
             context['my_template'] = 'custom_admin/base.html'
         else:
@@ -112,11 +112,13 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
+            context['disbursed_list'] = Disbursement.objects.all()
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
             context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
+            context['disbursed_list'] = Disbursement.objects.filter(item_name=self.get_object().item_id)
             context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
