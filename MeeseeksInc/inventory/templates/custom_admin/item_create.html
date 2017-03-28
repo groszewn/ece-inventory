@@ -1,11 +1,26 @@
 {% extends 'custom_admin/base.html' %} 
 
+{% load template_filters %}
+
 {% block content %}
 
  <h2>Create New Item</h2>
  
  <form method="POST" class="post-form">{% csrf_token %}
-	{{ form.as_p }}	
+	 {% for field in form %}
+        <div class="fieldWrapper">
+            {{ field.errors }}
+            {% if field.field.widget|klass == 'Textarea' %}
+            	<div>{{ field.label_tag }}</div>
+				<div>{{ field }}</div>
+			{% elif field.label == 'Tags to include...(Hold command to select multiple tags.)' %}
+				<div>{{field.label_tag }}</div>
+				<div>{{ field }}</div>
+            {% else %}
+            	{{ field.label_tag }} {{ field }}
+            {% endif %}
+        </div>
+    {% endfor %}
 	<button type="submit" class="save btn btn-default">Save</button>
  </form>
  	

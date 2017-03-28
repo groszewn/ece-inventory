@@ -8,7 +8,7 @@ from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Cus
     Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(allow_blank = True)
+    email = serializers.CharField(allow_blank = False)
     class Meta:
         model = User
         fields = ('username', 'password', 'email', 'is_staff', 'is_superuser', 'is_active')
@@ -144,7 +144,7 @@ class RequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = Request
-        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason')    
+        fields = ('request_id', 'user_id', 'time_requested', 'item_name', 'request_quantity', 'status', 'comment', 'reason', 'type')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -187,7 +187,7 @@ class MultipleRequestPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Request
-        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'reason', 'request_id')    
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'type', 'reason', 'request_id')    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -304,6 +304,16 @@ class SubscribeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscribedUsers
         fields = ('user','email',)
+        
+    def validate_email(self, value):
+        """
+        Check that the email is valid
+        """
+        pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+        
+        if not pattern.match(value):
+            raise serializers.ValidationError("Enter a valid email address.")
+        return value
         
 class LoanReminderBodySerializer(serializers.ModelSerializer):
     class Meta:

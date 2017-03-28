@@ -1,24 +1,29 @@
-from datetime import datetime
+from datetime import date, time, datetime, timedelta
+import sys
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
 from django.forms.models import inlineformset_factory, modelformset_factory, ModelMultipleChoiceField
 from django.http import HttpResponseRedirect
-from django.http.response import Http404
+from django.http.response import Http404, HttpResponse
 from django.shortcuts import render, redirect, render_to_response
+from django.template import Context
+from django.template.loader import render_to_string, get_template
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from django.core.mail import EmailMessage
-from django.template import Context
-from django.template.loader import render_to_string, get_template
 from django.views import generic
 from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
@@ -26,14 +31,19 @@ import django_filters
 from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
 import requests, json, urllib, subprocess
-import rest_framework
 from rest_framework import status, permissions, viewsets
+import rest_framework
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from MeeseeksInc.celery import app
+from MeeseeksInc.celery import app as celery_app
 from custom_admin.forms import AdminRequestEditForm, DisburseForm
+from custom_admin.tasks import loan_reminder_email as task_email
+from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
@@ -43,11 +53,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
+
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
-from custom_admin.tasks import loan_reminder_email as task_email
-from django.core.exceptions import ObjectDoesNotExist
 
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -191,9 +200,10 @@ class APIItemDetail(APIView):
             "request": self.request,
             "pk": pk,
         }
-        tag_ids = request.data.getlist('tags')
-        tags = Tag.objects.filter(id__in=tag_ids)
-        item.tags.set(tags)
+        if 'tag' in request.data:
+            tag_ids = request.data['tags']
+            tags = Tag.objects.filter(id__in=tag_ids)
+            item.tags.set(tags)
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
@@ -255,7 +265,7 @@ class APIItemDetail(APIView):
 class RequestFilter(FilterSet):
     class Meta:
         model = Request
-        fields = ['status']
+        fields = ['status', 'type']
        
 class APIRequestList(ListAPIView):  
     """
@@ -307,7 +317,8 @@ class APIRequestDetail(APIView):
                     change_list.append(('request quantity', indiv_request.request_quantity, serializer.validated_data['request_quantity']))
                 if serializer.validated_data['reason'] != indiv_request.reason:
                     change_list.append(('reason', indiv_request.reason, serializer.validated_data['reason']))
-            
+                if serializer.validated_data['type'] != indiv_request.type:
+                    change_list.append(('type', indiv_request.type, serializer.validated_data['type']))
                 serializer.save(time_requested=timezone.now())
                 Log.objects.create(request_id=indiv_request.request_id, item_id=indiv_request.item_name.item_id, item_name=indiv_request.item_name, initiating_user=str(request.user), nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited request for " + str(indiv_request.item_name))
@@ -388,7 +399,6 @@ class APIRequestThroughItem(APIView):
             for user in SubscribedUsers.objects.all():
                 to.append(user.email)
             message=render_to_string('inventory/request_confirmation_email.txt', ctx)
-            #print(to)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -589,7 +599,7 @@ class APIDirectDisbursement(APIView):
         if serializer.is_valid():
             if item_to_disburse.quantity >= int(request.data.get('total_quantity')):
                 # decrement quantity in item
-                item_to_disburse.quantity = F('quantity')-int(request.data.get('total_quantity'))
+                item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
@@ -823,8 +833,9 @@ class ItemUpload(APIView):
     Uploading items via API
     """
     def errorHandling(self, request, message, createdItems):
-        for createdItem in createdItems:
-            createdItem.delete()
+        if createdItems:
+            for createdItem in createdItems:
+                createdItem.delete()
         messages.error(request._request, message)
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
         
@@ -838,38 +849,33 @@ class ItemUpload(APIView):
             if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
                 # ERROR CHECK, make sure the custom field names are correct 
                 if not any(field.field_name == header for field in custom_fields):
-                    messages.error(request._request, 
-                                 'field ' + header + ' does not exist')
-                    return Response('field ' + header + ' does not exist', status=status.HTTP_400_BAD_REQUEST) 
+                    return self.errorHandling(request, 'field ' + header + ' does not exist', [])
                 customFieldMap[header.lower()] = i
             else:
                 headerMap[header.lower()] = i    
             
         # ERROR CHECK, make sure that item name and quantity headers exist
         if not "item name" in headerMap:
-            messages.error(request._request, 
-                                 'Item Name does not exist in header')
-            return Response("Make sure item name exists in header", status=status.HTTP_400_BAD_REQUEST) 
+            return self.errorHandling(request, '"Item Name" does not exist in header', [])
         if not "quantity" in headerMap:
-            messages.error(request._request, 
-                                 'Quantity does not exist in header')
-            return Response("Make sure quantity exists in header", status=status.HTTP_400_BAD_REQUEST) 
+            return self.errorHandling(request, '"Quantity" does not exist in header', [])
         
         createdItems = []
         for i, csvRow in enumerate(csvData[1:]):
             row = csvRow.split(',')
             if row[headerMap["item name"]]=='':
-                messages.error(request._request, 
-                                 'item name does not exist in row ' + str(i+1))
-                return Response('item name does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
+                return self.errorHandling(request, 'value of "Item Name" does not exist in row ' + str(i+1), createdItems)
             if row[headerMap["quantity"]]=='':
-                messages.error(request._request, 
-                                 'quantity does not exist in row ' + str(i+1))
-                return Response('quantity does not exist in row ' + str(i+1), status=status.HTTP_400_BAD_REQUEST) 
-            item, created = Item.objects.get_or_create(item_name=row[headerMap["item name"]], quantity=row[headerMap["quantity"]], model_number=row[headerMap["model number"]], description=row[headerMap["description"]])
-            if not created:
+                return self.errorHandling(request, 'value of "Quantity" does not exist in row ' + str(i+1), createdItems)
+            if not row[headerMap["quantity"]].isdigit():
+                return self.errorHandling(request, 'value of "Quantity" is not an integer in row' + str(i+1), createdItems)          
+            if int(row[headerMap["quantity"]])<0:
+                return self.errorHandling(request, 'value of "Quantity" is less than 0 in row ' + str(i+1), createdItems)           
+            existingItem = Item.objects.filter(item_name=row[headerMap["item name"]]).count()
+            if existingItem>0:
                 return self.errorHandling(request, "Item " + row[headerMap["item name"]] + " already exists", createdItems)
-
+            item = Item(item_name=row[headerMap["item name"]], quantity=row[headerMap["quantity"]], model_number=row[headerMap["model number"]] if "model number" in headerMap else "", description=row[headerMap["description"]] if "description" in headerMap else "")
+            
             item.save()
             createdItems.append(item)
             # add to tags
@@ -886,13 +892,13 @@ class ItemUpload(APIView):
                         value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
                         value.save()
                     else:
-                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
+                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
                 elif actual_field.field_type == "Long":
                     if len(row[j])<=1000:
                         value = Custom_Field_Value(item=item, field=actual_field, field_value_long_text=row[j])
                         value.save()
                     else:
-                        return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
+                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
                 elif actual_field.field_type == "Int":
                     try:
                         int(row[j])
@@ -902,7 +908,7 @@ class ItemUpload(APIView):
                         if row[j] == "":
                             continue
                         else:
-                            return self.errorHandling(request,"custom_field at row " + str(i+1) + " is not a int", createdItems) 
+                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not an integer", createdItems) 
                 elif actual_field.field_type == "Float":
                     try:
                         float(row[j])
@@ -912,7 +918,7 @@ class ItemUpload(APIView):
                         if row[j] == "":
                             continue
                         else:
-                            return self.errorHandling(request, "custom_field at row " + str(i+1) + " is not a float", createdItems)
+                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not a float", createdItems)
         items = {}
 #         pk_list = [5, 7, 1, 3, 4]  
 #         clauses = ' '.join(['WHEN id=%s THEN %s' % (pk, i) for i, pk in enumerate(pk_list)])  
@@ -954,16 +960,38 @@ class APILoan(APIView):
             return Response(status=status.HTTP_304_NOT_MODIFIED)
         item.quantity = item_quant
         item.save()
+        change_list=[]
         if serializer.is_valid():
+            print(serializer.validated_data['total_quantity'], loan.total_quantity)
+            print(serializer.validated_data['comment'], loan.comment)
+            if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
+                change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
+            if serializer.validated_data['comment'] != loan.comment:
+                change_list.append(('comment', loan.comment, serializer.validated_data['comment']))
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan edit'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def delete(self, request, pk, format=None): # check in loan
         loan = Loan.objects.get(loan_id=pk)
         requested_quant = int(request.data['check_in'])   
+        original_quantity = loan.total_quantity
         if requested_quant > 0 and requested_quant <= loan.total_quantity:
             loan.total_quantity = loan.total_quantity - requested_quant
             item = loan.item_name
@@ -975,6 +1003,20 @@ class APILoan(APIView):
             serializer = LoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan checkin'
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, requested_quant, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'checked_in':checked_in,
+                }
+                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 if loan.total_quantity == 0:
                     loan.delete()
                 return Response(serializer.data)
@@ -988,6 +1030,7 @@ class APILoan(APIView):
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         quantity_disbursed = int(request.data['convert'])
+        original_quantity = loan.total_quantity
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()
@@ -999,7 +1042,23 @@ class APILoan(APIView):
                 loan.delete()
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
+                print("VALID")
                 serializer.save()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan convert'
+                convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, quantity_disbursed, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'convert':checked_in,
+                }
+                message=render_to_string('inventory/convert_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
@@ -1023,6 +1082,8 @@ class APISubscriptionDetail(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        else:
+            user.delete()
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def delete(self, request, pk, format=None):
@@ -1050,7 +1111,7 @@ class APILoanEmailBody(APIView):
         LoanReminderEmailBody.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-class APILoanSendDates(APIView):
+class APILoanEmailConfigureDates(APIView):
     """
     Loan send dates 
     """
@@ -1061,19 +1122,94 @@ class APILoanSendDates(APIView):
         return Response(serializer.data)
     
     def post(self, request, format=None):
-        LoanSendDates.objects.all().delete()
+        #LoanSendDates.objects.all().delete()
         serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
-                print(date['date'])
+                day = datetime.strptime(date['date'], "%Y-%m-%d")
+                task_email.apply_async(eta=day+timedelta(hours=12))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-  
+
+
+class APILoanEmailClearDates(APIView):
+    """
+    Clear all loan dates
+    """
     def delete(self, request, format=None):
-        app.control.purge()
+        celery_app.control.purge()
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+  
         
-    
+class JSONResponse(HttpResponse):
+    """
+    Return a JSON serialized HTTP response
+    """
+    def __init__(self, request, data, status=200):
+        # pass DjangoJSONEncoder to handle Decimal fields
+        json_data = json.dumps(data, cls=DjangoJSONEncoder)
+        super(JSONResponse, self).__init__(
+            content=json_data,
+            content_type='application/json',
+            status=status,
+        )
+ 
+class JSONViewMixin(object):
+    """
+    Return JSON data. Add to a class-based view.
+    """
+    def json_response(self, data, status=200):
+        return JSONResponse(self.request, data, status=status)  
+
+ 
+# API
+ 
+# define a map from json column name to model field name
+# this would be better placed in the model
+col_name_map = {
+    'nature_of_event': 'nature_of_event',
+    'initiating_user': 'initiating_user',
+    'item_name': 'item_name',
+    'affected_user': 'affected_user',
+    'change_occurred': 'change_occurred',
+    'time_occurred': 'time_occurred',
+                
+               }
+class MyAPI(JSONViewMixin, View):
+    "Return the JSON representation of the objects"
+    def get(self, request, *args, **kwargs):
+        class_name = kwargs.get('cls_name')
+        params = request.GET
+        # make this api general enough to handle different classes
+        klass = getattr(sys.modules['inventory.models'], class_name)
+ 
+        # TODO: this only pays attention to the first sorting column
+        sort_col_num = params.get('iSortCol_0', 0)
+        # default to value column
+        sort_col_name = params.get('mDataProp_{0}'.format(sort_col_num), 'value')
+        search_text = params.get('sSearch', '').lower()
+        sort_dir = params.get('sSortDir_0', 'asc')
+        start_num = int(params.get('iDisplayStart', 0))
+        num = int(params.get('iDisplayLength', 25))
+        obj_list = klass.objects.all()
+        sort_dir_prefix = (sort_dir=='desc' and '-' or '')
+        if sort_col_name in col_name_map:
+            sort_col = col_name_map[sort_col_name]
+            obj_list = obj_list.order_by('{0}{1}'.format(sort_dir_prefix, sort_col))
+ 
+        filtered_obj_list = obj_list
+        if search_text:
+            filtered_obj_list = obj_list.filter_on_search(search_text)
+        print(search_text)
+        
+ 
+        d = {"iTotalRecords": obj_list.count(),                # num records before applying any filters
+            "iTotalDisplayRecords": filtered_obj_list.count(), # num records after applying filters
+            "sEcho":params.get('sEcho',1),                     # unaltered from query
+            "aaData": [obj.as_dict() for obj in filtered_obj_list[start_num:(start_num+num)]] # the data
+        }
+ 
+        return self.json_response(d)
     

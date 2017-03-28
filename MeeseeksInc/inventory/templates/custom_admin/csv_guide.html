@@ -1,0 +1,26 @@
+{% load static %}
+<a href="{% static 'csv_template.csv' %}">Download a template</a>
+<h2>Rules:</h2>
+<ul>
+	<li>The document MUST be in a .csv format</li>
+	<li>The first row shall be for column headers only.</li>
+	<li>Do not leave any spaces between the word and the comma, indicating the next item</li>
+	<li>The implicit column headers are named "Item Name", "Quantity", "Model Number", "Description", and "Tags"</li>
+	<li>For "Tags", to add multiple tags, use "/" to separate between tags</li>
+	<li>The loader will return an error if "Item Name" or "Quantity" cannot be found in the header, or the values are empty.</li>
+	<li>To add custom fields, just add more column headers and the same rules apply</li>
+	<li>Custom field values must obey its type (float types must have a float, not a text, for example).</li>
+	<li><b>If there are any errors, nothing will be uploaded.</b></li>
+</ul>
+<h2>Example csv file without custom fields</h2>
+Item Name,Quantity,Model Number,Description,Tags<br>
+CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
+CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
+CSV Name4,1000,CSV Model #,,csv3/csv4/csv5<br>
+<p><b>**Notice that the above example doesn't have a description in row 3.**</b></p>
+
+<h2>Example csv file with custom fields</h2>
+Item Name,Quantity,Model Number,Description,Tags,new field!,newFloatField,integerField<br>
+CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,1,10000<br>
+CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,,2<br>
+CSV Name4,1000,CSV Model #,CSV Description,csv3/csv4/csv5,hi,1.1,<br>

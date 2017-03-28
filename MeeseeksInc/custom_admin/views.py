@@ -267,6 +267,7 @@ def edit_item_module(request, pk):
     if request.method == "POST":
         form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
         if form.is_valid():
+            values_custom_field = []
             if int(form['quantity'].value())!=original_quantity:    
                 Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
                                          affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
@@ -295,6 +296,16 @@ def edit_item_module(request, pk):
                     else:
                         custom_val.field_value_floating = None
                 custom_val.save()
+#             user = request.user
+#             token, create = Token.objects.get_or_create(user=user)
+#             http_host = get_host(request)
+#             url=http_host+'/api/items/'+pk+'/'
+#             payload = {'item_name':form['item_name'].value(), 'quantity':int(form['quantity'].value()), 
+#                        'model_number':form['model_number'].value(), 'description':form['description'].value(), 
+#                        'values_custom_field': values_custom_field}
+#             header = {'Authorization': 'Token '+ str(token), 
+#                       "Accept": "application/json", "Content-type":"application/json"}
+#             requests.put(url, headers = header, data = json.dumps(payload))
             messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
             return redirect('/item/' + pk)
     else:
@@ -340,7 +351,7 @@ def convert_loan(request, pk): #redirect to main if deleted
             if response.status_code == 201:
                messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             else:
-                messages.errors(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
                 return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER')) 
@@ -452,14 +463,23 @@ def edit_request_main_page(request, pk):
     instance = Request.objects.get(request_id=pk)
     if request.method == "POST":
         form = RequestEditForm(request.POST, instance=instance, initial = {'item_field': instance.item_name})
-        change_list=[]
-        if int(form['request_quantity'].value()) != int(instance.request_quantity):
-            change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
-        if form['reason'].value() != instance.reason:
-            change_list.append(('reason', instance.reason, form['reason'].value()))
-        if form['type'].value() != instance.type:
-            change_list.append(('type', instance.type, form['type'].value()))
+#         change_list=[]
+#         if int(form['request_quantity'].value()) != int(instance.request_quantity):
+#             change_list.append(('request quantity', instance.request_quantity, form['request_quantity'].value()))
+#         if form['reason'].value() != instance.reason:
+#             change_list.append(('reason', instance.reason, form['reason'].value()))
+#         if form['type'].value() != instance.type:
+#             change_list.append(('type', instance.type, form['type'].value()))
         if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/requests/'+pk+'/'
+            payload = {'request_quantity': form['request_quantity'].value(),'type':form['type'].value(), 
+                       'reason':form['reason'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data=json.dumps(payload))
 #             user = request.user
 #             token, create = Token.objects.get_or_create(user=user)
 #             http_host = get_host(request)
@@ -469,29 +489,29 @@ def edit_request_main_page(request, pk):
 #                       "Accept": "application/json", "Content-type":"application/json"}
 #             requests.post(url, headers = header, data=json.dumps(payload))
 #             messages.success(request, 'You just edited the request successfully.')
-            post = form.save(commit=False)
+            #post = form.save(commit=False)
 #             post.item_id = form['item_field'].value()
 #             post.item_name = Item.objects.get(item_id = post.item_id)
-            post.status = "Pending"
-            post.time_requested = timezone.now()
-            post.save()
-            Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
-                                         affected_user='', change_occurred="Edited request for " + str(post.item_name))
-            item = instance.item_name
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Request edit'
-            to = [User.objects.get(username=instance.user_id).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':instance.user_id,
-                'changes':change_list,
-            }
-            message=render_to_string('inventory/request_edit_email.txt', ctx)
-            if len(change_list)>0:
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            #post.status = "Pending"
+            #post.time_requested = timezone.now()
+            #post.save()
+#             Log.objects.create(request_id = str(instance.request_id), item_id=instance.item_name.item_id, item_name=str(post.item_name), initiating_user=str(post.user_id), nature_of_event='Edit', 
+#                                          affected_user='', change_occurred="Edited request for " + str(post.item_name))
+#             item = instance.item_name
+#             try:
+#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#             except (ObjectDoesNotExist, IndexError) as e:
+#                 prepend = ''
+#             subject = prepend + 'Request edit'
+#             to = [User.objects.get(username=instance.user_id).email]
+#             from_email='noreply@duke.edu'
+#             ctx = {
+#                 'user':instance.user_id,
+#                 'changes':change_list,
+#             }
+#             message=render_to_string('inventory/request_edit_email.txt', ctx)
+#             if len(change_list)>0:
+#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return redirect('/customadmin')
     else:
         form = RequestEditForm(instance=instance, initial = {'item_field': instance.item_name})
@@ -822,14 +842,16 @@ def edit_item(request, pk):
 def edit_permission(request, pk):
     user = User.objects.get(username = pk)
     if request.method == "POST":
-        form = UserPermissionEditForm(request.POST or None, instance=user)
+        form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
         if form.is_valid():    
+            print("VALID")
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
             url=http_host+'/api/users/'+form['username'].value()+'/'
             payload = {'username':form['username'].value(), 'is_superuser':form['is_superuser'].value(),
-                       'is_staff':form['is_staff'].value(), 'is_active':form['is_active'].value()}
+                       'is_staff':form['is_staff'].value(), 'is_active':form['is_active'].value(), 
+                       'email':form['email'].value()}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.put(url, headers = header, data = json.dumps(payload))
@@ -838,7 +860,7 @@ def edit_permission(request, pk):
             #                             affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
             return redirect('/customadmin')
     else:
-        form = UserPermissionEditForm(instance = user, initial = {'username': user.username})
+        form = UserPermissionEditForm(instance = user, initial = {'username': user.username, 'email':user.email})
     return render(request, 'custom_admin/user_edit.html', {'form': form})
 
 @login_required(login_url='/login/')
@@ -1196,7 +1218,7 @@ def loan_reminder_body(request):
         form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
         if form.is_valid():
             input_date_list = form['send_dates'].value().split(',')
-            output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            #output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
             payload_send_dates=[]
             for date in input_date_list:
                 lst = date.split('/')
@@ -1209,17 +1231,29 @@ def loan_reminder_body(request):
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
-            url_send_dates=http_host+'/api/loan/email/dates/'
+            url_send_dates=http_host+'/api/loan/email/dates/configure/'
             url_loan_body = http_host+'/api/loan/email/body/'
             payload_loan_body = {'body':form['body'].value()}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"} 
             requests.post(url_loan_body, headers = header, data = json.dumps(payload_loan_body))
             requests.post(url_send_dates, headers = header, data = json.dumps(payload_send_dates))
-            return redirect('/customadmin')
+            return redirect(reverse('custom_admin:change_loan_body'))
     else:
         form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
-    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':selected_dates})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':sorted(selected_dates)})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def delete_task_queue(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    http_host = get_host(request)
+    url=http_host+'/api/loan/email/dates/delete/'
+    header = {'Authorization': 'Token '+ str(token), 
+              "Accept": "application/json", "Content-type":"application/json"} 
+    requests.delete(url, headers = header)#, data = json.dumps(payload_loan_body))
+    return loan_reminder_body(request)
             
 def delay_email(request):
     #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
