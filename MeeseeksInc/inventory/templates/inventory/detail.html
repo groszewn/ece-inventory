@@ -260,6 +260,49 @@
 	});
 	</script>
 {% endif %}
+
+{% if disbursed_list %}
+<h2>Disbursements</h2>
+	<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Item Name</th>
+				<th>Quantity</th>
+				<th>Disbursed to</th>
+				<th>Disbursed by</th>
+				<th>User Reason</th>
+				<th>Admin Comment</th>
+				<th>Time Disbursed</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for disbursed in disbursed_list %}
+	        		<tr>
+						<td>{{ disbursed.item_name }}</td>
+						<td>{{ disbursed.total_quantity }}</td>
+						<td>{{ disbursed.user_name }}</td>
+						<td>{{ disbursed.admin_name }}</td>
+						<td>{{ disbursed.orig_request.reason}}</td>
+						<td>{{ disbursed.comment}}</td>
+						<td>
+						  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+								  {{ disbursed.time_disbursed }}
+							</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+	    <script>
+	$('#inventory-disbursed tr td:not(:last-child)').click(function ()    {
+	 window.document.location = $(this).parent().data('href');
+	});
+	$(document).ready(function(){
+	    $('#inventory-disbursed').dataTable({
+	        "order": [[ 6, "desc" ]]
+	    });
+	});
+	</script>
+{% endif %}
 		
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
