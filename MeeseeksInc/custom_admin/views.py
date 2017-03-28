@@ -829,8 +829,11 @@ def add_tags_module(request, pk):
                         item.tags.add(t)
                         item.save()
             for ittag in item_tags:
-                ittag.tag = form[ittag.tag].value()
-                ittag.save()
+                if form[ittag.tag].value() is "":
+                    ittag.delete()
+                else:
+                    ittag.tag = form[ittag.tag].value().strip()
+                    ittag.save()
             return redirect('/item/' + pk)
     else:
         item = Item.objects.get(item_id = pk)
