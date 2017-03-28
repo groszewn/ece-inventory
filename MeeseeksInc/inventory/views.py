@@ -298,7 +298,7 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
         else:
             return redirect(reverse('inventory:index'))
 
-    def request_specific_item(self,request, pk):
+    def request_specific_item(request, pk):
         if request.method == "POST":
             form = RequestSpecificForm(request.POST) # create request-form with the data from the request
             if form.is_valid():

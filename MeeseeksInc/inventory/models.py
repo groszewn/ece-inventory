@@ -213,5 +213,5 @@ class MyClassQuerySet(QuerySet, MyClassMixin):
     pass
  
 class MyClassManager(models.Manager, MyClassMixin):
-    def get_query_set(self):
+    def get_queryset(self):
         return MyClassQuerySet(self.model, using=self._db)

@@ -36,29 +36,29 @@ $(function(){
 		</tr>
         </thead>
         
-        <tbody>
-            {% for instance in log_list %}
-				<tr>
-					{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
-						<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
-					{% else %}
-						<td>{{ instance.nature_of_event }}</td>
-					{% endif %}
-					<td>{{ instance.initiating_user }}</td>
-					{% if instance.item_id in item_list %}
-						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>
-					{% else%}
-						<td>{{instance.item_name}}</td>
-					{% endif %}
-					<td>{{ instance.affected_user }}</td>
-					<td>{{ instance.change_occurred }}</td>
-					<td>
-						  <span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>
-						  {{ instance.time_occurred }}
-					</td>
-				</tr>
-			{% endfor %}
-        </tbody>
+{#        <tbody>#}
+{#            {% for instance in log_list %}#}
+{#				<tr>#}
+{#					{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}#}
+{#						<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>#}
+{#					{% else %}#}
+{#						<td>{{ instance.nature_of_event }}</td>#}
+{#					{% endif %}#}
+{#					<td>{{ instance.initiating_user }}</td>#}
+{#					{% if instance.item_id in item_list %}#}
+{#						<td><a href="{% url 'inventory:detail' instance.item_id %}">{{instance.item_name}}</a></td>#}
+{#					{% else%}#}
+{#						<td>{{instance.item_name}}</td>#}
+{#					{% endif %}#}
+{#					<td>{{ instance.affected_user }}</td>#}
+{#					<td>{{ instance.change_occurred }}</td>#}
+{#					<td>#}
+{#						  <span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>#}
+{#						  {{ instance.time_occurred }}#}
+{#					</td>#}
+{#				</tr>#}
+{#			{% endfor %}#}
+{#        </tbody>#}
     </table>
     
 {% else %}
@@ -87,11 +87,47 @@ function (settings, data, dataIndex) {
 
 
 	$(document).ready(function(){
+		var item_ids = {{item_list|safe}}
+		var request_ids = {{request_list|safe}}
 	    var table = $('#log-table').dataTable({
-	        //"order": [[ 5, "desc" ]],
+	    	"bProcessing": true,
+	        "aaSorting": [[ 5, "desc" ]],
+	        "aoColumns": [
+	        	{"mData":"nature_of_event",
+	        	"mRender": function ( data, type, full ) {
+	        		if(full["nature_of_event"]==="Request" && request_ids.indexOf(full["request_id"]) >= 0){
+	        			return '<a href="'+"../request_detail/"+full["request_id"]+'">Request</a>';
+	        		} else {
+	        			return data;
+	        		}
+		    	}
+	        	},
+	        	{"mData":"initiating_user"},
+	        	{"mData":"item_name",
+				"mRender": function ( data, type, full ) {
+					if(item_ids.indexOf(full["item_id"]) >= 0) {
+		        		return '<a href="'+"../item/"+full["item_id"]+'">'+data+'</a>';
+		        	} else {
+		        		return data;
+		        	}
+		    	}
+	        	},
+	        	{"mData":"affected_user"},
+	        	{"mData":"change_occurred"},
+	        	{"mData":"time_occurred"}],
 	        "bServerSide": true,
         	"sAjaxSource": '{% url 'inventory:api' 'Log' %}',
-	        
+        	"fnServerData": function (sSource, aoData, fnCallback) {
+				aoData.push( { "name": "datetime", "value": $('#startdate').val() } );
+				console.log(aoData);
+				$.ajax({
+	             'dataType': 'json',
+	             'type': 'GET',
+	             'url': '{% url 'inventory:api' 'Log' %}',
+	             'data': aoData,
+	             'success': fnCallback
+	          });
+			},
 	    });
 		$('#startdate').change(function () {
 	    	table.fnDraw();
