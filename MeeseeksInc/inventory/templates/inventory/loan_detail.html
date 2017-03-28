@@ -98,7 +98,7 @@
 <script>
     $('.checkIn').click(function() {
     	loan_id = $(this).attr("loan-id"); 
-        $('#form-modal-body-checkIn').load(('checkIn/loan/'+loan_id), function () {
+        $('#form-modal-body-checkIn').load(('../../../customadmin/checkIn/loan/'+loan_id), function () {
             $('#form-modal-checkIn').modal('toggle');
         });
     });
@@ -126,7 +126,7 @@
 <script>
     $('.editLoan').click(function() {
     	loan_id = $(this).attr("loan-id"); 
-        $('#form-modal-body-editLoan').load(('edit/loan/'+loan_id), function () {
+        $('#form-modal-body-editLoan').load(('../../../customadmin/edit/loan/'+loan_id), function () {
             $('#form-modal-editLoan').modal('toggle');
         });
     });
@@ -154,7 +154,7 @@
 <script>
     $('.convert').click(function() {
     	loan_id = $(this).attr("loan-id"); 
-        $('#form-modal-body-convert').load(('../../customadmin/convert/loan/'+loan_id), function () {
+        $('#form-modal-body-convert').load(('../../../customadmin/convert/loan/'+loan_id), function () {
             $('#form-modal-convert').modal('toggle');
         });
     });
