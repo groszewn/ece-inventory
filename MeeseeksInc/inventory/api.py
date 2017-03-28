@@ -1055,7 +1055,7 @@ class APILoan(APIView):
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
             if loan.total_quantity == 0:
                 loan.delete()
-            serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
+            serializer = DisbursementSerializer(data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 try:
@@ -1074,6 +1074,7 @@ class APILoan(APIView):
                 message=render_to_string('inventory/convert_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
 ########################################## Subscription ###########################################    
