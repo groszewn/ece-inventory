@@ -1008,7 +1008,7 @@ def log_item(request):
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
 def api_guide_page(request):
-    if(not request.user.is_staff):
+    if not request.user.is_staff:
         my_template = 'inventory/base.html'
     else:
         my_template = 'custom_admin/base.html'
