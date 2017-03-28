@@ -243,7 +243,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         return self.render_to_response(
             self.get_context_data(formset=formset))
         
-    def delete_cart_instance(self, request, pk):
+    def delete_cart_instance(request, pk):
         ShoppingCartInstance.objects.get(cart_id=pk).delete()
         messages.success(request, 'You have successfully removed item from cart.')
         return redirect('/inventory_cart')
