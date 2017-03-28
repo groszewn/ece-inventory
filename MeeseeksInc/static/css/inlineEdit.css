@@ -1,0 +1,11 @@
+div.DTE_Inline input {
+        border: none;
+        background-color: transparent;
+        padding: 0 !important;
+        font-size: 90%;
+    }
+ 
+    div.DTE_Inline input:focus {
+        outline: none;
+        background-color: transparent;
+    }
