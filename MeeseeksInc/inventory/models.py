@@ -172,8 +172,6 @@ class LoanReminderEmailBody(models.Model):
 class LoanSendDates(models.Model):
     date = models.DateField()
     
-    
-    
 class MyClassMixin(object):
     """
     This will be subclassed by both the Object Manager and the QuerySet.
