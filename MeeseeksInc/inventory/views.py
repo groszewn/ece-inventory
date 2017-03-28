@@ -370,10 +370,10 @@ def request_token(request):
     request_url = "https://oauth.oit.duke.edu/oauth/authorize.php?"
     params = {
         'response_type':'token',
-         'client_id' : 'meeseeks-prod',
-        #'client_id': 'meeseeks-inc--inventory-system',
-        'redirect_uri' : 'https://meeseeksinc.colab.duke.edu/get_access_token',
-        #'redirect_uri':'http://localhost:8000/get_access_token',
+        # 'client_id' : 'meeseeks-prod',
+        'client_id': 'meeseeks-inc--inventory-system',
+        #'redirect_uri' : 'https://meeseeksinc.colab.duke.edu/get_access_token',
+        'redirect_uri':'http://localhost:8000/get_access_token',
         'scope':'basic identity:netid:read',
         'state':11291,
     }
