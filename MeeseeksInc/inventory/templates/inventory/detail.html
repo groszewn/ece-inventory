@@ -72,6 +72,15 @@
 <thead>
 	<tr>
 	<td>  
+
+	 </td>
+	<td>  </td>
+	</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+
 <div>
 	{% if user.is_staff %}
 	<script>
@@ -108,18 +117,11 @@
 	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Directly Disburse Item</a>									
 	{% endblock disbursement_direct %}
 {% endif %}
-	 </td>
-	<td> <h3>Add To Cart.</h3> </td>
-	</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-
 
 </td>
 
 <td>
+	<h3>Add To Cart.</h3>
   <form id="addToCart" class="form-horizontal" method="post">
 	{% csrf_token %}
    	{{form.as_p}}
