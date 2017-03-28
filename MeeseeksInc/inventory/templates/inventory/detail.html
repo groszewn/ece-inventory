@@ -6,6 +6,8 @@
 
 <center> <h1>  Item: {{ item.item_name }} </h1> </center> 
 
+<br>
+
 			</table>
 				<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -65,8 +67,11 @@
 		        </tbody>
 		    </table>
 
-<br/>
-    
+      
+<table id="set_up" cellspacing="0" width="100%">
+<thead>
+	<tr>
+	<td>  
 <div>
 	{% if user.is_staff %}
 	<script>
@@ -76,7 +81,7 @@
 	    }
 	}
 	</script>
-		
+	
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
 {% endblock edit_specific_item %}
@@ -89,31 +94,41 @@
 <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
 {% endif %}
 	
+	{% endif %}	
 </div>
 
-<br/>
-
-{% endif %}
+<br>
 
 {% block request_specific_item %}
-<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
+<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Request Item</a>									
 {% endblock request_specific_item %}
 
 {% if user.is_staff %}
 	{% block disbursement_direct %}
-	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Click Here to Directly Disburse Item to User</a>									
+	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Directly Disburse Item</a>									
 	{% endblock disbursement_direct %}
 {% endif %}
+	 </td>
+	<td> <h3>Add To Cart.</h3> </td>
+	</tr>
+</thead>
+<tbody>
+<tr>
+<td>
 
 
-<br/>
-<br/>
+</td>
 
-<form id="addToCart" class="form-horizontal" method="post">
+<td>
+  <form id="addToCart" class="form-horizontal" method="post">
 	{% csrf_token %}
    	{{form.as_p}}
     <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
-</form>
+	</form>
+</td>
+</tr>
+</tbody>
+</table>
 
 {% if request_list%}
 <h2>Outstanding Requests for This Item:  </h2>
