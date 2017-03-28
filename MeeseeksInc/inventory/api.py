@@ -12,6 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
+from django.db.models.query_utils import Q
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
@@ -1196,23 +1197,30 @@ class MyAPI(JSONViewMixin, View):
         sort_dir = params.get('sSortDir_0', 'asc')
         start_num = int(params.get('iDisplayStart', 0))
         num = int(params.get('iDisplayLength', 25))
+        start_date = params.get('datetime')
+        
         obj_list = klass.objects.all()
+#         obj_list = klass.objects.annotate(item_exists=Item.objects.filter(item_id='item_id').exists())
+       
         sort_dir_prefix = (sort_dir=='desc' and '-' or '')
         if sort_col_name in col_name_map:
             sort_col = col_name_map[sort_col_name]
             obj_list = obj_list.order_by('{0}{1}'.format(sort_dir_prefix, sort_col))
- 
+            
         filtered_obj_list = obj_list
-        if search_text:
-            filtered_obj_list = obj_list.filter_on_search(search_text)
-        print(search_text)
         
- 
+        if start_date:
+            obj_list = obj_list.filter(time_occurred__gte=start_date)
+        if search_text or start_date:
+            filtered_obj_list = obj_list.filter(
+                Q(item_name__icontains=search_text) | Q(initiating_user__icontains=search_text) |
+                Q(nature_of_event__icontains=search_text) | Q(affected_user__icontains=search_text) | Q(change_occurred__icontains=search_text))
+        
         d = {"iTotalRecords": obj_list.count(),                # num records before applying any filters
             "iTotalDisplayRecords": filtered_obj_list.count(), # num records after applying filters
             "sEcho":params.get('sEcho',1),                     # unaltered from query
             "aaData": [obj.as_dict() for obj in filtered_obj_list[start_num:(start_num+num)]] # the data
         }
- 
+        
         return self.json_response(d)
     
