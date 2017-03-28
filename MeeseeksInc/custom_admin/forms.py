@@ -127,7 +127,7 @@ class UserPermissionEditForm(forms.ModelForm):
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active', 'email')
         
-    def clean_manager(self):
+    def clean(self):
         cleaned_data = super(UserPermissionEditForm, self).clean()
         if cleaned_data['is_superuser']:
             cleaned_data['is_staff'] = True
@@ -237,4 +237,4 @@ class ChangeEmailPrependForm(forms.Form):
     
 class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
-    send_dates = forms.CharField()
+    send_dates = forms.CharField(required=False)

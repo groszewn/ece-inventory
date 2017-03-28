@@ -221,7 +221,7 @@ class RequestAcceptDenySerializer(serializers.ModelSerializer):
 class DisbursementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Disbursement
-        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity','orig_request', 'comment', 'time_disbursed')
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'orig_request','time_disbursed')
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(

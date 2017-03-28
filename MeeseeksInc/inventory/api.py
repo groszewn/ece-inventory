@@ -12,6 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
+from django.db.models.query_utils import Q
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
 from django.forms.formsets import formset_factory
@@ -849,7 +850,9 @@ class ItemUpload(APIView):
             if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
                 # ERROR CHECK, make sure the custom field names are correct 
                 if not any(field.field_name == header for field in custom_fields):
-                    return self.errorHandling(request, 'field ' + header + ' does not exist', [])
+                    if header=='':
+                        return self.errorHandling(request, 'field (empty string) does not exist. make sure you don\'t have an extra comma', [])
+                    return self.errorHandling(request, 'field ' + header + ' does not exist. check the header', [])
                 customFieldMap[header.lower()] = i
             else:
                 headerMap[header.lower()] = i    
@@ -863,14 +866,19 @@ class ItemUpload(APIView):
         createdItems = []
         for i, csvRow in enumerate(csvData[1:]):
             row = csvRow.split(',')
-            if row[headerMap["item name"]]=='':
+            if headerMap["item name"] >= len(row) or row[headerMap["item name"]]=='':
                 return self.errorHandling(request, 'value of "Item Name" does not exist in row ' + str(i+1), createdItems)
-            if row[headerMap["quantity"]]=='':
+            if headerMap["quantity"] >= len(row) or row[headerMap["quantity"]]=='':
                 return self.errorHandling(request, 'value of "Quantity" does not exist in row ' + str(i+1), createdItems)
             if not row[headerMap["quantity"]].isdigit():
                 return self.errorHandling(request, 'value of "Quantity" is not an integer in row' + str(i+1), createdItems)          
             if int(row[headerMap["quantity"]])<0:
                 return self.errorHandling(request, 'value of "Quantity" is less than 0 in row ' + str(i+1), createdItems)           
+            if "model number" in headerMap and headerMap["model number"] >= len(row):
+                return self.errorHandling(request, 'value of "Model Number" does not exist in row ' + str(i+1), createdItems)
+            if "description" in headerMap and headerMap["description"] >= len(row):
+                return self.errorHandling(request, 'value of "Description" does not exist in row ' + str(i+1), createdItems)
+            
             existingItem = Item.objects.filter(item_name=row[headerMap["item name"]]).count()
             if existingItem>0:
                 return self.errorHandling(request, "Item " + row[headerMap["item name"]] + " already exists", createdItems)
@@ -879,14 +887,20 @@ class ItemUpload(APIView):
             item.save()
             createdItems.append(item)
             # add to tags
-            for tag in row[headerMap["tags"]].split('/'):
-                t = Tag(tag=tag)
-                t.save(force_insert=True)
-                item.tags.add(t)
-                item.save()
+            if "tags" in headerMap:
+                if headerMap["tags"] >= len(row):
+                    return self.errorHandling(request, 'value of "tags" does not exist in row ' + str(i+1), createdItems)
+                for tag in row[headerMap["tags"]].split('/'):
+                    if not tag == '':
+                        t = Tag(tag=tag)
+                        t.save(force_insert=True)
+                        item.tags.add(t)
+                        item.save()
             # add custom fields
             for custom_field, j in customFieldMap.items():
                 actual_field = next((x for x in custom_fields if x.field_name.lower() == custom_field), None)
+                if j >= len(row):
+                    return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), createdItems)
                 if actual_field.field_type == "Short":
                     if len(row[j])<=400:
                         value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
@@ -965,8 +979,6 @@ class APILoan(APIView):
         item.save()
         change_list=[]
         if serializer.is_valid():
-            print(serializer.validated_data['total_quantity'], loan.total_quantity)
-            print(serializer.validated_data['comment'], loan.comment)
             if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
                 change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
             if serializer.validated_data['comment'] != loan.comment:
@@ -1033,12 +1045,11 @@ class APILoan(APIView):
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         quantity_disbursed = int(request.data['convert'])
-        original_quantity = loan.total_quantity
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()
             disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
-            #disbursement.save()
+            disbursement.save()
             Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
             if loan.total_quantity == 0:
@@ -1046,21 +1057,6 @@ class APILoan(APIView):
             serializer = DisbursementSerializer(disbursement, data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Loan convert'
-                convert=[(loan.item_name, quantity_disbursed, original_quantity)]
-                to = [User.objects.get(username=loan.user_name).email]
-                from_email='noreply@duke.edu'
-                checked_in = [(loan.item_name, quantity_disbursed, original_quantity)]
-                ctx = {
-                    'user':request.user,
-                    'convert':checked_in,
-                }
-                message=render_to_string('inventory/convert_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
         
@@ -1195,23 +1191,30 @@ class MyAPI(JSONViewMixin, View):
         sort_dir = params.get('sSortDir_0', 'asc')
         start_num = int(params.get('iDisplayStart', 0))
         num = int(params.get('iDisplayLength', 25))
+        start_date = params.get('datetime')
+        
         obj_list = klass.objects.all()
+#         obj_list = klass.objects.annotate(item_exists=Item.objects.filter(item_id='item_id').exists())
+       
         sort_dir_prefix = (sort_dir=='desc' and '-' or '')
         if sort_col_name in col_name_map:
             sort_col = col_name_map[sort_col_name]
             obj_list = obj_list.order_by('{0}{1}'.format(sort_dir_prefix, sort_col))
- 
+            
         filtered_obj_list = obj_list
-        if search_text:
-            filtered_obj_list = obj_list.filter_on_search(search_text)
-        print(search_text)
         
- 
+        if start_date:
+            obj_list = obj_list.filter(time_occurred__gte=start_date)
+        if search_text or start_date:
+            filtered_obj_list = obj_list.filter(
+                Q(item_name__icontains=search_text) | Q(initiating_user__icontains=search_text) |
+                Q(nature_of_event__icontains=search_text) | Q(affected_user__icontains=search_text) | Q(change_occurred__icontains=search_text))
+        
         d = {"iTotalRecords": obj_list.count(),                # num records before applying any filters
             "iTotalDisplayRecords": filtered_obj_list.count(), # num records after applying filters
             "sEcho":params.get('sEcho',1),                     # unaltered from query
             "aaData": [obj.as_dict() for obj in filtered_obj_list[start_num:(start_num+num)]] # the data
         }
- 
+        
         return self.json_response(d)
     
