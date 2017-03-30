@@ -282,20 +282,7 @@ def edit_item_module(request, pk):
                     custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                 else:
                     custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_integer = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value 
-                    else:
-                        custom_val.field_value_floating = None
+                custom_val.value = field_value
                 custom_val.save()
 #             user = request.user
 #             token, create = Token.objects.get_or_create(user=user)
@@ -709,25 +696,9 @@ def edit_item(request, pk):
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
-                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
-                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
-                else:
-                    custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_integer = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value 
-                    else:
-                        custom_val.field_value_floating = None
-                custom_val.save()
+                custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
+                custom_val.save() 
+            print("HIHIHIHIHIHIHIHIHI")
             return redirect('/item/' + pk)
     else:
         form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
@@ -987,22 +958,9 @@ def create_new_item(request):
                     item.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
-                custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_floating = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value
-                    else:
-                        custom_val.field_value_floating = None
-                custom_val.save()
+                custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
+                custom_val.save()  
+            
             return redirect('/customadmin')
         else:
             messages.error(request, ("An error occurred while trying to create " + form['item_name'].value() + "."))

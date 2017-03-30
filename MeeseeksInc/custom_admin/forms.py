@@ -107,13 +107,13 @@ class ItemEditForm(forms.ModelForm):
             for val in custom_values:
                 if val.field == field:
                     if field.field_type == 'Short':
-                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)                    
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,required=False)                    
                     if field.field_type == 'Long':
-                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_long_text,widget=forms.Textarea,required=False) 
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,widget=forms.Textarea,required=False) 
                     if field.field_type == 'Int':
-                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
+                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
                     if field.field_type == 'Float':
-                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
+                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)

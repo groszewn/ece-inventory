@@ -130,7 +130,7 @@ class CustomValueSerializerNoItem(serializers.ModelSerializer):
     
     class Meta:
         model = Custom_Field_Value
-        fields = ('id','field_name', 'is_private', 'field_type', 'field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        fields = ('id','field_name', 'is_private', 'field_type', 'value')      
         depth = 1
 
 

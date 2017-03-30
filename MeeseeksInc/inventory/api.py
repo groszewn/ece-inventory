@@ -140,26 +140,31 @@ class APIItemList(ListCreateAPIView):
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
+            
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         custom_val = Custom_Field_Value(item=item, field=field)
-                        if field.field_type == 'Short':    
-                            custom_val.field_value_short_text = value['field_value_short_text']
-                        if field.field_type == 'Long':
-                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if value['value']=='':
+                            continue
+                        if field.field_type == 'Short' and len(value['value'])<=400 or \
+                            field.field_type == 'Long' and len(value['value'])<=1000:
+                            custom_val.value = value['value']
                         if field.field_type == 'Int':
-                            if value != '':
-                                custom_val.field_value_integer = value['field_value_integer']
-                            else:
-                                custom_val.field_value_integer = None
+                            try:
+                                int(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be an integer", status=status.HTTP_400_BAD_REQUEST)
                         if field.field_type == 'Float':
-                            if value != '':
-                                custom_val.field_value_floating = value['field_value_floating'] 
-                            else:
-                                custom_val.field_value_floating = None
+                            try:
+                                float(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
             context = {
             "request": self.request,
             "pk": item.item_id,
@@ -219,6 +224,7 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
+            print(request.data)
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
@@ -227,21 +233,24 @@ class APIItemDetail(APIView):
                             custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                         else:
                             custom_val = Custom_Field_Value(item=item, field=field)
-                        if field.field_type == 'Short':    
-                            custom_val.field_value_short_text = value['field_value_short_text']
-                        if field.field_type == 'Long':
-                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if value['value']=='':
+                            continue
+                        if field.field_type == 'Short' and len(value['value'])<=400 or \
+                            field.field_type == 'Long' and len(value['value'])<=1000:
+                            custom_val.value = value['value']
                         if field.field_type == 'Int':
-                            if value != '':
-                                custom_val.field_value_integer = value['field_value_integer']
-                            else:
-                                custom_val.field_value_integer = None
+                            try:
+                                int(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be an integer", status=status.HTTP_400_BAD_REQUEST)
                         if field.field_type == 'Float':
-                            if value != '':
-                                custom_val.field_value_floating = value['field_value_floating'] 
-                            else:
-                                custom_val.field_value_floating = None
-                        custom_val.save()
+                            try:
+                                float(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
+                        custom_val.save()  
             context = {
             "request": self.request,
             "pk": pk,
@@ -903,20 +912,20 @@ class ItemUpload(APIView):
                     return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), createdItems)
                 if actual_field.field_type == "Short":
                     if len(row[j])<=400:
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, value=row[j])
                         value.save()
                     else:
                         return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
                 elif actual_field.field_type == "Long":
                     if len(row[j])<=1000:
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_long_text=row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, value=row[j])
                         value.save()
                     else:
                         return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
                 elif actual_field.field_type == "Int":
                     try:
                         int(row[j])
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_integer=int(row[j]))
+                        value = Custom_Field_Value(item=item, field=actual_field, value=int(row[j]))
                         value.save()
                     except ValueError:
                         if row[j] == "":
@@ -926,7 +935,7 @@ class ItemUpload(APIView):
                 elif actual_field.field_type == "Float":
                     try:
                         float(row[j])
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_floating=float(row[j]))
+                        value = Custom_Field_Value(item=item, field=actual_field, value=float(row[j]))
                         value.save()
                     except ValueError:
                         if row[j] == "":
