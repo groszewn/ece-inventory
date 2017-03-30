@@ -142,7 +142,7 @@ class APIItemList(ListCreateAPIView):
             custom_field_values = request.data.get('values_custom_field')
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
-                    value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
+                    value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         custom_val = Custom_Field_Value(item=item, field=field)
                         if field.field_type == 'Short':    
