@@ -618,9 +618,13 @@ editor = new $.fn.dataTable.Editor( {
 				        success: function(json) {
 				        	successCallback(output);
 				        },
-				        error: function(error) {
+				        error: function (xhr, error, thrown) {
+				        	if (xhr.status == 400) {
+							    editor.error(xhr.responseText);
+							}
 				        	errorCallback();
 				        }
+				        
 					});
 			    }
 		    } else if(d.action==='remove') {
@@ -662,6 +666,7 @@ editor
     .on( 'close', function () {
         table.keys.enable();
     } );
+
 get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
