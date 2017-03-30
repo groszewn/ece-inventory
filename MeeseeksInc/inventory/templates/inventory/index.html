@@ -7,13 +7,6 @@
 
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
-{% if user.is_staff %}
-	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
-	{% block csvHelp %}
-	<a id="csvHelp" class="csvHelp btn btn-primary">Help</a>
-	{% endblock csvHelp %}
-	
-{% endif %}
 
 <form id="search-form">
     <label>Included Tags:</label>
@@ -274,8 +267,8 @@
 								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
 								  {{ loan.time_loaned }}
 							</td>
-							<td>
 							{% if user.is_staff %}
+							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 								{% endblock checkIn %}
@@ -285,13 +278,13 @@
 								{% block  editLoan %}
 								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
 								{% endblock editLoan %}
-							{% endif %}
 							</td>
+							{% endif %}
 						</tr>
 					{% endfor %}
 		        </tbody>
 		    </table>
-{% endif %}
+	{% endif %}
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -325,7 +318,9 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
-{% endif %}
+	{#% else %#}
+		{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
+	{% endif %}
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -703,21 +698,21 @@ function get_search_data(first) {
 				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
 				    		var custom_field_object = json[i].values_custom_field[count];
 				    		var field = custom_field_object.field;
-							var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+							var indexOfField = djangoCustomFieldNameList.indexOf(custom_field_object.field_name);
 							if(indexOfField == -1) {
 				    			continue;
 				    		}
-				    		if (field.field_type == "Short") {
-								json[i][field.field_name] = custom_field_object.field_value_short_text;
-							} else if(field.field_type == "Long") {
-								json[i][field.field_name] = custom_field_object.field_value_long_text;
-							} else if(field.field_type == "Int") {
+				    		if (custom_field_object.field_type == "Short") {
+								json[i][custom_field_object.field_name] = custom_field_object.field_value_short_text;
+							} else if(custom_field_object.field_type == "Long") {
+								json[i][custom_field_object.field_name] = custom_field_object.field_value_long_text;
+							} else if(custom_field_object.field_type == "Int") {
 								if(custom_field_object.field_value_integer) {
-									json[i][field.field_name] = custom_field_object.field_value_integer;
+									json[i][custom_field_object.field_name] = custom_field_object.field_value_integer;
 								}
-							} else if(field.field_type == "Float") {
+							} else if(custom_field_object.field_type == "Float") {
 								if(custom_field_object.field_value_floating) {
-									json[i][field.field_name] = custom_field_object.field_value_floating;
+									json[i][custom_field_object.field_name] = custom_field_object.field_value_floating;
 								}
 							}
 				    	}

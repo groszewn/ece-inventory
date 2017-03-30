@@ -1,9 +1,12 @@
  {% load crispy_forms_tags %}
  {% load static %}
 
-<h3>How many items are you checking in?</h3>
+<h3>How many {{item_name}}s are you checking in?</h3>
+
+Quantity of <b>{{item_name}}</b> loaned: {{num_loaned}}
+<br/>
+
 <div class="row">
-	Total items loaned: {{num_loaned}}
     <form id="formID-checkIn" action="{% url 'custom_admin:check_in_loan' pk %}" class="form-horizontal" method="post">
 {#        {% crispy form %}#}
 		{% csrf_token %}

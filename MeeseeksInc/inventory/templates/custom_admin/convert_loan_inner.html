@@ -1,7 +1,11 @@
  {% load crispy_forms_tags %}
  {% load static %}
 
-<h3>How many items from this loan do you want to permanently disburse?</h3>
+<h3>How many {{item_name}}(s) from this loan do you want to permanently disburse?</h3>
+
+Quantity of <b>{{item_name}}</b> loaned: {{num_loaned}}
+<br/>
+
 <div class="row">
     <form id="formID-convert" action="{% url 'custom_admin:convert_loan' pk %}" class="form-horizontal" method="post">
 {#        {% crispy form %}#}

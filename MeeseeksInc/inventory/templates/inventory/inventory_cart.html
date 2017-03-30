@@ -23,7 +23,7 @@
 						{% with formset|index:forloop.counter0 as form %}
 						    {{ form.as_p }}
 						{% endwith %}
-						<a href="{% url 'inventory:delete_cart_instance' cart_item.cart_id %}" class="btn btn-danger">Cancel</a>
+						<a onclick="return confirm('Remove this item from your cart?')" href="{% url 'inventory:delete_cart_instance' cart_item.cart_id %}" class="btn btn-danger">Cancel</a>
 					</td>
 				</tr>
 			{% endfor %}

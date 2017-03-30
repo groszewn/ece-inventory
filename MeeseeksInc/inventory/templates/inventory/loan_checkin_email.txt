@@ -1,0 +1,11 @@
+Hello {{ user }}, 
+
+The following items have been checked in:
+
+{% for item, amount, total in checked_in %}
+	{{item}} (checked in {{amount}} out of {{total}})
+{% endfor %}
+
+Best, 
+
+ECE inventory

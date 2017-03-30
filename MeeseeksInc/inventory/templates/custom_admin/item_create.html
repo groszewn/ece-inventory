@@ -5,6 +5,7 @@
 {% block content %}
 
  <h2>Create New Item</h2>
+ 
  <form method="POST" class="post-form">{% csrf_token %}
 	 {% for field in form %}
         <div class="fieldWrapper">
@@ -12,13 +13,20 @@
             {% if field.field.widget|klass == 'Textarea' %}
             	<div>{{ field.label_tag }}</div>
 				<div>{{ field }}</div>
-			{% elif field.label == 'Tags to include...(Hold command to select multiple tags.)' %}
+			{% elif field.label == 'Tags to include...' %}
 				<div>{{field.label_tag }}</div>
 				<div>{{ field }}</div>
+				
+			{% elif field.label == 'New tags' %}
+				<div>{{field.label_tag }}</div>
+				<div>{{ field }}</div>
+				(Enter a comma separated list to create and add multiple tags.)
+			
             {% else %}
             	{{ field.label_tag }} {{ field }}
             {% endif %}
         </div>
+        <br>
     {% endfor %}
 	<button type="submit" class="save btn btn-default">Save</button>
  </form>

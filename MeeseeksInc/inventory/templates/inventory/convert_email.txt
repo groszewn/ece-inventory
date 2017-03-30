@@ -1,0 +1,11 @@
+Hello {{ user }}, 
+
+Your loan has been edited:
+
+{% for item, amount, total in convert %}
+	{{item}} (Converted {{amount}} out of {{total}} to disbursal)
+{% endfor %}
+
+Best, 
+
+ECE inventory

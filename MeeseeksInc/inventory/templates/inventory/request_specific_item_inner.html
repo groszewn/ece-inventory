@@ -2,6 +2,10 @@
  {% load static %}
 
 <h3>Enter quantity and reason for request</h3>
+
+Quantity of <b>{{item_name}}</b> available: {{num_available}}
+<br/>
+<br/>
 <div class="row">
     <form id="formID-specific-request" request-comment ="" action="{% url 'inventory:request_specific_item' pk %}" class="form-horizontal" method="post">
 		{% csrf_token %}

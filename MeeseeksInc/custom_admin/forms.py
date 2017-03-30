@@ -11,7 +11,7 @@ from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, R
 
 
 class DisburseForm(forms.ModelForm):
-    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    user_field = forms.ModelChoiceField(queryset=User.objects.all())
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
@@ -25,7 +25,7 @@ class DisburseForm(forms.ModelForm):
         fields = ('user_field', 'item_field', 'total_quantity', 'comment', 'type')
 
 class DisburseSpecificForm(forms.Form):
-    user_field = forms.ModelChoiceField(queryset=User.objects.filter(is_staff="False")) #to disburse only to users
+    user_field = forms.ModelChoiceField(queryset=User.objects.all()) 
     total_quantity = forms.IntegerField(min_value=0)
     comment = forms.CharField(required=False)
     TYPES = (
@@ -127,7 +127,7 @@ class UserPermissionEditForm(forms.ModelForm):
         model = User
         fields = ('username', 'is_superuser', 'is_staff', 'is_active', 'email')
         
-    def clean_manager(self):
+    def clean(self):
         cleaned_data = super(UserPermissionEditForm, self).clean()
         if cleaned_data['is_superuser']:
             cleaned_data['is_staff'] = True
@@ -153,7 +153,7 @@ class AddTagForm(forms.Form):
                 choices.append([myTag.tag,myTag.tag])
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
-            self.fields["%s" % tag.tag] = forms.CharField(initial = tag.tag, label = "Edit existing tag")
+            self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")
         
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags',)
@@ -170,7 +170,7 @@ class CreateItemForm(forms.ModelForm):
         for myTag in tags:
             if [myTag.tag,myTag.tag] not in choices:
                 choices.append([myTag.tag,myTag.tag])
-        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...(Hold command to select multiple tags.)')
+        self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Tags to include...')
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -181,7 +181,7 @@ class CreateItemForm(forms.ModelForm):
             if field.field_type == 'Float':
                 self.fields["%s" % field.field_name] = forms.FloatField(required=False)
         
-    new_tags = forms.CharField(required=False, label = 'New tags: (Enter multiple new tags in a comma separated list.)')
+    new_tags = forms.CharField(required=False, label = 'New tags')
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
@@ -237,4 +237,4 @@ class ChangeEmailPrependForm(forms.Form):
     
 class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
-    send_dates = forms.CharField()
+    send_dates = forms.CharField(required=False)

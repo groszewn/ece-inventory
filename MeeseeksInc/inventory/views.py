@@ -71,7 +71,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['approved_request_list'] = Request.objects.filter(status="Approved")
             context['pending_request_list'] = Request.objects.filter(status="Pending")
             context['denied_request_list'] = Request.objects.filter(status="Denied")
-            context['disbursed_list'] = Disbursement.objects.filter()
+            context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
             context['my_template'] = 'custom_admin/base.html'
         else:
@@ -112,11 +112,13 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
+            context['disbursed_list'] = Disbursement.objects.filter(user_name=user.username)
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
             context['custom_fields'] = Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
             context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
+            context['disbursed_list'] = Disbursement.objects.filter(item_name=self.get_object().item_id)
             context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
@@ -241,7 +243,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         return self.render_to_response(
             self.get_context_data(formset=formset))
         
-    def delete_cart_instance(self, request, pk):
+    def delete_cart_instance(request, pk):
         ShoppingCartInstance.objects.get(cart_id=pk).delete()
         messages.success(request, 'You have successfully removed item from cart.')
         return redirect('/inventory_cart')
@@ -263,8 +265,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
     
     def test_func(self):
         return self.request.user.is_active
-
-    def edit_request(self,request, pk): 
+        
+    def edit_request(request, pk): 
         instance = Request.objects.get(request_id=pk)
         if request.method == "POST":
             form = RequestEditForm(request.POST, instance=instance)
@@ -275,16 +277,16 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                 header = get_header(request)
                 response = requests.put(url, headers = header, data=json.dumps(payload))
                 if response.status_code == 200:
-                    messages.success(request, 'You edited the request successfully.')
-                    return redirect('/request_detail/' + instance.request_id )
+                    messages.success(request, 'You edited the request successfully.')                    
+                    return redirect(request.META.get('HTTP_REFERER'))
                 else:
                     messages.error(request, 'An error occurred.')
-                    return redirect('/request_detail/' + instance.request_id ) 
+                    return redirect(request.META.get('HTTP_REFERER')) 
         else:
             form = RequestEditForm(instance=instance)
-        return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk})
+        return render(request, 'inventory/request_edit_inner.html', {'form': form, 'pk':pk, 'item_name':instance.item_name.item_name, 'num_left':instance.item_name.quantity})
  
-    def cancel_request(self,request, pk):
+    def cancel_request(request, pk):
         instance = Request.objects.get(request_id=pk)
         url = get_host(request) + '/api/requests/' + instance.request_id + '/'
         header = get_header(request)
@@ -293,6 +295,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             messages.success(request, ('Successfully deleted request for ' + str(instance.item_name)))
         else:
             messages.error(request, ('Failed to delete request for ' + str(instance.item_name)))
+        if "item" in request.META.get('HTTP_REFERER'):
+            return redirect(request.META.get('HTTP_REFERER'))
         if request.user.is_staff:
             return redirect(reverse('custom_admin:index'))
         else:
@@ -313,8 +317,8 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
                     messages.error(request, ('Could not request ' + item.item_name + ' (' + request.user.username +')'))
                 return redirect(reverse('inventory:detail', kwargs={'pk':item.item_id}))  
         else:
-            form = RequestSpecificForm(initial={'available_quantity': Item.objects.get(item_id=pk).quantity}) # blank request form with no data yet
-        return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk})
+            form = RequestSpecificForm() # blank request form with no data yet
+        return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk, 'num_available':Item.objects.get(item_id=pk).quantity, 'item_name':Item.objects.get(item_id=pk).item_name})
 
 
 class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):

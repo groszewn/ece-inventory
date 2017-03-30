@@ -6,6 +6,8 @@
 
 <center> <h1>  Item: {{ item.item_name }} </h1> </center> 
 
+<br>
+
 			</table>
 				<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -65,8 +67,20 @@
 		        </tbody>
 		    </table>
 
-<br/>
-    
+      
+<table id="set_up" cellspacing="0" width="100%">
+<thead>
+	<tr>
+	<td>  
+
+	 </td>
+	<td>  </td>
+	</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+
 <div>
 	{% if user.is_staff %}
 	<script>
@@ -76,7 +90,7 @@
 	    }
 	}
 	</script>
-		
+	
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
 {% endblock edit_specific_item %}
@@ -89,31 +103,34 @@
 <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
 {% endif %}
 	
+	{% endif %}	
 </div>
 
-<br/>
-
-{% endif %}
+<br>
 
 {% block request_specific_item %}
-<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here to Request this Item</a>									
+<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Request Item</a>									
 {% endblock request_specific_item %}
 
 {% if user.is_staff %}
 	{% block disbursement_direct %}
-	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Click Here to Directly Disburse Item to User</a>									
+	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Directly Disburse Item</a>									
 	{% endblock disbursement_direct %}
 {% endif %}
 
+</td>
 
-<br/>
-<br/>
-
-<form id="addToCart" class="form-horizontal" method="post">
+<td>
+	<h3>Add To Cart.</h3>
+  <form id="addToCart" class="form-horizontal" method="post">
 	{% csrf_token %}
    	{{form.as_p}}
     <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
-</form>
+	</form>
+</td>
+</tr>
+</tbody>
+</table>
 
 {% if request_list%}
 <h2>Outstanding Requests for This Item:  </h2>
@@ -160,7 +177,7 @@
 										<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
 									{% endblock requestEdit %}
 									
-									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:item_detail_request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 								{% endif %}
 							</td>
 						</tr>
@@ -198,7 +215,9 @@
 					<th>Loaned By</th>
 					<th>Quantity</th>
 					<th>Admin Comment</th>
+					{% if user.is_staff %}
 					<th>Actions</th>
+					{% endif %}
 				</tr>
 		        </thead>
 		        <tbody>
@@ -213,8 +232,8 @@
 							<td>{{ loan.admin_name }}</td>
 							<td>{{ loan.total_quantity }}</td>
 							<td>{{ loan.comment }}</td>
-							<td>
 							{% if user.is_staff %}
+							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 								{% endblock checkIn %}
@@ -223,9 +242,9 @@
 								{% endblock convert %}
 								{% block  editLoan %}
 								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
-								{% endblock editLoan %}
-							{% endif %}	
+								{% endblock editLoan %}	
 							</td>
+							{% endif %}
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -237,6 +256,49 @@
 	$(document).ready(function(){
 	    $('#inventory-loan-indiv-item').dataTable({
 	        "order": [[ 1, "desc" ]]
+	    });
+	});
+	</script>
+{% endif %}
+
+{% if disbursed_list %}
+<h2>Disbursements for This Item:</h2>
+	<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Item Name</th>
+				<th>Quantity</th>
+				<th>Disbursed to</th>
+				<th>Disbursed by</th>
+				<th>User Reason</th>
+				<th>Admin Comment</th>
+				<th>Time Disbursed</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for disbursed in disbursed_list %}
+	        		<tr>
+						<td>{{ disbursed.item_name }}</td>
+						<td>{{ disbursed.total_quantity }}</td>
+						<td>{{ disbursed.user_name }}</td>
+						<td>{{ disbursed.admin_name }}</td>
+						<td>{{ disbursed.orig_request.reason}}</td>
+						<td>{{ disbursed.comment}}</td>
+						<td>
+						  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+								  {{ disbursed.time_disbursed }}
+							</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+	    <script>
+	$('#inventory-disbursed tr td:not(:last-child)').click(function ()    {
+	 window.document.location = $(this).parent().data('href');
+	});
+	$(document).ready(function(){
+	    $('#inventory-disbursed').dataTable({
+	        "order": [[ 6, "desc" ]]
 	    });
 	});
 	</script>

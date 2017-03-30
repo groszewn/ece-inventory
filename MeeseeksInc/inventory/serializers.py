@@ -122,9 +122,15 @@ class CustomValueSerializer(serializers.ModelSerializer):
         depth = 1
         
 class CustomValueSerializerNoItem(serializers.ModelSerializer):
+    
+    id = serializers.ReadOnlyField(source='field.id')
+    field_name = serializers.ReadOnlyField(source='field.field_name')
+    is_private = serializers.ReadOnlyField(source='field.is_private')
+    field_type = serializers.ReadOnlyField(source='field.field_type')
+    
     class Meta:
         model = Custom_Field_Value
-        fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        fields = ('id','field_name', 'is_private', 'field_type', 'field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
         depth = 1
 
 
@@ -221,7 +227,7 @@ class RequestAcceptDenySerializer(serializers.ModelSerializer):
 class DisbursementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Disbursement
-        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_disbursed')
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'orig_request','time_disbursed')
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
@@ -304,6 +310,16 @@ class SubscribeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscribedUsers
         fields = ('user','email',)
+        
+    def validate_email(self, value):
+        """
+        Check that the email is valid
+        """
+        pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+        
+        if not pattern.match(value):
+            raise serializers.ValidationError("Enter a valid email address.")
+        return value
         
 class LoanReminderBodySerializer(serializers.ModelSerializer):
     class Meta:

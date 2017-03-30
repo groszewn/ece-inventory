@@ -13,12 +13,12 @@
 	 		<br/>
 	 		{{form.tag_field.label}}
 	 		<br/>
-	 		Choose already existing tags to add to this item.
-	 		<br/>
 	 		{{form.tag_field}}
 	 		<br/>
-	 		 (Hold command to select multiple tags.)
+	 		 (Choose already existing tags to add to this item.)
 	 		<br/>
+	 		<br/>
+	 		(To delete a tag, just delete its text)
 	 		<br/>
 	 	{% for field in form %}
 	 		{% if field.label != "Create new tags" and field.label != "Add new tags..."%}
