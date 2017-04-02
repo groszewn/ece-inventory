@@ -1,62 +1,36 @@
-from datetime import date, time, datetime, timedelta
+from datetime import date, datetime, timedelta
 import sys
-
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
 from django.db.models.query_utils import Q
-from django.db.models.signals import post_save
-from django.dispatch.dispatcher import receiver
-from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory, ModelMultipleChoiceField
-from django.http import HttpResponseRedirect
 from django.http.response import Http404, HttpResponse
-from django.shortcuts import render, redirect, render_to_response
-from django.template import Context
-from django.template.loader import render_to_string, get_template
-from django.test import Client
-from django.urls import reverse
+from django.template.loader import render_to_string
 from django.utils import timezone
-from django.views import generic
-from django.views.generic.base import View, TemplateResponseMixin
-from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
+from django.views.generic.base import View
 import django_filters
-from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.filters import ModelChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
-import requests, json, urllib, subprocess
-from rest_framework import status, permissions, viewsets
+import json
+from rest_framework import status
 import rest_framework
-from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
-from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from MeeseeksInc.celery import app
 from MeeseeksInc.celery import app as celery_app
-from custom_admin.forms import AdminRequestEditForm, DisburseForm
-from custom_admin.tasks import loan_reminder_email as task_email
-from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.forms import EditCartAndAddRequestForm
-from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
+from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
+    TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
 
-from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
 
 
@@ -1219,7 +1193,6 @@ class MyAPI(JSONViewMixin, View):
         start_date = params.get('datetime')
         
         obj_list = klass.objects.all()
-#         obj_list = klass.objects.annotate(item_exists=Item.objects.filter(item_id='item_id').exists())
        
         sort_dir_prefix = (sort_dir=='desc' and '-' or '')
         if sort_col_name in col_name_map:

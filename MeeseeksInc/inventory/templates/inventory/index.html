@@ -603,7 +603,6 @@ editor = new $.fn.dataTable.Editor( {
 			    	}
 			    	var output = { data: [] };
 			    	output.data.push(result);
-					console.log(pushToData);
 			    	var data = JSON.stringify(pushToData);
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
@@ -619,10 +618,11 @@ editor = new $.fn.dataTable.Editor( {
 				        	successCallback(output);
 				        },
 				        error: function (xhr, error, thrown) {
-				        	if (xhr.status == 400) {
-							    editor.error(xhr.responseText);
-							}
-				        	errorCallback();
+				        	//if (xhr.status == 100) {
+				        		console.log(xhr);
+							    //this.error();
+							    errorCallback(xhr.responseJSON);
+							//}
 				        }
 				        
 					});
@@ -666,7 +666,11 @@ editor
     .on( 'close', function () {
         table.keys.enable();
     } );
-
+//editor.on('submit',function ( e, xhr, err, thrown, data ){
+//    data = JSON.parse(xhr.responseText);
+//    this.error(JSON.parse(xhr.responseText).error);
+//    return true;
+//});
 get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();

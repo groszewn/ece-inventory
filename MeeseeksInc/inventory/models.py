@@ -1,9 +1,5 @@
-from datetime import datetime
 import uuid
-
 from django.db import models
-from django.db.models.query import QuerySet
-from django.db.models.query_utils import Q
 from django.utils import timezone
 
 
@@ -11,7 +7,6 @@ class Tag(models.Model):
     tag = models.CharField(max_length=200)
     def __str__(self):
         return self.tag
-    
 
 class Item(models.Model):
     item_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -20,16 +15,9 @@ class Item(models.Model):
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=1000, null=True)
     tags = models.ManyToManyField(Tag, related_name='items', blank=True)
+    is_asset = models.BooleanField(default=False)
     def __str__(self):
         return self.item_name
- 
-class Instance(models.Model):
-    item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
-    instance_id = models.CharField(primary_key=True, max_length=200)
-    status = models.CharField(max_length=200)
-    available = models.CharField(max_length=200)
-    def __str__(self):
-        return self.item.item_name + " #" + self.instance_id
  
 class Request(models.Model):
     request_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -114,11 +102,6 @@ class Custom_Field_Value(models.Model):
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
     field = models.ForeignKey(Custom_Field, null=False, on_delete=models.CASCADE)
     value = models.TextField(null=True, blank=True)
-#     field_value_short_text = models.CharField(max_length=400,null=True)
-#     field_value_long_text = models.TextField(max_length=1000,null=True)
-#     field_value_integer = models.IntegerField(null=True, blank=True)
-#     field_value_floating = models.FloatField(null=True, blank=True)
-    
     class Meta:
         unique_together = (("item", "field"),)
 
@@ -172,45 +155,10 @@ class LoanReminderEmailBody(models.Model):
     
 class LoanSendDates(models.Model):
     date = models.DateField()
-    
-class MyClassMixin(object):
-    """
-    This will be subclassed by both the Object Manager and the QuerySet.
-    By doing it this way, you can chain these functions, along with filter().
-    (A simpler approach would define these in MyClassManager(models.Manager),
-        but won't let you chain them, as the result of each is a QuerySet, not a Manager.)
-    """
-    def q_for_search_word(self, word):
-        """
-        Given a word from the search text, return the Q object which you can filter on,
-        to show only objects containing this word.
-        Extend this in subclasses to include class-specific fields, if needed.
-        """
-        return Q(name__icontains=word) | Q(supplier__name__icontains=word)
- 
-    def q_for_search(self, search):
-        """
-        Given the text from the search box, search on each word in this text.
-        Return a Q object which you can filter on, to show only those objects with _all_ the words present.
-        Do not expect to override/extend this in subclasses.
-        """
-        q = Q()
-        if search:
-            searches = search.split()
-            for word in searches:
-                q = q & self.q_for_search_word(word)
-        return q
- 
-    def filter_on_search(self, search):
-        """
-        Return the objects containing the search terms.
-        Do not expect to override/extend this in subclasses.
-        """
-        return self.filter(self.q_for_search(search))
- 
-class MyClassQuerySet(QuerySet, MyClassMixin):
-    pass
- 
-class MyClassManager(models.Manager, MyClassMixin):
-    def get_queryset(self):
-        return MyClassQuerySet(self.model, using=self._db)
+
+class Asset(models.Model):
+    asset_id = models.CharField(primary_key=True, max_length=200) #for asset tag
+    item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE)
+    loan = models.ForeignKey(Loan, null=True, on_delete=models.CASCADE)
+    disbursement = models.ForeignKey(Disbursement, null=True, on_delete=models.CASCADE)
+

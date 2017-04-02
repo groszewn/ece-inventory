@@ -1,35 +1,27 @@
 from dal import autocomplete
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.mail import EmailMessage
-from django.db import connection, transaction
-from django.db import models
 from django.db.models import F
 from django.http import HttpResponseRedirect
-from django.http.response import Http404
-from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.template.defaulttags import comment
-from django.template import Context
-from django.template.loader import render_to_string, get_template
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.urls import reverse_lazy 
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-from django.core.mail import send_mail
 from django.core import mail
-from django.conf import settings
-from datetime import date, time, datetime, timedelta
+from datetime import date,datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
-from MeeseeksInc.celery import app
-import requests, json, urllib, subprocess
+import requests, json
 from rest_framework.authtoken.models import Token
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from inventory.forms import RequestForm
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -97,24 +89,6 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         
     def get_queryset(self):
         return Log.objects.all()
-    def test_func(self):
-        return self.request.user.is_staff
- 
-class DetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView): ## DetailView to display detail for the object
-    login_url = "/login/"
-    permission_required = 'is_staff'
-    model = Instance
-    template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-    
-    def test_func(self):
-        return self.request.user.is_staff
- 
-class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): ## DetailView to display detail for the object
-    login_url = "/login/"
-    permission_required = 'is_staff'
-    model = Instance
-    template_name = 'custom_admin/single_disburse.html' # w/o this line, default would've been inventory/<model_name>.html
-    
     def test_func(self):
         return self.request.user.is_staff
  
