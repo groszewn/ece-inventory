@@ -1152,11 +1152,12 @@ class APIItemToAsset(APIView):
     
     def get(self, request, pk, format=None):
         item = Item.objects.get(item_id=pk)
-        item.is_asset = True
-        for i in range(item.quantity):
-            print('asset creating')
-            asset = Asset(item=item)
-            asset.save()
+        if not Asset.objects.filter(item=pk):
+            item.is_asset = True
+            for i in range(item.quantity):
+                print('asset creating')
+                asset = Asset(item=item)
+                asset.save()
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
         return Response(serializer.data)
     
