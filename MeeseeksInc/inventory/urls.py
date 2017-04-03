@@ -52,5 +52,6 @@ urlpatterns = [
     url(r'^api/loan/email/body/$', inventory.api.APILoanEmailBody.as_view(), name='email_body'),
     url(r'^api/loan/email/dates/configure/$', inventory.api.APILoanEmailConfigureDates.as_view(), name='email_send_dates'),
     url(r'^api/loan/email/dates/delete/$', inventory.api.APILoanEmailClearDates.as_view(), name='loan_email_delete_dates'),
+    url(r'^api/asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
 ]

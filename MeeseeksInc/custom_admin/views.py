@@ -894,6 +894,30 @@ def delete_item(request, pk):
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
+@user_passes_test(admin_check, login_url='/login/')
+def toggleAsset(request, pk):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    http_host = get_host(request)
+    if Item.objects.get(item_id=pk).is_asset:
+        # change back to non-asset
+        url=http_host+'/api/requests/deny/'+pk+'/'
+        payload = {'comment':''}
+        header = {'Authorization': 'Token '+ str(token), 
+                  "Accept": "application/json", "Content-type":"application/json"}
+        requests.put(url, headers = header, data = json.dumps(payload))
+    else:
+        # change to asset
+        url=http_host+'/api/requests/deny/'+pk+'/'
+        payload = {'comment':''}
+        header = {'Authorization': 'Token '+ str(token), 
+                  "Accept": "application/json", "Content-type":"application/json"}
+        requests.put(url, headers = header, data = json.dumps(payload))
+        
+    
+    return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def delete_tag(request, pk, item):
     item = Item.objects.get(item_id=item)

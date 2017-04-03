@@ -1,7 +1,10 @@
 from datetime import date, datetime, timedelta
+import json
 import sys
+
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
@@ -13,7 +16,6 @@ from django.views.generic.base import View
 import django_filters
 from django_filters.filters import ModelChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
-import json
 from rest_framework import status
 import rest_framework
 from rest_framework.generics import ListCreateAPIView, ListAPIView
@@ -21,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from MeeseeksInc.celery import app as celery_app
+from inventory.models import Asset
 from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
@@ -28,7 +31,8 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
-    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
+    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, \
+    AssetSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates
@@ -1138,8 +1142,38 @@ class APILoanEmailClearDates(APIView):
         celery_app.control.purge()
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-  
-        
+
+########################################## Asset-tracking ###########################################   
+class APIItemToAsset(APIView):
+    """
+    Converts an item to per-asset
+    """
+    permission_classes = (IsAdmin,)
+    
+    def get(self, request, pk, format=None):
+        item = Item.objects.get(item_id=pk)
+        item.is_asset = True
+        for i in range(item.quantity):
+            print('asset creating')
+            asset = Asset(item=item)
+            asset.save()
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)
+    
+class APIAssetToItem(APIView):
+    """
+    Converts an item back to non-per-asset
+    """
+    permission_classes = (IsAdmin,)
+    
+    def get(self, request, pk, format=None):
+        # what should happen when an item is converted back to non-per-asset
+        # assets should be deleted, 
+        # NOT DONE YET!!!
+        item = Item.objects.get(item_id=pk)
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)   
+########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """
     Return a JSON serialized HTTP response

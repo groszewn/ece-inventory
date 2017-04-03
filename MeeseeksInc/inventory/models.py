@@ -157,8 +157,8 @@ class LoanSendDates(models.Model):
     date = models.DateField()
 
 class Asset(models.Model):
-    asset_id = models.CharField(primary_key=True, max_length=200) #for asset tag
-    item = models.ForeignKey(Item, null=True, on_delete=models.CASCADE)
-    loan = models.ForeignKey(Loan, null=True, on_delete=models.CASCADE)
-    disbursement = models.ForeignKey(Disbursement, null=True, on_delete=models.CASCADE)
+    asset_id = models.CharField(primary_key=True, unique=True, default=uuid.uuid4, max_length=200)
+    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
+    loan = models.ForeignKey(Loan, null=True)
+    disbursement = models.ForeignKey(Disbursement, null=True)
 

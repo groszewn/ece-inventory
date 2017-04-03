@@ -72,6 +72,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context = super(DetailView, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['item'] = self.get_object()
+        context['isAsset'] = self.get_object().is_asset
         tags = self.get_object().tags.all()
         if tags:
             context['tag_list'] = tags
@@ -91,6 +92,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         context['current_user'] = self.request.user.username
+        context['asset_list'] = Asset.objects.filter(item=self.get_object())
         return context
     
     def post(self, request, *args, **kwargs): 

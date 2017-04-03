@@ -10,6 +10,7 @@ $(function() {
     	console.log($($(this).parent()).attr("toActivate"));
        $('nav li').removeClass();
        $($(this).parent()).addClass('active');
+       $('#assetContent').hide();
        $('#requestContent').hide();
        $('#loanContent').hide();
        $('#disbursementContent').hide();
@@ -76,14 +77,19 @@ $(function() {
 <td>
 
 <div>
-	{% if user.is_staff %}
-	<script>
-	function clickEvent(){
-	    if (confirm("Delete this item?")) {
-	    	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
-	    }
-	}
-	</script>
+{% if user.is_staff %}
+<script>
+function changeToAsset(){
+    if (confirm("Are you sure you want to convert this to an asset?")) {
+    	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
+    }
+}
+function clickEvent(){
+    if (confirm("Delete this item?")) {
+    	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
+    }
+}
+</script>
 	
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
@@ -95,9 +101,11 @@ $(function() {
 	
 {% if user.is_superuser %}
 <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+<button type="button" onclick="changeToAsset();" class="btn btn-primary">Change to Asset</button>
 {% endif %}
-	
-	{% endif %}	
+
+
+{% endif %}	
 </div>
 
 <br>
@@ -133,7 +141,12 @@ $(function() {
       <nav class="navbar navbar-default navbar-fixed-side">
         <!-- normal collapsible navbar markup -->
         <ul class="nav navbar-nav">
-            <li toActivate="requestContent" style="width:100%;" class="active"><a>Requests</a></li>
+        	{% if isAsset %}
+        	<li toActivate="assetContent" style="width:100%;" class="active"><a>Assets</a></li>
+        	<li toActivate="requestContent" style="width:100%;"><a>Requests</a></li>
+        	{% else %}
+        	<li toActivate="requestContent" style="width:100%;" class="active"><a>Requests</a></li>
+        	{% endif %}
             <li toActivate="loanContent" style="width:100%;"><a>Loans</a></li>
             <li toActivate="disbursementContent" style="width:100%;"><a>Disbursements</a></li>
             <li toActivate="logContent" style="width:100%;"><a>Logs</a></li>
@@ -141,6 +154,38 @@ $(function() {
       </nav>
     </div>
     <div class="col-sm-9 col-lg-10">
+
+{#################### Asset table #####################}
+<div id="assetContent">
+{% if asset_list%}
+<h2>Assets:</h2>
+	<table id="inventory-asset" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>Asset Tag</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for asset in asset_list %}
+{#		        		<tr class="clickable-row" data-href="{% url 'inventory:request_detail' request.request_id %}">#}
+						<tr>
+							<td>{{ asset.asset_id }}</td>
+							<td>hi</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	
+	<script>
+	$(document).ready(function(){
+	    $('#inventory-asset').dataTable({
+	        "order": [[ 1, "desc" ]]
+	    });
+	});
+	</script>
+{% endif %}
+</div>
 
 {#################### Request table #####################}
 <div id="requestContent">
@@ -710,13 +755,16 @@ $(function(){
  
 $.fn.dataTable.ext.search.push(
 function (settings, data, dataIndex) {
-    var startDate = Date.parse($('#startdate').val(), 10);
-    var convert = data[5].split('T')[0];
-    var columnDate = Date.parse(convert); // use data for the age column
-    if ((isNaN(startDate)) || (startDate <= columnDate)) {
-        return true;
+	if(settings.nTable.id!=="inventory-asset") {
+	    var startDate = Date.parse($('#startdate').val(), 10);
+	    var convert = data[5].split('T')[0];
+	    var columnDate = Date.parse(convert); // use data for the age column
+	    if ((isNaN(startDate)) || (startDate <= columnDate)) {
+	        return true;
+	    }
+	     return false;
     }
-    return false;
+    return true;
 });
 	$(document).ready(function(){
 	    var table = $('#log-table').dataTable({
