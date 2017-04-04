@@ -342,7 +342,7 @@ class BackfillRequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     class Meta:
         model = BackfillRequest
-        fields = ('pdf', 'item', 'loan', 'user', 'status')
+        fields = ('pdf', 'item', 'loan', 'quantity', 'user', 'status')
         
     def validate_user(self, value):
         """
@@ -352,4 +352,12 @@ class BackfillRequestSerializer(serializers.ModelSerializer):
             return User.objects.get(username=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist")
+        return value
+    
+    def validate_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<=0:
+            raise serializers.ValidationError("Quantity needs to be greater than 0")
         return value

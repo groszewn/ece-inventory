@@ -18,7 +18,7 @@ import requests, json
 from rest_framework.authtoken.models import Token
 from inventory.forms import EditCartAndAddRequestForm
 from .forms import RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, BackfillRequest
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -322,6 +322,8 @@ class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailVie
     
     def test_func(self):
         return self.request.user.is_active
+    
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):

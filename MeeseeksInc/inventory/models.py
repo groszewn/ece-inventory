@@ -176,3 +176,4 @@ class BackfillRequest(models.Model):
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Requested')
     user = models.CharField(max_length=200, null=False)
+    quantity = models.IntegerField(null=False)
