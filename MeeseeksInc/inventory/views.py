@@ -72,7 +72,6 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context = super(DetailView, self).get_context_data(**kwargs)
         context['form'] = self.get_form()
         context['item'] = self.get_object()
-        context['isAsset'] = self.get_object().is_asset
         tags = self.get_object().tags.all()
         if tags:
             context['tag_list'] = tags
@@ -306,7 +305,24 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
     
     def test_func(self):
         return self.request.user.is_active
- 
+
+class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
+    login_url = "/login/"
+    model = Asset
+    template_name = 'inventory/asset_detail.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super(AssetDetailView, self).get_context_data(**kwargs)
+        context['asset'] = self.get_object()
+        if self.request.user.is_staff:
+            context['my_template'] = 'custom_admin/base.html'
+        else:
+            context['my_template'] = 'inventory/base.html'
+        return context
+    
+    def test_func(self):
+        return self.request.user.is_active
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
