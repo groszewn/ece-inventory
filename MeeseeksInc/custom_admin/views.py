@@ -1080,7 +1080,7 @@ def create_backfill_from_loan(request, pk):
             header = {'Authorization': 'Token '+ str(token)}#, 
                  #     "Accept": "application/json", "Content-type":"application/json"} 
             requests.post(url, headers=header, data=payload, files=files)
-            return redirect('/customadmin')
+            return redirect(request.META.get('HTTP_REFERER')) 
     else:
         form = BackfillRequestForm()
     return render(request, 'custom_admin/backfill_from_loan.html', {'form': form, 'pk':pk})
