@@ -7,7 +7,10 @@ from django import forms
 from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, BackfillRequest
+from django.forms.formsets import BaseFormSet
+
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
+    Asset, BackfillRequest
 
 
 class DisburseForm(forms.ModelForm):
@@ -55,7 +58,40 @@ class EditLoanForm(forms.ModelForm):
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+
+class AssetsRequestForm(forms.ModelForm):
+    asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
+    class Meta:
+        model = Asset
+        exclude = ('item','loan','disbursement')
+   
     
+class BaseAssetsRequestFormSet(BaseFormSet):
+    def clean(self):
+        """
+        Adds validation to check that you choose distinct assets
+        """
+        if any(self.errors):
+            return
+        for i in range(self.total_form_count()):
+            if not self.forms[i].has_changed():
+                raise forms.ValidationError("All assets must be chosen.")
+        assets = []
+        duplicates = False
+        for form in self.forms:
+            if form.cleaned_data:
+                asset = form.cleaned_data['asset_id']
+                if asset:
+                    if asset in assets:
+                        duplicates = True
+                    assets.append(asset)
+                if duplicates:
+                    raise forms.ValidationError(
+                        'Assets must be distinct',
+                        code='duplicate_assets'
+                    )
+
+                      
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
