@@ -68,7 +68,7 @@ class Loan(models.Model):
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Checked Out')
     def __str__(self):
-        return "Loan of " + self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
+        return self.loan_id
     
 class ShoppingCartInstance(models.Model):
     cart_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -162,3 +162,18 @@ class Asset(models.Model):
     loan = models.ForeignKey(Loan, null=True)
     disbursement = models.ForeignKey(Disbursement, null=True)
 
+class BackfillRequest(models.Model):
+    pdf = models.FileField(upload_to='documents/%Y/%m/%d/')
+    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
+    loan = models.ForeignKey(Loan, null=True, on_delete=models.CASCADE)
+    CHOICES = (
+        ('Requested', 'Requested'), # requested
+        ('Denied', 'Denied'), # request denied
+        ('In Transit', 'In Transit'), # items in transit
+        ('Completed', 'Completed'), # successful
+        ('Awaiting File', 'Awaiting File'), # manager marked request for backfill, need to upload pdf
+        ('Failed', 'Failed') # items never arrived/were unsatisfactory
+    )
+    status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Requested')
+    user = models.CharField(max_length=200, null=False)
+    quantity = models.IntegerField(null=False)
