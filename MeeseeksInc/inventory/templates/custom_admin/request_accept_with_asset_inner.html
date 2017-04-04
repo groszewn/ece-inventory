@@ -1,0 +1,39 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+ 
+<h3>Add a comment to the user (optional)</h3>
+
+Request for <b>{{num_requested}}</b> instance(s) of <b>{{item_name}}</b>.
+<br>
+Quantity of <b>{{item_name}}</b> available: {{num_available}}
+<br>
+
+<div class="row">
+    <form id="formID-comment-accept-with-asset" request-comment="" action="{% url 'custom_admin:request_accept_with_assets' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+		<table>	 
+			{{ commentForm }}
+			{{ formset }}
+	    <table>
+		{{ formset.management_form }}
+{#		{% for form in formset.forms %}#}
+{#			<div class="fieldWrapper">#}
+{#			{{ formset.non_form_errors }}#}
+{#			{{ form }}#}
+{#			</div>#}
+{#		{% endfor %}#}
+		
+{#		{{ formset.management_form }}#}
+{#		{{ form_errors }}#}
+{#	    {% for form in formset.forms %}#}
+{#	        {{ form.non_field_errors }}#}
+{#	        {{ form.errors }}#}
+{#	        <table>#}
+{#	            {{ form.as_table }}#}
+{#	        </table>#}
+{#	    {% endfor %}#}
+
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+    </form>
+</div>
+

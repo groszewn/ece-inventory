@@ -26,4 +26,61 @@
 </tbody>
 </table>
 
+{% if asset.loan %}
+<h3>Loan Information</h3>
+<table id="inventory-loan" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+        <tr>
+        <th>Loaned To:</th>
+		<th>Loaned By:</th>
+		<th>Item:</th>
+		<th>Quantity:</th>
+		<th>Admin Comment:</th>
+		<th>Time Loaned:</th>
+		</tr>
+    </thead>
+    <tbody>
+    		<tr>
+    			<td>{{asset.loan.admin_name}}</td>
+				<td>{{asset.loan.user_name}}</td>
+				<td>{{asset.loan.item_name}}</td>
+				<td>{{asset.loan.total_quantity}}</td>
+				<td>{{asset.loan.comment}}</td>
+				<td>{{asset.loan.time_loaned}}</td>
+			</tr>
+    </tbody>
+</table>
+{% endif %}
+
+{% if asset.disbursement %}
+<h3>Disbursement Information</h3>
+<table id="inventory-disbursement" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+		<th>Item Name</th>
+		<th>Quantity</th>
+		<th>Disbursed to</th>
+		<th>Disbursed by</th>
+		<th>User Reason</th>
+		<th>Admin Comment</th>
+		<th>Time Disbursed</th>
+	</tr>
+</thead>
+<tbody>
+		<tr>
+			<td>{{ asset.disbursement.item_name }}</td>
+			<td>{{ asset.disbursement.total_quantity }}</td>
+			<td>{{ asset.disbursement.user_name }}</td>
+			<td>{{ asset.disbursement.admin_name }}</td>
+			<td>{{ asset.disbursement.orig_request.reason}}</td>
+			<td>{{ asset.disbursement.comment}}</td>
+			<td>
+		  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+				  {{ disbursed.time_disbursed }}
+			</td>
+		</tr>
+</tbody>
+</table>
+{% endif %}
+
 {% endblock %}

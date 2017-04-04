@@ -1,11 +1,16 @@
+from datetime import date, datetime, timedelta
+
 from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.db.models import F
+from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.defaulttags import comment
@@ -15,14 +20,16 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-from django.core import mail
-from datetime import date,datetime, timedelta
-from custom_admin.tasks import loan_reminder_email as task_email
 import requests, json
 from rest_framework.authtoken.models import Token
+from django import forms
+
+from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet
+from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
+
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm
-from django.core.exceptions import ObjectDoesNotExist
+
 
 def staff_check(user):
     return user.is_staff
@@ -231,6 +238,55 @@ def add_comment_to_request_accept(request, pk):
     else:
         form = AddCommentRequestForm() # blank request form with no data yet
     return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
+
+
+def make_asset_request_form(item):
+    queryset = Asset.objects.exclude(loan__isnull=False).exclude(disbursement__isnull=False).filter(item=item)
+    print(queryset)
+    class AssetsRequestForm(forms.ModelForm):
+        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
+        class Meta:
+            model = Asset
+            exclude = ('item','loan','disbursement')
+    return AssetsRequestForm
+
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def request_accept_with_assets(request, pk):
+    indiv_request = Request.objects.get(request_id=pk)
+    AssetsRequestForm = make_asset_request_form(indiv_request.item_name)
+    AssetsRequestFormset = formset_factory(AssetsRequestForm, extra=indiv_request.request_quantity, formset=BaseAssetsRequestFormSet)
+    if request.method == "POST":
+        formset = AssetsRequestFormset(request.POST)
+        commentForm = AddCommentRequestForm(request.POST)
+        if all([commentForm.is_valid(), formset.is_valid()]):
+            if indiv_request.type == 'Dispersal':
+                disbursement = Disbursement(orig_request=indiv_request, admin_name=request.user.username, user_name=xindiv_request.user_id, item_name=indiv_request.item_name, comment="COMMENT FOR NOW",
+                                            total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                disbursement.save()
+                for form in formset:
+                    asset = Asset.objects.get(asset_id=form['asset_id'].value())
+                    asset.disbursement = disbursement
+                    asset.save()
+            else:
+                loan = Loan(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment="COMMENT FOR NOW",
+                                            total_quantity=indiv_request.request_quantity, time_loaned=timezone.localtime(timezone.now()))
+                loan.save()
+                for form in formset:
+                    asset = Asset.objects.get(asset_id=form['asset_id'].value())
+                    asset.loan = loan
+                    asset.save()
+            return redirect(reverse('custom_admin:index'))
+        else:
+            form_errors = formset.non_form_errors()
+            return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name, 'form_errors':form_errors})
+    else:
+        commentForm = AddCommentRequestForm()
+        formset = AssetsRequestFormset()
+    return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
+
+
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')

@@ -161,7 +161,9 @@ class Asset(models.Model):
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
     loan = models.ForeignKey(Loan, null=True)
     disbursement = models.ForeignKey(Disbursement, null=True)
-
+    def __str__(self):
+        return self.item.item_name + ' ' + self.asset_id
+    
 class BackfillRequest(models.Model):
     pdf = models.FileField(upload_to='documents/%Y/%m/%d/')
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)

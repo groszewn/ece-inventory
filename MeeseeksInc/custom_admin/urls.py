@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^checkIn/loan/(?P<pk>[\w\-\ ]+)/$', views.check_in_loan, name='check_in_loan'),
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_request_accept, name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_request_deny, name='add_comment_to_request_deny'),
+    url(r'^request/asset_accept/(?P<pk>[\w\-\ ]+)/$', views.request_accept_with_assets, name='request_accept_with_assets'),
     url(r'^disburse/item$', views.post_new_disburse, name='post_new_disburse'),
     url(r'^disburse/item/(?P<pk>[\w\-\ ]+)/$', views.post_new_disburse_specific, name='post_specific_disburse'),
     url(r'^deny/request/all$', views.deny_all_request, name='deny_all_requests'),
