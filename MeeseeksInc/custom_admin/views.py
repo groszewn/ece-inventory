@@ -61,7 +61,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+        return Asset.objects.order_by('item')[:5]
 
     def test_func(self):
         return self.request.user.is_staff
@@ -194,7 +194,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
         return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+        return Asset.objects.order_by('item')[:5]
     def test_func(self):
         return self.request.user.is_staff
 

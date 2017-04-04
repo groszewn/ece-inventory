@@ -20,6 +20,7 @@ from inventory.forms import EditCartAndAddRequestForm
 from .forms import RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
 from django.core.exceptions import ObjectDoesNotExist
+from django.template.loader import render_to_string
 
 
 def get_host(request):

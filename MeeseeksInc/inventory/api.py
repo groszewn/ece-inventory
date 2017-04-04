@@ -1154,6 +1154,7 @@ class APIItemToAsset(APIView):
         item = Item.objects.get(item_id=pk)
         if not Asset.objects.filter(item=pk):
             item.is_asset = True
+            item.save()
             for i in range(item.quantity):
                 print('asset creating')
                 asset = Asset(item=item)

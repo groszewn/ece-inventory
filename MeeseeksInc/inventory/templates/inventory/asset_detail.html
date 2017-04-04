@@ -12,12 +12,16 @@
 <thead>
     <tr>
     <th>Asset Tag</th>
+    <th>Model Number</th>
+    <th>Description</th>
 {#	TODO: add custom fields here#}
 	</tr>
 </thead>
 <tbody>
 		<tr>
-			<td>{{asset.asset_id}}</td>
+			<td>{{ asset.asset_id }}</td>
+			<td>{{ asset.item.model_number }}</td>
+			<td>{{ asset.item.description }}</td>
 		</tr>
 </tbody>
 </table>
