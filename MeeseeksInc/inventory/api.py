@@ -32,10 +32,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, \
-    AssetSerializer
+    AssetSerializer, BackfillRequestSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates
+    LoanReminderEmailBody, LoanSendDates, BackfillRequest
 
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -1141,7 +1141,26 @@ class APILoanEmailClearDates(APIView):
     def delete(self, request, format=None):
         celery_app.control.purge()
         LoanSendDates.objects.all().delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+
+########################################## Backfill Requests ###########################################   
+class APIBackfillRequest(ListCreateAPIView):
+    """
+    creation of backfill requests
+    """
+    permission_classes = (IsAtLeastUser,)
+    queryset = BackfillRequest.objects.all()
+    serializer_class = BackfillRequestSerializer
+    
+    def post(self, request, format=None):
+        data = request.data.copy()
+        print(data)
+        serializer = BackfillRequestSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
 
 ########################################## Asset-tracking ###########################################   
 class APIItemToAsset(APIView):

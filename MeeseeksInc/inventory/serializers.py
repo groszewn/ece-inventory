@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset, BackfillRequest
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -336,3 +336,20 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('asset_id','item')
+        
+class BackfillRequestSerializer(serializers.ModelSerializer):
+    pdf = serializers.FileField(max_length=None, use_url=True)
+    status = serializers.CharField(read_only=True)
+    class Meta:
+        model = BackfillRequest
+        fields = ('pdf', 'item', 'loan', 'user', 'status')
+        
+    def validate_user(self, value):
+        """
+        Check that the user is real
+        """
+        try:
+            return User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value

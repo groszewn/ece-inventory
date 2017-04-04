@@ -1,4 +1,6 @@
 from django.conf.urls import url
+from django.conf.urls.static import static
+from django.conf import settings
 
 import custom_admin.views
 import inventory.api
@@ -53,5 +55,6 @@ urlpatterns = [
     url(r'^api/loan/email/dates/configure/$', inventory.api.APILoanEmailConfigureDates.as_view(), name='email_send_dates'),
     url(r'^api/loan/email/dates/delete/$', inventory.api.APILoanEmailClearDates.as_view(), name='loan_email_delete_dates'),
     url(r'^api/asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
+    url(r'^api/backfill/request/create/', inventory.api.APIBackfillRequest.as_view(), name='backfill_create'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
-]
+]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
