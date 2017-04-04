@@ -80,7 +80,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
-            context['disbursed_list'] = Disbursement.objects.filter(user_name=user.username)
+            context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id)
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
             context['custom_fields'] = Custom_Field.objects.all()

@@ -1032,7 +1032,6 @@ class APILoan(APIView):
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         quantity_disbursed = int(request.data['convert'])
-        original_quantity = loan.total_quantity
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()

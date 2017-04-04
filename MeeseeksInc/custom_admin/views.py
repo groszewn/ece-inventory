@@ -308,14 +308,14 @@ def convert_loan(request, pk): #redirect to main if deleted
         form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
             url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
-            payload = {'convert':form['items_to_convert'].value()}
+            payload = {'convert':form['items_to_convert'].value(), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
             header = get_header(request)
             response = requests.post(url, headers = header, data=json.dumps(payload))
             if response.status_code == 201:
                messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             else:
                 messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
-            if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
+            if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0 and "item" not in request.META.get('HTTP_REFERER'):
                 return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER')) 
     else:
@@ -342,7 +342,7 @@ def check_in_loan(request, pk):
                       "Accept": "application/json", "Content-type":"application/json"}
             requests.delete(url, headers = header, data = json.dumps(payload))
             messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
-            if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0:
+            if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0 and "item" not in request.META.get('HTTP_REFERER'):
                  return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER'))
     else:
