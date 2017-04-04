@@ -54,4 +54,5 @@ urlpatterns = [
     url(r'delete_task_queue/$', views.delete_task_queue, name='delete_task_queue'),
     url(r'^csv/guide/$',inventory.views.csv_guide_page,name='csv_help'),
     url(r'^upload/$', views.upload_page, name='upload_page'),
+    url(r'^backfill/from/loan/(?P<pk>[\w\-\ ]+)/$', views.create_backfill_from_loan, name='backfill_from_loan'),
 ]

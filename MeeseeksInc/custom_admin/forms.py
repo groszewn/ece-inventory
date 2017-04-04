@@ -7,7 +7,7 @@ from django import forms
 from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, BackfillRequest
 
 
 class DisburseForm(forms.ModelForm):
@@ -238,3 +238,7 @@ class ChangeEmailPrependForm(forms.Form):
 class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
     send_dates = forms.CharField(required=False)
+    
+class BackfillRequestForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1)
+    pdf = forms.FileField(max_length=200)

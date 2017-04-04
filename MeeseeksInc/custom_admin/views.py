@@ -21,7 +21,7 @@ from custom_admin.tasks import loan_reminder_email as task_email
 import requests, json
 from rest_framework.authtoken.models import Token
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -1063,6 +1063,29 @@ def subscribe(request):
     else:
         form = SubscribeForm(initial = {'subscribed': exists})
     return render(request, 'custom_admin/subscribe.html', {'form': form}) 
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def create_backfill_from_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == 'POST':
+        form = BackfillRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/backfill/request/create/'
+            payload = {'user':user.username, 'item':loan.item_name.item_id, 'loan':loan.loan_id, 'quantity':int(form['quantity'].value())}
+            files = {'pdf':form['pdf'].value()}
+            header = {'Authorization': 'Token '+ str(token)}#, 
+                 #     "Accept": "application/json", "Content-type":"application/json"} 
+            requests.post(url, headers=header, data=payload, files=files)
+            return redirect('/customadmin')
+    else:
+        form = BackfillRequestForm()
+    return render(request, 'custom_admin/backfill_from_loan.html', {'form': form, 'pk':pk})
+        
+            
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')

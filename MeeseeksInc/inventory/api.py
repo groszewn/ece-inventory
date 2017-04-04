@@ -21,6 +21,7 @@ import rest_framework
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from custom_admin.tasks import loan_reminder_email as task_email
 
 from MeeseeksInc.celery import app as celery_app
 from inventory.models import Asset
@@ -1031,6 +1032,7 @@ class APILoan(APIView):
         item = loan.item_name
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
+        original_quantity = loan.total_quantity
         quantity_disbursed = int(request.data['convert'])
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
             loan.total_quantity = loan.total_quantity - quantity_disbursed
@@ -1153,7 +1155,6 @@ class APIBackfillRequest(ListCreateAPIView):
     
     def post(self, request, format=None):
         data = request.data.copy()
-        print(data)
         serializer = BackfillRequestSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
