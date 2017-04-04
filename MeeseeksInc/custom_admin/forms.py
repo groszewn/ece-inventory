@@ -153,8 +153,7 @@ class AddTagForm(forms.Form):
                 choices.append([myTag.tag,myTag.tag])
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
-            self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")
-        
+            self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")  
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags',)
          

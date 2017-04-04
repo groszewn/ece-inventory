@@ -38,12 +38,6 @@ from custom_admin.forms import AdminRequestEditForm, DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
-from inventory.serializers import ItemSerializer, RequestSerializer, \
-    RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
-    DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
-    SubscribeSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates

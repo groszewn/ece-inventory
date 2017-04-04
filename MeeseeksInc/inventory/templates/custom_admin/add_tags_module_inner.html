@@ -15,14 +15,20 @@
 	 		<br/>
 	 		{{form.tag_field}}
 	 		<br/>
-	 		 (Choose already existing tags to add to this item.)
+	 		(Choose already existing tags to add to this item.)
 	 		<br/>
 	 		<br/>
-	 		(To delete a tag, just delete its text)
+	 		Edit existing tags below. To delete a tag, just delete its text.
+	 		<br/>
 	 		<br/>
 	 	{% for field in form %}
 	 		{% if field.label != "Create new tags" and field.label != "Add new tags..."%}
-	    	{{field.label}}:{{ field }}
+	    	{{field.label}}:{{ field }} 
+	    	{% for tag in item_tags%}
+	    		{% if tag.tag == field.value %}
+	    			<a onclick="return confirm('Do you want to delete this tag?')" href="{% url 'custom_admin:delete_tag' pk=tag.id item=pk %}" class="btn btn-danger">Delete</a>
+	    		{% endif %}
+	    	{% endfor %}
 	    	<br/>
 	    	<br/>
 	    	{% endif %}

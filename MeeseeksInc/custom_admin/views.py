@@ -346,11 +346,11 @@ def convert_loan(request, pk): #redirect to main if deleted
     if request.method == "POST":
         form = ConvertLoanForm(loan.total_quantity, request.POST)
         if form.is_valid():
-            url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
-            payload = {'convert':form['items_to_convert'].value(), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
+            url = get_host(request) + '/api/loan/convert/' + loan.loan_id + '/'
+            payload = {'number_to_convert':form['items_to_convert'].value(), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
             header = get_header(request)
             response = requests.post(url, headers = header, data=json.dumps(payload))
-            if response.status_code == 201:
+            if response.status_code == 200:
                messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
             else:
                 messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
@@ -375,11 +375,11 @@ def check_in_loan(request, pk):
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
-            url=http_host+'/api/loan/'+pk+'/'
+            url=http_host+'/api/loan/checkin/'+pk+'/'
             payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
-            requests.delete(url, headers = header, data = json.dumps(payload))
+            requests.post(url, headers = header, data = json.dumps(payload))
             messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
             if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0 and "item" not in request.META.get('HTTP_REFERER'):
                  return redirect('/customadmin')
@@ -399,7 +399,7 @@ def edit_loan(request, pk):
             user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
-            url=http_host+'/api/loan/'+loan.loan_id+'/'
+            url=http_host+'/api/loan/update/'+loan.loan_id+'/'
             payload = {'comment': post.comment,'total_quantity':post.total_quantity}
             header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
@@ -802,11 +802,13 @@ def add_tags(request, pk):
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def add_tags_module(request, pk):
+    item = Item.objects.get(item_id = pk)
+    item_tags = item.tags.all()
     if request.method == "POST":
-        item = Item.objects.get(item_id = pk)
+        #item = Item.objects.get(item_id = pk)
         tags = Tag.objects.all()
 #         item_tags = Tag.objects.filter(item_name = item)
-        item_tags = item.tags.all()
+        #item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags, request.POST or None)
         if form.is_valid():
             pickedTags = form.cleaned_data.get('tag_field')
@@ -840,7 +842,7 @@ def add_tags_module(request, pk):
         tags = Tag.objects.all()
         item_tags = item.tags.all()
         form = AddTagForm(tags, item_tags)
-    return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk})
+    return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk, 'item_tags':item_tags})
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
