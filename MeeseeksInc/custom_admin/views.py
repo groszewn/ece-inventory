@@ -52,16 +52,16 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['user_list'] = User.objects.all()
         context['loan_list'] = Loan.objects.all()
         context['current_user'] = self.request.user.username
+        context['tags'] = Tag.objects.distinct('tag')
         if self.request.user.is_staff or self.request.user.is_superuser:
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        context['tags'] = Tag.objects.distinct('tag')
         return context
     
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+#         return Instance.objects.order_by('item')[:5]
 
     def test_func(self):
         return self.request.user.is_staff
@@ -142,46 +142,39 @@ def delete_custom_field(request):
     else:
         form = DeleteFieldForm(fields)
     return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
-
-@login_required(login_url='/login/')
-@user_passes_test(admin_check, login_url='/login/')
-def register_page(request):
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            username = form['username'].value()
-            password = form['password1'].value()
-            email = form['email'].value()
-            is_staff = form['staff'].value()
-            is_superuser = form['admin'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/users/'
-            payload = {'username': username,'password':password, 'email':email, 'is_staff':is_staff, 
+# Figure out a way to display the error in a nicer way
+class RegistrationView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    login_url='/login/'
+    permission_required = 'is_superuser'
+    form_class = RegistrationForm
+    success_url = '/customadmin/'
+    template_name = 'custom_admin/register_user.html'
+    def form_valid(self, form):
+        username = form['username'].value()
+        password = form['password1'].value()
+        email = form['email'].value()
+        is_staff = form['staff'].value()
+        is_superuser = form['admin'].value()
+        user = self.request.user
+        token, create = Token.objects.get_or_create(user=user)
+        http_host = get_host(self.request)
+        url=http_host+'/api/users/'
+        payload = {'username': username,'password':password, 'email':email, 'is_staff':is_staff, 
                        'is_superuser':is_superuser, 'is_active':True}
-            header = {'Authorization': 'Token '+ str(token), 
+        header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
-            requests.post(url, headers = header, data = json.dumps(payload))
-#             if form.cleaned_data['admin']:
-#                 user = User.objects.create_superuser(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
-#                 user.save()
-#             elif form.cleaned_data['staff']:
-#                 user = User.objects.create_user(username=form.cleaned_data['username'], password=form.cleaned_data['password1'], email=form.cleaned_data['email'], is_staff=True)
-#             else:
-#                 user = User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password1'],email=form.cleaned_data['email'])
-#                 user.save()
-#             Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Create', 
-#                                      affected_user=user.username, change_occurred="Created user")
-            return HttpResponseRedirect('/customadmin')
-        
-        elif form['password1'].value() != form['password2'].value():
-            messages.error(request, (" passwords do not match."))
-        else:
-            messages.error(request, (form['username'].value() + " has already been created."))
-    else:
-        form = RegistrationForm()
-    return render(request, 'custom_admin/register_user.html', {'form': form})
+        requests.post(url, headers = header, data = json.dumps(payload))  
+        return super(RegistrationView, self).form_valid(form)
+    def form_invalid(self, form):
+        messages.error(self.request, form.errors.popitem())
+        return super(RegistrationView, self).form_invalid(form)
+     
+#         elif form['password1'].value() != form['password2'].value():
+#             messages.error(request, (" passwords do not match."))
+#         else:
+#             messages.error(request, (form['username'].value() + " has already been created."))
+    def test_func(self):
+        return self.request.user.is_superuser
 
 class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  ## ListView to display a list of objects
     login_url = "/login/"
@@ -194,7 +187,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
         return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+#         return Instance.objects.order_by('item')[:5]
     def test_func(self):
         return self.request.user.is_staff
 

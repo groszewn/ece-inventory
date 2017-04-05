@@ -220,7 +220,7 @@ class RegistrationForm(forms.Form):
             password2 = self.cleaned_data['password2']
             if password1 == password2:
                 return password2
-            raise forms.ValidationError('Passwords do not match.')
+            raise forms.ValidationError(('Passwords do not match.'))
     def clean_username(self):
         try:
             user = User.objects.get(username__iexact=self.cleaned_data['username'])
