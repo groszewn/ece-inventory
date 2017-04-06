@@ -58,12 +58,12 @@ urlpatterns = [
     url(r'^userfield-autocomplete/$', views.UserAutocomplete.as_view(), name='userfield-autocomplete'),
     url(r'^registration/$', views.RegistrationView.as_view(), name = 'register_page'),
     
-    url(r'^subscription/$', views.subscribe, name='subscribe'),
-    url(r'^edit_prepend/$', views.change_email_prepend, name='change_email_prepend'),
-    url(r'^send_email/$', views.create_email, name='send_email'),
-    url(r'delay_email/$', views.delay_email, name='delay_email'),
-    url(r'change_loan_email_body/$', views.loan_reminder_body, name='change_loan_body'),
-    url(r'delete_task_queue/$', views.delete_task_queue, name='delete_task_queue'),
+    url(r'^subscription/$', views.EmailView.subscribe, name='subscribe'),
+    url(r'^edit_prepend/$', views.EmailView.change_email_prepend, name='change_email_prepend'),
+    url(r'^send_email/$', views.EmailView.create_email, name='send_email'),
+    url(r'delay_email/$', views.EmailView.delay_email, name='delay_email'),
+    url(r'change_loan_email_body/$', views.EmailView.loan_reminder_body, name='change_loan_body'),
+    url(r'delete_task_queue/$', views.EmailView.delete_task_queue, name='delete_task_queue'),
     
     url(r'^csv/guide/$',inventory.views.csv_guide_page,name='csv_help'),
     url(r'^upload/$', views.upload_page, name='upload_page'),

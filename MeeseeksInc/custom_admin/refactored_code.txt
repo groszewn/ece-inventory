@@ -253,5 +253,116 @@ def edit_permission(request, pk):
         form = UserPermissionEditForm(instance = user, initial = {'username': user.username, 'email':user.email})
     return render(request, 'custom_admin/user_edit.html', {'form': form})
 
+########Email Stuffs
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def delete_task_queue(request):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    http_host = get_host(request)
+    url=http_host+'/api/loan/email/dates/delete/'
+    header = {'Authorization': 'Token '+ str(token), 
+              "Accept": "application/json", "Content-type":"application/json"} 
+    requests.delete(url, headers = header)#, data = json.dumps(payload_loan_body))
+    return loan_reminder_body(request)
 
-
+def delay_email(request):
+    #task_email.apply_async(eta=datetime.now()+timedelta(seconds=5))
+    task_email.apply_async(eta=datetime.utcnow()+timedelta(minutes=5))
+    return redirect(reverse('custom_admin:log'))
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def create_email(request):
+    email = mail.EmailMessage(
+        'Testing delayed email', 
+        'Body goes here', 
+        'noreply@duke.edu', 
+        ['nrg12@duke.edu'], 
+    )
+    email.send(fail_silently=False)
+    return redirect(reverse('custom_admin:log'))
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def change_email_prepend(request):
+    try:
+        text = EmailPrependValue.objects.all()[0].prepend_text
+    except (ObjectDoesNotExist, IndexError) as e:
+        text=''
+    if request.method == "POST":
+        form = ChangeEmailPrependForm(request.POST or None, initial={'text': text})
+        if form.is_valid():
+            if form['text'].value() == text:
+                return redirect('/customadmin')
+            else:
+                EmailPrependValue.objects.all().delete()
+                EmailPrependValue.objects.create(prepend_text=form['text'].value())
+            return redirect('/customadmin')
+    else:
+        form = ChangeEmailPrependForm(initial={'text':text})
+    return render(request, 'custom_admin/change_prepend.html', {'form': form})
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def subscribe(request):
+    exists = SubscribedUsers.objects.filter(user=request.user.username).exists()
+    if request.method == "POST":
+        form = SubscribeForm(request.POST or None, initial = {'subscribed': exists})
+        if form.is_valid(): 
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/subscribe/'+user.username+'/'
+            payload = {'user':user.username, 'email':user.email}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"} 
+            if form['subscribed'].value():
+                requests.post(url, headers = header, data = json.dumps(payload))
+                #SubscribedUsers.objects.get_or_create(user=request.user.username)
+            else:
+                requests.delete(url, headers=header, data=json.dumps(payload))
+            return redirect('/customadmin')
+    else:
+        form = SubscribeForm(initial = {'subscribed': exists})
+    return render(request, 'custom_admin/subscribe.html', {'form': form}) 
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def loan_reminder_body(request):
+    try:
+        body = LoanReminderEmailBody.objects.all()[0]
+    except (ObjectDoesNotExist, IndexError) as e:
+        body = LoanReminderEmailBody.objects.create(body='')
+    try:
+        start_dates = [str(x.date) for x in LoanSendDates.objects.all()]
+        selected_dates = []
+        for d in start_dates:
+            selected_dates.append(d)
+    except ObjectDoesNotExist:
+        selected_dates = None
+    if request.method == "POST":
+        form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
+        if form.is_valid():
+            input_date_list = form['send_dates'].value().split(',')
+            #output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            payload_send_dates=[]
+            for date in input_date_list:
+                if date != '':
+                    lst = date.split('/')
+                    formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
+                    payload_send_dates.append({'date':formatted})
+              
+                #LoanSendDates.objects.create(date=date)
+                #task_email.apply_async(eta=date+timedelta(hours=3))
+            #LoanReminderEmailBody.objects.create(body=form['body'].value())
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url_send_dates=http_host+'/api/loan/email/dates/configure/'
+            url_loan_body = http_host+'/api/loan/email/body/'
+            payload_loan_body = {'body':form['body'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"} 
+            requests.post(url_loan_body, headers = header, data = json.dumps(payload_loan_body))
+            requests.post(url_send_dates, headers = header, data = json.dumps(payload_send_dates))
+            return redirect(reverse('custom_admin:change_loan_body'))
+    else:
+        form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':sorted(selected_dates)})
