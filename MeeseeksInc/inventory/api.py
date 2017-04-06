@@ -1103,7 +1103,7 @@ class APILoanConvert(APIView):
         return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST)
     
     
-class APILoanBackfill(ListCreateAPIView):
+class APILoanBackfillPost(ListCreateAPIView):
     '''
     Create a backfill request
     '''
@@ -1112,12 +1112,29 @@ class APILoanBackfill(ListCreateAPIView):
     queryset = Loan.objects.all().exclude(backfill_status="None")
     serializer_class = LoanBackfillPostSerializer
     
-    def post(self, request, pk, format=None):
+    def post(self, request, pk,  format=None):
         loan = Loan.objects.get(loan_id=pk)
         data = request.data.copy()
         serializer = LoanBackfillPostSerializer(loan, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Backfill Request'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':loan.user_name,
+                'item':loan.item_name,
+                'backfill_quantity':loan.backfill_quantity,
+                'loan_quantity':loan.total_quantity, 
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/backfill_create_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         

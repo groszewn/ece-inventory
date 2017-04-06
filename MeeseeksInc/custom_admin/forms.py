@@ -274,3 +274,8 @@ class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
     send_dates = forms.CharField(required=False)
     
+class BackfillRequestForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1)
+    pdf = forms.FileField(max_length=200)
+    
+    

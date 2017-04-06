@@ -42,6 +42,9 @@
 	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
 {% endblock editLoan %}
 {% endif %}
+{% block backfillRequest %}
+	<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
+{% endblock backfillRequest %}
 
 <h3> Original Request Information </h3>
 				<table id="inventory-request" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -74,7 +77,27 @@
 					{% endif %}
 		        </tbody>
 		    </table>
-	
+{% if loan.backfill_status != 'None' %}
+<h3> Backfill Information </h3>
+		    <table id="loan-backfill-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>Backfill Status:</th>
+					<th>Backfill Quantity</th>
+					<th>Backfill Notes:</th>
+					<th>Proof Of Purchase:</th>
+					</tr>
+		        </thead>
+		        <tbody>
+		        		<tr>
+		        			<td>{{loan.backfill_status}}</td>
+							<td>{{loan.backfill_quantity}}</td>
+							<td>{{loan.backfill_notes}}</td>
+							<td><a href={{loan.backfill_pdf.url}} target="_blank">{{file_name}}</a></td>
+						</tr>
+		        </tbody>
+		    </table>
+{% endif %}
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 {############################# CHECK IN MODAL LOGIC ##############################}

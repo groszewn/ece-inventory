@@ -267,7 +267,7 @@ class FullLoanSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     class Meta:
         model = Loan
-        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned', 'backfill_pdf', 'backfill_status', 'backfill_quantity') 
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_notes') 
     
 class LoanUpdateSerializer(serializers.ModelSerializer):
     comment = serializers.CharField(required=False, allow_blank=True)
@@ -380,7 +380,20 @@ class AssetSerializer(serializers.ModelSerializer):
 class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     backfill_quantity = serializers.IntegerField(required=True)
+    loan_id = serializers.CharField(read_only=True)
     class Meta:
         model = Loan
-        fields = ('backfill_pdf', 'backfill_status', 'backfill_quantity')
+        fields = ('loan_id', 'backfill_pdf', 'backfill_status', 'backfill_quantity')
+        
+    def validate_backfill_quantity(self, value):
+        """
+        Check that the quantity is positive and less than the total loan quantity
+        
+        """
+        loan = Loan.objects.get(loan_id=self.instance)
+        if (value <=0):
+            raise serializers.ValidationError("Backfill quantity needs to be greater than 0")
+        elif (value > loan.total_quantity):
+            raise serializers.ValidationError("Backfill quantity can't be more than the loan quantity")
+        return value
         

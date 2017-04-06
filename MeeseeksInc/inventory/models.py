@@ -67,7 +67,7 @@ class Loan(models.Model):
         ('Checked In', 'Checked In'),
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Checked Out')
-    backfill_pdf = models.FileField(null=True, upload_to='documents/%Y/%m/%d/', default = 'documents/None/nofile.pdf')
+    backfill_pdf = models.FileField(null=True, upload_to='documents/%Y/%m/%d/')
     BACKFILL_CHOICES = (
         ('None', 'None'), # no backfill request
         ('Requested', 'Requested'), # requested
@@ -78,6 +78,7 @@ class Loan(models.Model):
     )
     backfill_status = models.CharField(max_length=200, null=False, choices=BACKFILL_CHOICES, default='None')
     backfill_quantity = models.IntegerField(null=True)
+    backfill_notes = models.TextField(null=True)
     def __str__(self):
         return self.loan_id
     

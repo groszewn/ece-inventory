@@ -304,6 +304,7 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
     def get_context_data(self, **kwargs):
         context = super(LoanDetailView, self).get_context_data(**kwargs)
         context['loan'] = self.get_object()
+        context['file_name'] = str(self.get_object().backfill_pdf).split('/')[-1]
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
         else:
