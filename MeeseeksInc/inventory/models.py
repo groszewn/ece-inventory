@@ -67,6 +67,17 @@ class Loan(models.Model):
         ('Checked In', 'Checked In'),
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Checked Out')
+    backfill_pdf = models.FileField(null=True, upload_to='documents/%Y/%m/%d/', default = 'documents/None/nofile.pdf')
+    BACKFILL_CHOICES = (
+        ('None', 'None'), # no backfill request
+        ('Requested', 'Requested'), # requested
+        ('Denied', 'Denied'), # request denied
+        ('In Transit', 'In Transit'), # items in transit
+        ('Completed', 'Completed'), # successful
+        ('Failed', 'Failed') # items never arrived/were unsatisfactory
+    )
+    backfill_status = models.CharField(max_length=200, null=False, choices=BACKFILL_CHOICES, default='None')
+    backfill_quantity = models.IntegerField(null=True)
     def __str__(self):
         return self.loan_id
     
@@ -164,18 +175,3 @@ class Asset(models.Model):
     def __str__(self):
         return self.item.item_name + ' ' + self.asset_id
     
-class BackfillRequest(models.Model):
-    pdf = models.FileField(upload_to='documents/%Y/%m/%d/')
-    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
-    loan = models.ForeignKey(Loan, null=True, on_delete=models.CASCADE)
-    CHOICES = (
-        ('Requested', 'Requested'), # requested
-        ('Denied', 'Denied'), # request denied
-        ('In Transit', 'In Transit'), # items in transit
-        ('Completed', 'Completed'), # successful
-        ('Awaiting File', 'Awaiting File'), # manager marked request for backfill, need to upload pdf
-        ('Failed', 'Failed') # items never arrived/were unsatisfactory
-    )
-    status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Requested')
-    user = models.CharField(max_length=200, null=False)
-    quantity = models.IntegerField(null=False)

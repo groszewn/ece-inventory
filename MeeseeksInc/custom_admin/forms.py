@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.forms.formsets import BaseFormSet
 
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
-    Asset, BackfillRequest
+    Asset
 
 
 class DisburseForm(forms.ModelForm):
@@ -274,6 +274,3 @@ class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
     send_dates = forms.CharField(required=False)
     
-class BackfillRequestForm(forms.Form):
-    quantity = forms.IntegerField(min_value=1)
-    pdf = forms.FileField(max_length=200)

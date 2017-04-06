@@ -24,7 +24,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, 
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, BackfillRequest
+    LoanReminderEmailBody, LoanSendDates
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 

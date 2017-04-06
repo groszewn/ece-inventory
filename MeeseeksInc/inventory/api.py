@@ -31,12 +31,12 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, LoanConvertSerializer, \
+    LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    AssetSerializer, BackfillRequestSerializer
+    AssetSerializer, LoanBackfillPostSerializer
     
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, BackfillRequest
+    LoanReminderEmailBody, LoanSendDates
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -1101,6 +1101,25 @@ class APILoanConvert(APIView):
                # return Response(status=status.HTTP_201_CREATED)
                return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class APILoanBackfill(ListCreateAPIView):
+    '''
+    Create a backfill request
+    '''
+    permission_classes = (IsAtLeastUser,)
+    model = Loan
+    queryset = Loan.objects.all().exclude(backfill_status="None")
+    serializer_class = LoanBackfillPostSerializer
+    
+    def post(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
+        data = request.data.copy()
+        serializer = LoanBackfillPostSerializer(loan, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 ########################################## Subscription ###########################################    
 
@@ -1182,23 +1201,23 @@ class APILoanEmailClearDates(APIView):
         LoanSendDates.objects.all().delete()
         return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
 
-########################################## Backfill Requests ###########################################   
-class APIBackfillRequest(ListCreateAPIView):
-    """
-    creation of backfill requests
-    """
-    permission_classes = (IsAtLeastUser,)
-    queryset = BackfillRequest.objects.all()
-    serializer_class = BackfillRequestSerializer
-    
-    def post(self, request, format=None):
-        data = request.data.copy()
-        serializer = BackfillRequestSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
+# ########################################## Backfill Requests ###########################################   
+# class APIBackfillRequest(ListCreateAPIView):
+#     """
+#     creation of backfill requests
+#     """
+#     permission_classes = (IsAtLeastUser,)
+#     queryset = BackfillRequest.objects.all()
+#     serializer_class = BackfillRequestSerializer
+#     
+#     def post(self, request, format=None):
+#         data = request.data.copy()
+#         serializer = BackfillRequestSerializer(data=data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#             
 
 ########################################## Asset-tracking ###########################################   
 class APIItemToAsset(APIView):
