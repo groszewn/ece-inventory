@@ -30,14 +30,16 @@ from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
-    TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
-    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, \
-    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, \
+    GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
+    LogSerializer, MultipleRequestPostSerializer, LoanSerializer, FullLoanSerializer, LoanConvertSerializer, \
+    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
     AssetSerializer, BackfillRequestSerializer
-
+    
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates, BackfillRequest
 
+def get_host(request):
+    return 'http://' + request.META.get('HTTP_HOST')
 
 class TagsMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     def filter(self, qs, value): # way to pass through data
@@ -949,9 +951,14 @@ class APILoanList(APIView):
         serializer = FullLoanSerializer(loans, many=True)
         return Response(serializer.data)
 
-class APILoan(APIView):
+class APILoanUpdate(APIView):
     permission_classes = (IsAdminOrManager,)
-    serializer_class = LoanSerializer
+    serializer_class = LoanUpdateSerializer
+    
+    def get(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id = pk)
+        serializer = FullLoanSerializer(loan)
+        return Response(serializer.data)
     
     def put(self, request, pk, format=None): # edit loan
         loan = Loan.objects.get(loan_id=pk)
@@ -960,7 +967,7 @@ class APILoan(APIView):
         item = loan.item_name
         quantity_changed = new_quant - orig_quant
         item_quant = item.quantity - quantity_changed
-        serializer = LoanSerializer(loan, data=request.data, partial=True)
+        serializer = FullLoanSerializer(loan, data=request.data, partial=True)
         if item_quant < 0 or new_quant < 1:
             return Response(status=status.HTTP_304_NOT_MODIFIED)
         item.quantity = item_quant
@@ -974,24 +981,35 @@ class APILoan(APIView):
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Loan edit'
-            to = [User.objects.get(username=loan.user_name).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':request.user,
-                'changes':change_list,
-            }
-            message=render_to_string('inventory/request_edit_email.txt', ctx)
-            if len(change_list)>0:
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+#             try:
+#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#             except (ObjectDoesNotExist, IndexError) as e:
+#                 prepend = ''
+#             subject = prepend + 'Loan edit'
+#             to = [User.objects.get(username=loan.user_name).email]
+#             from_email='noreply@duke.edu'
+#             ctx = {
+#                 'user':request.user,
+#                 'changes':change_list,
+#             }
+#             message=render_to_string('inventory/request_edit_email.txt', ctx)
+#             if len(change_list)>0:
+#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            serializer = LoanUpdateSerializer(loan, data=request.data, partial=True)
+            if serializer.is_valid():
+                return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-    def delete(self, request, pk, format=None): # check in loan
+class APILoanCheckIn(APIView):
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = LoanCheckInSerializer
+    
+    def get(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id = pk)
+        serializer = FullLoanSerializer(loan)
+        return Response(serializer.data)
+    
+    def post(self, request, pk, format=None): # check in loan
         loan = Loan.objects.get(loan_id=pk)
         requested_quant = int(request.data['check_in'])   
         original_quantity = loan.total_quantity
@@ -1003,28 +1021,45 @@ class APILoan(APIView):
             item.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(requested_quant) + " instances.")
-            serializer = LoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Loan checkin'
-                to = [User.objects.get(username=loan.user_name).email]
-                from_email='noreply@duke.edu'
-                checked_in = [(loan.item_name, requested_quant, original_quantity)]
-                ctx = {
-                    'user':request.user,
-                    'checked_in':checked_in,
-                }
-                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            fullserializer = FullLoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
+            if fullserializer.is_valid():
+                fullserializer.save()
+                #try:
+                #    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                #except (ObjectDoesNotExist, IndexError) as e:
+                #    prepend = ''
+                #subject = prepend + 'Loan checkin'
+                #to = [User.objects.get(username=loan.user_name).email]
+                #from_email='noreply@duke.edu'
+                #checked_in = [(loan.item_name, requested_quant, original_quantity)]
+                #ctx = {
+                #    'user':request.user,
+                #    'checked_in':checked_in,
+                #}
+                #message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+                #EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                #serializer = LoanCheckInSerializer(data={'admin_name':loan.admin_name,'user_name':loan.user_name,'item_name':loan.item_name,'total_quantity':loan.total_quantity,'comment':loan.comment,'check_in':request.data['check_in']},partial=True)
+                data = {'check_in':request.data['check_in'],'loan':loan}
+                serializer = LoanCheckInSerializer(data=data,partial=True)
                 if loan.total_quantity == 0:
-                    loan.delete()
-                return Response(serializer.data)
+                    loan.status = 'Checked In'
+             
+                if serializer.is_valid():
+                    #response = Response(serializer.data, status=status.HTTP_200_OK)
+                    #return redirect(request.META.get('HTTP_REFERER'))
+                    #return self.get(request, pk)
+                    return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
-        
+    
+class APILoanConvert(APIView):
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = LoanConvertSerializer  
+    
+    def get(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id = pk)
+        serializer = FullLoanSerializer(loan)
+        return Response(serializer.data)  
+  
     def post(self, request, pk, format=None): # convert loan
         loan = Loan.objects.get(loan_id=pk)
         admin_name = request.user.username
@@ -1033,36 +1068,39 @@ class APILoan(APIView):
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         original_quantity = loan.total_quantity
-        quantity_disbursed = int(request.data['convert'])
+        quantity_disbursed = int(request.data['number_to_convert'])
         if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
+            original_quantity = loan.total_quantity
             loan.total_quantity = loan.total_quantity - quantity_disbursed
             loan.save()
             disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
             disbursement.save()
             Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            serializer = LoanConvertSerializer(loan,data=request.data, partial=True)
             if loan.total_quantity == 0:
-                loan.delete()
+                loan.status = 'Checked In'
             #serializer = DisbursementSerializer(data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
             #if serializer.is_valid():
             #   serializer.save()
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Loan convert'
-            convert=[(loan.item_name, quantity_disbursed, original_quantity)]
-            to = [User.objects.get(username=loan.user_name).email]
-            from_email='noreply@duke.edu'
-            checked_in = [(loan.item_name, quantity_disbursed, original_quantity)]
-            ctx = {
-                'user':request.user,
-                'convert':checked_in,
-            }
-            message=render_to_string('inventory/convert_email.txt', ctx)
-            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            return Response(status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+           # try:
+           #     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+           # except (ObjectDoesNotExist, IndexError) as e:
+           #     prepend = ''
+           # subject = prepend + 'Loan convert'
+           # to = [User.objects.get(username=loan.user_name).email]
+           # from_email='noreply@duke.edu'
+           # convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+           # ctx = {
+           #     'user':request.user,
+           #     'convert':convert,
+           # }
+           # message=render_to_string('inventory/convert_email.txt', ctx)
+           # EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            if serializer.is_valid():
+               # return Response(status=status.HTTP_201_CREATED)
+               return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST)
         
 ########################################## Subscription ###########################################    
 
