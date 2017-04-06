@@ -59,12 +59,225 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
         return context
     
-    def get_queryset(self):
-        """Return the last five published questions."""
-#         return Instance.objects.order_by('item')[:5]
+    def add_comment_to_request_accept(request, pk):
+        indiv_request = Request.objects.get(request_id=pk)
+        if request.method == "POST":
+            form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+            if form.is_valid():
+                indiv_request = Request.objects.get(request_id=pk)
+                item = Item.objects.get(item_name=indiv_request.item_name)
+                if item.quantity >= indiv_request.request_quantity:
+                    comment = form['comment'].value()
+                    indiv_request = Request.objects.get(request_id=pk)
+                    item = Item.objects.get(item_name=indiv_request.item_name)
+                    user = request.user
+                    token, create = Token.objects.get_or_create(user=user)
+                    http_host = get_host(request)
+                    url=http_host+'/api/requests/approve/'+pk+'/'
+                    payload = {'comment':comment}
+                    header = {'Authorization': 'Token '+ str(token), 
+                          "Accept": "application/json", "Content-type":"application/json"}
+                    requests.put(url, headers = header, data = json.dumps(payload))
+                    if indiv_request.type == "Dispersal": 
+                        messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                    elif indiv_request.type == "Loan":
+                        messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                else:
+                    messages.error(request, ('Not enough ' + indiv_request.item_name.item_name + ' remaining to approve this request.'))
+            if "request_detail" in request.META.get('HTTP_REFERER'):
+                return redirect(reverse('custom_admin:index'))
+            return redirect(request.META.get('HTTP_REFERER'))  
+        else:
+            form = AddCommentRequestForm() # blank request form with no data yet
+        return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
 
+    def edit_item_module(request, pk):
+        item = Item.objects.get(item_id=pk)
+        custom_fields = Custom_Field.objects.all()
+        custom_vals = Custom_Field_Value.objects.filter(item = item)
+        original_quantity = item.quantity
+        if request.method == "POST":
+            form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
+            if form.is_valid():
+                values_custom_field = []
+                if int(form['quantity'].value())!=original_quantity:    
+                    Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
+                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
+                else:
+                    Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
+                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
+            form.save()
+            for field in custom_fields:
+                field_value = form[field.field_name].value()
+                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                else:
+                    custom_val = Custom_Field_Value(item=item, field=field)
+                custom_val.value = field_value
+                custom_val.save()
+#             user = request.user
+#             token, create = Token.objects.get_or_create(user=user)
+#             http_host = get_host(request)
+#             url=http_host+'/api/items/'+pk+'/'
+#             payload = {'item_name':form['item_name'].value(), 'quantity':int(form['quantity'].value()), 
+#                        'model_number':form['model_number'].value(), 'description':form['description'].value(), 
+#                        'values_custom_field': values_custom_field}
+#             header = {'Authorization': 'Token '+ str(token), 
+#                       "Accept": "application/json", "Content-type":"application/json"}
+#             requests.put(url, headers = header, data = json.dumps(payload))
+            messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
+            return redirect('/item/' + pk)
+        else:
+            form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
+        return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk})    
+    def add_comment_to_request_deny(request, pk):
+        indiv_request = Request.objects.get(request_id=pk)
+        if request.method == "POST":
+            form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+            if form.is_valid():
+                comment = form['comment'].value()
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/requests/deny/'+pk+'/'
+                payload = {'comment':comment}
+                header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+                requests.put(url, headers = header, data = json.dumps(payload))
+                indiv_request = Request.objects.get(request_id=pk)
+                messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                if "request_detail" in request.META.get('HTTP_REFERER'):
+                    return redirect(reverse('custom_admin:index'))
+                return redirect(request.META.get('HTTP_REFERER')) 
+        else:
+            form = AddCommentRequestForm() # blank request form with no data yet
+        return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})    
+    def convert_loan(request, pk): #redirect to main if deleted
+        loan = Loan.objects.get(loan_id=pk)
+        loan_orig_quantity = loan.total_quantity
+        if request.method == "POST":
+            form = ConvertLoanForm(loan.total_quantity, request.POST)
+            if form.is_valid():
+                url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
+                payload = {'convert':form['items_to_convert'].value()}
+                header = get_header(request)
+                response = requests.post(url, headers = header, data=json.dumps(payload))
+                if response.status_code == 201:
+                    messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                else:
+                    messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
+                    return redirect('/customadmin')
+                return redirect(request.META.get('HTTP_REFERER')) 
+        else:
+            form = ConvertLoanForm(loan.total_quantity) 
+        return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})    
+    def check_in_loan(request, pk):
+        loan = Loan.objects.get(loan_id=pk)
+        if request.method == "POST":
+            loan = Loan.objects.get(loan_id=pk)
+            loan_orig_quantity = loan.total_quantity
+            form = CheckInLoanForm(loan.total_quantity, request.POST) 
+            if form.is_valid():
+                item = loan.item_name
+                items_checked_in = form['items_to_check_in'].value()
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/loan/'+pk+'/'
+                payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
+                header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+                requests.delete(url, headers = header, data = json.dumps(payload))
+                messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+                if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0:
+                    return redirect('/customadmin')
+                return redirect(request.META.get('HTTP_REFERER'))
+        else:
+            form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
+        return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})   
+    def edit_loan(request, pk):
+        loan = Loan.objects.get(loan_id=pk)
+        if request.method == "POST":
+            form = EditLoanForm(request.POST, instance=loan) 
+            if form.is_valid():
+                post = form.save(commit=False)
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/loan/'+loan.loan_id+'/'
+                payload = {'comment': post.comment,'total_quantity':post.total_quantity}
+                header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+                response = requests.put(url, headers = header, data=json.dumps(payload))
+                if response.status_code == 304:
+                    messages.error(request, ('You cannot loan more items than the quantity available.'))
+                    return redirect(request.META.get('HTTP_REFERER'))
+                messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+                return redirect(request.META.get('HTTP_REFERER'))
+        else:
+            form = EditLoanForm(instance=loan) # blank request form with no data yet
+        return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})    
+    def post_new_disburse(request):
+        if request.method == "POST":
+            form = DisburseForm(request.POST) # create request-form with the data from the request        
+            if form.is_valid():
+                item = Item.objects.get(item_id=form['item_field']).value()
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/disbursements/direct/'+item.item_id+'/'
+                payload = {'total_quantity':int(form['total_quantity'].value()), 
+                       'comment':form['comment'].value(), 'type':form['type'].value()}
+                header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+                requests.post(url, headers = header, data=json.dumps(payload))
+#             post = form.save(commit=False)
+#             post.admin_name = request.user.username
+#             id_requested = form['item_field'].value()
+#             item = Item.objects.get(item_id=id_requested)
+#             post.item_name = item
+#             post.user_name = User.objects.get(id=form['user_field'].value()).username
+#             post.time_disbursed = timezone.localtime(timezone.now())
+                if item.quantity >= int(form['total_quantity'].value()):
+                    pass
+#                 # decrement quantity in item
+#                 quant_change = int(form['total_quantity'].value())
+#                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
+#                 item.save()
+#                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
+#                                          affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
+#                 try:
+#                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+#                 except (ObjectDoesNotExist, IndexError) as e:
+#                     prepend = ''
+#                 subject = prepend + 'Direct Dispersal'
+#                 to = [User.objects.get(username=post.user_name).email]
+#                 from_email='noreply@duke.edu'
+#                 ctx = {
+#                     'user':post.user_name,
+#                     'item':item.item_name,
+#                     'quantity':quant_change,
+#                     'disburser':request.user.username,
+#                     'type':'disbursed',
+#                 }
+#                 message=render_to_string('inventory/disbursement_email.txt', ctx)
+#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                else:
+                    messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+                    return redirect(reverse('custom_admin:index'))
+            #post.save()
+                messages.success(request, 
+                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
+        
+                return redirect('/customadmin')
+            else:
+                form = DisburseForm() # blank request form with no data yet
+            return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})    
+    
     def test_func(self):
         return self.request.user.is_staff
+
     
 class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
@@ -91,58 +304,54 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         return Log.objects.all()
     def test_func(self):
         return self.request.user.is_staff
- 
-@login_required(login_url='/login/')
-def add_custom_field(request):
-    if request.method == 'POST':
-        form = CustomFieldForm(request.POST)
-        if form.is_valid():
-            field_name = form['field_name'].value()
-            field_type = form['field_type'].value()
-            is_private = form['is_private'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/custom/field/'
-            payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.post(url, headers = header, data=json.dumps(payload))
-            #form.save()
-            #Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
-             #                  affected_user='', change_occurred='Added custom field ' + str(form['field_name'].value()))
-            return redirect(reverse('custom_admin:index'))
-    else:
-        form = CustomFieldForm()
-    return render(request, 'custom_admin/create_custom_field.html', {'form': form})
 
-@login_required(login_url='/login/')
-def delete_custom_field(request):
-    fields = Custom_Field.objects.all()
-    if request.method == 'POST':
-        form = DeleteFieldForm(fields,request.POST)
-        if form.is_valid():
-            pickedFields = form.cleaned_data.get('fields')
-            if pickedFields:
-                for field in pickedFields:
-                    delField = Custom_Field.objects.get(field_name=field)
-                    user = request.user
-                    token, create = Token.objects.get_or_create(user=user)
-                    http_host = get_host(request)
-                    url=http_host+'/api/custom/field/modify/'+ str(delField.id)+ '/'
-                    #payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
-                    header = {'Authorization': 'Token '+ str(token), 
+class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView): 
+    login_url='/login/'
+    permission_required = 'is_superuser'
+    form_class = CustomFieldForm
+    success_url = '/customadmin/'
+    template_name = 'custom_admin/create_custom_field.html'
+    def form_valid(self, form):
+        field_name = form['field_name'].value()
+        field_type = form['field_type'].value()
+        is_private = form['is_private'].value()
+        user = self.request.user
+        token, create = Token.objects.get_or_create(user=user)
+        http_host = get_host(self.request)
+        url=http_host+'/api/custom/field/'
+        payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
+        header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+        requests.post(url, headers = header, data=json.dumps(payload))
+        return super(CustomFieldView, self).form_valid(form)
+    def test_func(self):
+        return self.request.user.is_superuser
+    def delete_custom_field(request):
+        fields = Custom_Field.objects.all()
+        if request.method == 'POST':
+            form = DeleteFieldForm(fields,request.POST)
+            if form.is_valid():
+                pickedFields = form.cleaned_data.get('fields')
+                if pickedFields:
+                    for field in pickedFields:
+                        delField = Custom_Field.objects.get(field_name=field)
+                        user = request.user
+                        token, create = Token.objects.get_or_create(user=user)
+                        http_host = get_host(request)
+                        url=http_host+'/api/custom/field/modify/'+ str(delField.id)+ '/'
+                        #payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
+                        header = {'Authorization': 'Token '+ str(token), 
                               "Accept": "application/json", "Content-type":"application/json"}
-                    requests.delete(url, headers = header)
+                        requests.delete(url, headers = header)
 #                     delField = Custom_Field.objects.get(field_name = field)
 #                     Log.objects.create(request_id=None,item_id=None,  item_name='', initiating_user = request.user, nature_of_event="Delete", 
 #                                        affected_user='', change_occurred='Deleted custom field ' + str(field))
 #                     delField.delete()
-            return redirect(reverse('custom_admin:index'))
-    else:
-        form = DeleteFieldForm(fields)
-    return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
-# Figure out a way to display the error in a nicer way
+                return redirect(reverse('custom_admin:index'))
+        else:
+            form = DeleteFieldForm(fields)
+        return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
+
 class RegistrationView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     login_url='/login/'
     permission_required = 'is_superuser'
@@ -168,11 +377,6 @@ class RegistrationView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     def form_invalid(self, form):
         messages.error(self.request, form.errors.popitem())
         return super(RegistrationView, self).form_invalid(form)
-     
-#         elif form['password1'].value() != form['password2'].value():
-#             messages.error(request, (" passwords do not match."))
-#         else:
-#             messages.error(request, (form['username'].value() + " has already been created."))
     def test_func(self):
         return self.request.user.is_superuser
 
@@ -190,241 +394,32 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
 #         return Instance.objects.order_by('item')[:5]
     def test_func(self):
         return self.request.user.is_staff
-
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def add_comment_to_request_accept(request, pk):
-    indiv_request = Request.objects.get(request_id=pk)
-    if request.method == "POST":
-        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
-        if form.is_valid():
-            indiv_request = Request.objects.get(request_id=pk)
-            item = Item.objects.get(item_name=indiv_request.item_name)
-            if item.quantity >= indiv_request.request_quantity:
-                comment = form['comment'].value()
-                indiv_request = Request.objects.get(request_id=pk)
-                item = Item.objects.get(item_name=indiv_request.item_name)
+    def edit_permission(request, pk):
+        user = User.objects.get(username = pk)
+        if request.method == "POST":
+            form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
+            if form.is_valid():    
+                print(form.cleaned_data)
                 user = request.user
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
-                url=http_host+'/api/requests/approve/'+pk+'/'
-                payload = {'comment':comment}
+                url=http_host+'/api/users/'+form['username'].value()+'/'
+                payload = {'username':form['username'].value(), 'is_superuser':form.cleaned_data.get('is_superuser'),
+                       'is_staff':form.cleaned_data.get('is_staff'), 'is_active':form['is_active'].value(), 
+                       'email':form['email'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
-                          "Accept": "application/json", "Content-type":"application/json"}
+                      "Accept": "application/json", "Content-type":"application/json"}
                 requests.put(url, headers = header, data = json.dumps(payload))
-                if indiv_request.type == "Dispersal": 
-                    messages.success(request, ('Successfully disbursed ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                elif indiv_request.type == "Loan":
-                    messages.success(request, ('Successfully loaned ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-            else:
-                    messages.error(request, ('Not enough ' + indiv_request.item_name.item_name + ' remaining to approve this request.'))
-            if "request_detail" in request.META.get('HTTP_REFERER'):
-                return redirect(reverse('custom_admin:index'))
-            return redirect(request.META.get('HTTP_REFERER'))  
-    else:
-        form = AddCommentRequestForm() # blank request form with no data yet
-    return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
-
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def edit_item_module(request, pk):
-    item = Item.objects.get(item_id=pk)
-    custom_fields = Custom_Field.objects.all()
-    custom_vals = Custom_Field_Value.objects.filter(item = item)
-    original_quantity = item.quantity
-    if request.method == "POST":
-        form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
-        if form.is_valid():
-            values_custom_field = []
-            if int(form['quantity'].value())!=original_quantity:    
-                Log.objects.create(request_id = None, item_id=str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                         affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
-            else:
-                Log.objects.create(request_id=None, item_id = str(item.item_id), item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                         affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
-            form.save()
-            for field in custom_fields:
-                field_value = form[field.field_name].value()
-                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
-                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
-                else:
-                    custom_val = Custom_Field_Value(item=item, field=field)
-                custom_val.value = field_value
-                custom_val.save()
-#             user = request.user
-#             token, create = Token.objects.get_or_create(user=user)
-#             http_host = get_host(request)
-#             url=http_host+'/api/items/'+pk+'/'
-#             payload = {'item_name':form['item_name'].value(), 'quantity':int(form['quantity'].value()), 
-#                        'model_number':form['model_number'].value(), 'description':form['description'].value(), 
-#                        'values_custom_field': values_custom_field}
-#             header = {'Authorization': 'Token '+ str(token), 
-#                       "Accept": "application/json", "Content-type":"application/json"}
-#             requests.put(url, headers = header, data = json.dumps(payload))
-            messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
-            return redirect('/item/' + pk)
-    else:
-        form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
-    return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk})
-
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def add_comment_to_request_deny(request, pk):
-    indiv_request = Request.objects.get(request_id=pk)
-    if request.method == "POST":
-        form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
-        if form.is_valid():
-            comment = form['comment'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/requests/deny/'+pk+'/'
-            payload = {'comment':comment}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.put(url, headers = header, data = json.dumps(payload))
-            indiv_request = Request.objects.get(request_id=pk)
-            messages.success(request, ('Denied disbursement ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-            if "request_detail" in request.META.get('HTTP_REFERER'):
-                return redirect(reverse('custom_admin:index'))
-            return redirect(request.META.get('HTTP_REFERER')) 
-    else:
-        form = AddCommentRequestForm() # blank request form with no data yet
-    return render(request, 'custom_admin/request_deny_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
-
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def convert_loan(request, pk): #redirect to main if deleted
-    loan = Loan.objects.get(loan_id=pk)
-    loan_orig_quantity = loan.total_quantity
-    if request.method == "POST":
-        form = ConvertLoanForm(loan.total_quantity, request.POST)
-        if form.is_valid():
-            url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
-            payload = {'convert':form['items_to_convert'].value()}
-            header = get_header(request)
-            response = requests.post(url, headers = header, data=json.dumps(payload))
-            if response.status_code == 201:
-               messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
-            else:
-                messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
-            if loan_orig_quantity - int(form['items_to_convert'].value()) <= 0:
+            #form.save()
+            #Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Edit', 
+            #                             affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
                 return redirect('/customadmin')
-            return redirect(request.META.get('HTTP_REFERER')) 
-    else:
-        form = ConvertLoanForm(loan.total_quantity) 
-    return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
-    
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/') #redirect to main if deleted
-def check_in_loan(request, pk):
-    loan = Loan.objects.get(loan_id=pk)
-    if request.method == "POST":
-        loan = Loan.objects.get(loan_id=pk)
-        loan_orig_quantity = loan.total_quantity
-        form = CheckInLoanForm(loan.total_quantity, request.POST) 
-        if form.is_valid():
-            item = loan.item_name
-            items_checked_in = form['items_to_check_in'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/'+pk+'/'
-            payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.delete(url, headers = header, data = json.dumps(payload))
-            messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
-            if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0:
-                 return redirect('/customadmin')
-            return redirect(request.META.get('HTTP_REFERER'))
-    else:
-        form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
-    return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
-  
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def edit_loan(request, pk):
-    loan = Loan.objects.get(loan_id=pk)
-    if request.method == "POST":
-        form = EditLoanForm(request.POST, instance=loan) 
-        if form.is_valid():
-            post = form.save(commit=False)
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/'+loan.loan_id+'/'
-            payload = {'comment': post.comment,'total_quantity':post.total_quantity}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            response = requests.put(url, headers = header, data=json.dumps(payload))
-            if response.status_code == 304:
-                messages.error(request, ('You cannot loan more items than the quantity available.'))
-                return redirect(request.META.get('HTTP_REFERER'))
-            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
-            return redirect(request.META.get('HTTP_REFERER'))
-    else:
-        form = EditLoanForm(instance=loan) # blank request form with no data yet
-    return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})
-    
-@login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/')
-def post_new_disburse(request):
-    if request.method == "POST":
-        form = DisburseForm(request.POST) # create request-form with the data from the request        
-        if form.is_valid():
-            item = Item.objects.get(item_id=form['item_field']).value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/disbursements/direct/'+item.item_id+'/'
-            payload = {'total_quantity':int(form['total_quantity'].value()), 
-                       'comment':form['comment'].value(), 'type':form['type'].value()}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.post(url, headers = header, data=json.dumps(payload))
-#             post = form.save(commit=False)
-#             post.admin_name = request.user.username
-#             id_requested = form['item_field'].value()
-#             item = Item.objects.get(item_id=id_requested)
-#             post.item_name = item
-#             post.user_name = User.objects.get(id=form['user_field'].value()).username
-#             post.time_disbursed = timezone.localtime(timezone.now())
-            if item.quantity >= int(form['total_quantity'].value()):
-                pass
-#                 # decrement quantity in item
-#                 quant_change = int(form['total_quantity'].value())
-#                 item.quantity = F('quantity')-int(form['total_quantity'].value()) 
-#                 item.save()
-#                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Disburse', 
-#                                          affected_user=post.user_name, change_occurred="Disbursed " + str(quant_change))
-#                 try:
-#                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-#                 except (ObjectDoesNotExist, IndexError) as e:
-#                     prepend = ''
-#                 subject = prepend + 'Direct Dispersal'
-#                 to = [User.objects.get(username=post.user_name).email]
-#                 from_email='noreply@duke.edu'
-#                 ctx = {
-#                     'user':post.user_name,
-#                     'item':item.item_name,
-#                     'quantity':quant_change,
-#                     'disburser':request.user.username,
-#                     'type':'disbursed',
-#                 }
-#                 message=render_to_string('inventory/disbursement_email.txt', ctx)
-#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            else:
-                messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
-                return redirect(reverse('custom_admin:index'))
-            #post.save()
-            messages.success(request, 
-                                 ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
-        
-            return redirect('/customadmin')
-    else:
-        form = DisburseForm() # blank request form with no data yet
-    return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})
+        else:
+            form = UserPermissionEditForm(instance = user, initial = {'username': user.username, 'email':user.email})
+        return render(request, 'custom_admin/user_edit.html', {'form': form})    
+
+
+
  
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -671,31 +666,7 @@ def edit_item(request, pk):
         form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
     return render(request, 'inventory/item_edit.html', {'form': form})
 
-@login_required(login_url='/login/')
-@user_passes_test(admin_check, login_url='/login/')
-def edit_permission(request, pk):
-    user = User.objects.get(username = pk)
-    if request.method == "POST":
-        form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
-        if form.is_valid():    
-            print(form.cleaned_data)
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/users/'+form['username'].value()+'/'
-            payload = {'username':form['username'].value(), 'is_superuser':form.cleaned_data.get('is_superuser'),
-                       'is_staff':form.cleaned_data.get('is_staff'), 'is_active':form['is_active'].value(), 
-                       'email':form['email'].value()}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.put(url, headers = header, data = json.dumps(payload))
-            #form.save()
-            #Log.objects.create(request_id = None, item_id=None, item_name='', initiating_user=request.user, nature_of_event='Edit', 
-            #                             affected_user=user.username, change_occurred="Changed permissions for " + str(user.username))
-            return redirect('/customadmin')
-    else:
-        form = UserPermissionEditForm(instance = user, initial = {'username': user.username, 'email':user.email})
-    return render(request, 'custom_admin/user_edit.html', {'form': form})
+
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')

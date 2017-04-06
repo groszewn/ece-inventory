@@ -25,7 +25,7 @@ urlpatterns = [
     url(r'^(?P<pk>[\w\-\ ]+)/cancel/$', views.RequestDetailView.cancel_request, name='request_cancel'),
     url(r'^item_detail/(?P<pk>[\w\-\ ]+)/cancel/$', views.RequestDetailView.cancel_request, name='item_detail_request_cancel'),
  #   url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)/$', custom_admin.views.check_in_loan, name='check_in_loan'), 
-    url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)/$', custom_admin.views.edit_loan, name='edit_loan'), 
+    url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)/$', custom_admin.views.AdminIndexView.edit_loan, name='edit_loan'), 
     url(r'^loan/detail/(?P<pk>[\w\-\ ]+)/$', views.LoanDetailView.as_view(), name='loan_detail'),
     url(r'^asset/(?P<pk>[\w\-\ ]+)/$', views.AssetDetailView.as_view(), name='asset_detail'),
     ################################### API URLS #######################################
