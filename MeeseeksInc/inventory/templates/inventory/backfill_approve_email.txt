@@ -1,0 +1,14 @@
+Hello {{ user }}, 
+
+Your backfill has been approved and is awaiting arrival.
+
+Details:
+	
+	Item: {{item_name}}
+	
+	Quantity to backfill: {{ backfill_quantity }} out of {{ loan_quantity }}
+	
+
+Best, 
+
+ECE inventory

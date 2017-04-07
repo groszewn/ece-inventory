@@ -54,7 +54,6 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['backfill_approved'] = Loan.objects.filter(backfill_status='In Transit')
             context['backfill_denied'] = Loan.objects.filter(backfill_status='Denied')
             context['backfill_completed'] = Loan.objects.filter(backfill_status='Completed')
-            context['backfill_failed'] = Loan.objects.filter(backfill_status='Failed')
             context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
             context['my_template'] = 'custom_admin/base.html'
@@ -69,7 +68,6 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['backfill_approved'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='In Transit')
             context['backfill_denied'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Denied')
             context['backfill_completed'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Completed')
-            context['backfill_failed'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Failed')
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username) 
             context['my_template'] = 'inventory/base.html'

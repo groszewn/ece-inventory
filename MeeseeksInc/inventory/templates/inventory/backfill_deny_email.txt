@@ -1,0 +1,9 @@
+Hello {{ user }}, 
+
+Your backfill has been denied for the following reason:
+
+{{ reason }}
+
+Best, 
+
+ECE inventory

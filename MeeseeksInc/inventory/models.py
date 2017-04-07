@@ -75,7 +75,6 @@ class Loan(models.Model):
         ('Denied', 'Denied'), # request denied
         ('In Transit', 'In Transit'), # items in transit
         ('Completed', 'Completed'), # successful
-        ('Failed', 'Failed') # items never arrived/were unsatisfactory
     )
     backfill_status = models.CharField(max_length=200, null=False, choices=BACKFILL_CHOICES, default='None')
     backfill_quantity = models.IntegerField(null=True)

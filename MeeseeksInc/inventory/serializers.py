@@ -400,4 +400,12 @@ class LoanBackfillPostSerializer(serializers.ModelSerializer):
         elif (value > loan.total_quantity):
             raise serializers.ValidationError("Backfill quantity can't be more than the loan quantity")
         return value
+    
+class BackfillAcceptDenySerializer(serializers.ModelSerializer):
+    backfill_notes = serializers.CharField(required=False, allow_blank=True)
+    class Meta:
+        model = Loan
+        fields = ('backfill_notes',)
+        
+        
         
