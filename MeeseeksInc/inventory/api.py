@@ -479,7 +479,7 @@ class APIApproveRequest(APIView):
             elif indiv_request.type == "Loan":
                 # add new loan item to table
                 loan = Loan(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
-                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()))    
+                                            total_quantity=indiv_request.request_quantity, comment=comment, time_loaned=timezone.localtime(timezone.now()), )    
                 loan.save()
                 Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
                                    nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned " + str(indiv_request.request_quantity))
