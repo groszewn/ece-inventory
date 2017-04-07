@@ -80,17 +80,18 @@ class GetItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'requests_outstanding','values_custom_field','tags')
+        fields = ('item_id', 'item_name', 'quantity' ,'threshold_quantity', 'threshold_enabled','model_number', 
+                  'description', 'requests_outstanding','values_custom_field','tags')
 
 class ItemSerializer(serializers.ModelSerializer):
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
     model_number = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
     item_id = serializers.CharField(read_only=True)
-
     class Meta:
         model = Item
-        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field')
+        fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field' ,'threshold_quantity', 
+    'threshold_enabled' )
     
     def get_custom_field_values(self, obj):
         item = Item.objects.get(item_name = obj)

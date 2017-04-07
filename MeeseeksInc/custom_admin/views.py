@@ -217,15 +217,11 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
                 requests.post(url, headers = header, data=json.dumps(payload))
-                if item.quantity >= int(form['total_quantity'].value()):
-                    pass
-
-                else:
+                if item.quantity < int(form['total_quantity'].value()):
                     messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                     return redirect(reverse('custom_admin:index'))
                 messages.success(request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
-        
                 return redirect('/customadmin')
             else:
                 form = DisburseForm() # blank request form with no data yet

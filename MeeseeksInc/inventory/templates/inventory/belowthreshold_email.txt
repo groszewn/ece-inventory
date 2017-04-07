@@ -1,0 +1,7 @@
+Hello {{ user }}, 
+
+{{ item }} (Quantity: {{ quantity }}) stock is below minimum stock after a dispersal or a loan.  
+
+Best, 
+
+ECE inventory
