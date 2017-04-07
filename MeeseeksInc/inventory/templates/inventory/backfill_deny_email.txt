@@ -1,6 +1,6 @@
 Hello {{ user }}, 
 
-Your backfill has been denied for the following reason:
+Your backfill has been denied for the following reason(s):
 
 {{ reason }}
 

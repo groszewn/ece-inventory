@@ -1,0 +1,9 @@
+Hello {{ user }}, 
+
+Your backfill has failed and been converted back to a loan for the following reason(s):
+
+{{ reason }}
+
+Best, 
+
+ECE inventory

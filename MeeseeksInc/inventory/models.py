@@ -136,7 +136,8 @@ class Log(models.Model):
         ('Lost', 'Lost'), 
         ('Broken', 'Broken'),
         ('Loan', 'Loan'),
-        ('Check In', 'Check In')
+        ('Check In', 'Check In'),
+        ('Backfilled', 'Backfilled')
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)
