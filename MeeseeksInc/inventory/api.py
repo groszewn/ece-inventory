@@ -1118,6 +1118,9 @@ class APILoanBackfillPost(ListCreateAPIView):
         serializer = LoanBackfillPostSerializer(loan, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            print(serializer.data)
+            Log.objects.create(request_id=None, item_id=loan.item_name.item_id, item_name=loan.item_name.item_name, initiating_user=request.user, nature_of_event="Create",
+                               affected_user="", change_occurred="Created backfill request for " + str(loan.item_name.item_name))
             try:
                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
             except (ObjectDoesNotExist, IndexError) as e:
@@ -1127,7 +1130,7 @@ class APILoanBackfillPost(ListCreateAPIView):
             from_email='noreply@duke.edu'
             ctx = {
                 'user':loan.user_name,
-                'item':loan.item_name,
+                'item_name':loan.item_name.item_name,
                 'backfill_quantity':loan.backfill_quantity,
                 'loan_quantity':loan.total_quantity, 
             }

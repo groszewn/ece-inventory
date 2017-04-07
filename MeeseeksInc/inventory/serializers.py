@@ -381,9 +381,13 @@ class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     backfill_quantity = serializers.IntegerField(required=True)
     loan_id = serializers.CharField(read_only=True)
+    backfill_time_requested = serializers.DateTimeField(
+        default=timezone.localtime(timezone.now()),
+        read_only=True
+    )
     class Meta:
         model = Loan
-        fields = ('loan_id', 'backfill_pdf', 'backfill_status', 'backfill_quantity')
+        fields = ('loan_id', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_time_requested')
         
     def validate_backfill_quantity(self, value):
         """

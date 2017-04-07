@@ -1138,7 +1138,10 @@ def create_backfill_from_loan(request, pk):
             header = {'Authorization': 'Token '+ str(token)}#, 
                  #     "Accept": "application/json", "Content-type":"application/json"} 
             requests.post(url, headers=header, data=payload, files=files)
-            messages.success(request, ('Successfully requested backfill.'))
+            if int(form['quantity'].value()) > loan.total_quantity:
+                messages.error(request, ("You can't backfill more than is loaned."))
+            else:
+                messages.success(request, ('Successfully requested backfill.'))
             return redirect(request.META.get('HTTP_REFERER')) 
     else:
         form = BackfillRequestForm()

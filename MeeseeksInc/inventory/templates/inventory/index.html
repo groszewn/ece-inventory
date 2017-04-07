@@ -327,6 +327,169 @@
 	{#% else %#}
 		{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
 	{% endif %}
+	
+	
+{########################## ALL BACKFILLS #####################}
+{% if backfill_list %}
+	<h2>Backfills</h2>
+	<ul class="nav nav-tabs">
+	  <li><a href="#all-backfills" data-toggle="tab">All Backfills</a></li>
+	  <li><a href="#in-transit-backfills" data-toggle="tab">In Transit</a></li>
+	  <li class="active"><a href="#requested-backfills" data-toggle="tab">Requested</a></li>
+	  <li><a href="#denied-backfills" data-toggle="tab">Denied</a></li>
+	  <li><a href="#completed-backfills" data-toggle="tab">Completed</a></li>
+	  <li><a href="#failed-backfills" data-toggle="tab">Failed</a></li>
+	</ul>
+	<div class="tab-content">
+        <div class="tab-pane" id="all-backfills">
+			<table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Backfill for</th>
+				<th>Quantity</th>
+				<th>Notes</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_list %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td>{{ loan.backfill_notes }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane" id="in-transit-backfills">
+			<table id="inventory-backfill-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Notes</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_approved %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td>{{ loan.backfill_notes }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane active" id="requested-backfills">
+			<table id="inventory-backfill-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+				<th>Actions</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_requested %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+						<td>TODO BACKFILL ACTIONS</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane" id="denied-backfills">
+			<table id="inventory-backfill-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Notes</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_denied %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td>{{ loan.backfill_notes }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+	<div class="tab-pane" id="completed-backfills">
+			<table id="inventory-backfill-completed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Notes</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_approved %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td>{{ loan.backfill_notes }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane" id="failed-backfills">
+			<table id="inventory-backfill-failed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Notes</th>
+				<th>Proof of Purchase</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for loan in backfill_approved %}
+	        		<tr>
+						<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+						<td>{{ loan.backfill_quantity }}</td>
+						<td>{{ loan.backfill_notes }}</td>
+						<td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+						<td>{{ loan.backfill_time_requested}}</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+    </div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No outstanding Backfills.</p>
+	{% endif %}
+
 
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
@@ -578,7 +741,25 @@ $(document).ready(function(){
 	//});
     $('#inventory-loaned').dataTable({
     "order": [[ 5, "desc" ]]
-});
+    });
+    $('#inventory-backfill-all').dataTable({
+    "order": [[ 4, "desc" ]]
+    });
+    $('#inventory-backfill-approved').dataTable({
+    "order": [[ 3, "desc" ]]
+    });
+    $('#inventory-backfill-pending').dataTable({
+    "order": [[ 3, "desc" ]]
+    });
+    $('#inventory-backfill-denied').dataTable({
+    "order": [[ 3, "desc" ]]
+    });
+    $('#inventory-backfill-completed').dataTable({
+    "order": [[ 3, "desc" ]]
+    });
+    $('#inventory-backfill-failed').dataTable({
+    "order": [[ 3, "desc" ]]
+    });
 });
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select

@@ -18,3 +18,7 @@ def indexOfFieldProperty(fieldList, obj):
         if field.field_name == obj:
             index = i
     return i
+
+@register.filter
+def filename(value):
+    return str(value).split('/')[-1]
