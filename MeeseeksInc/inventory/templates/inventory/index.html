@@ -386,7 +386,14 @@
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td>{{ loan.backfill_time_requested}}</td>
                     {% if user.is_staff %}
-                    	<td>TODO completed actions</td>
+                    <td>
+                    	{% block comment_complete_backfill %}
+                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
+                        {% endblock comment_complete_backfill %}
+                        {% block comment_fail_backfill %}
+                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Deny</a>
+                        {% endblock comment_fail_backfill %}
+                    </td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -413,16 +420,16 @@
                     <td>{{ loan.backfill_quantity }}</td>
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td>{{ loan.backfill_time_requested}}</td>
-                    <td>
                     {% if user.is_staff %}
+                    <td>
                     	{% block comment_accept_backfill %}
                         	<a id = "accept-backfill" loan-id="{{ loan.loan_id }}" class="accept-backfill btn btn-success">Approve</a>
                         {% endblock comment_accept_backfill %}
                         {% block comment_deny_backfill %}
                         	<a id = "deny-backfill" loan-id="{{ loan.loan_id }}" class="deny-backfill btn btn-warning">Deny</a>
                         {% endblock comment_deny_backfill %}
-                    {% endif %}
                     </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -765,6 +772,71 @@
     });
 </script>
 {% endblock js-deny-backfill %}
+
+{############################# BACKFILL COMPLETE + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill %}
+<script>
+    $('.complete-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill').load(('backfill/complete/addcomment/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill %}
+
+
+{############################# BACKFILL FAIL + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-fail-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Failure</h4>
+            </div>
+            <div id="form-modal-body-fail-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-fail-backfill %}
+<script>
+    $('.fail-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-fail-backfill').load(('backfill/fail/addcomment/'+loan_id), function () {
+        	$('#formID-comment-fail-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-fail-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-fail-backfill %}
 
 
 {############################# CSV HELP PAGE MODAL ##############################}
