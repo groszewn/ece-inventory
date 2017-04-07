@@ -1181,8 +1181,7 @@ class APILoanBackfillPost(ListCreateAPIView):
         data = request.data.copy()
         serializer = LoanBackfillPostSerializer(loan, data=data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            print(serializer.data)
+            serializer.save(backfill_status="Requested", backfill_time_requested=timezone.localtime(timezone.now()))
             Log.objects.create(request_id=None, item_id=loan.item_name.item_id, item_name=loan.item_name.item_name, initiating_user=request.user, nature_of_event="Create",
                                affected_user="", change_occurred="Created backfill request for " + str(loan.item_name.item_name))
             try:
@@ -1225,7 +1224,7 @@ class APIApproveBackfill(APIView):
             return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(backfill_status="In Transit")
+            serializer.save(backfill_status="In Transit", backfill_time_requested=timezone.localtime(timezone.now()))
             Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Approve", 
                        affected_user=loan.user_name, change_occurred="Backfill in transit")
             try:
@@ -1269,7 +1268,7 @@ class APIDenyBackfill(APIView):
             return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(backfill_status="Denied")
+            serializer.save(backfill_status="Denied", backfill_time_requested=timezone.localtime(timezone.now()))
             Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Deny", 
                        affected_user=loan.user_name, change_occurred="Backfill denied")
             try:

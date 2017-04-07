@@ -58,6 +58,9 @@ class EditLoanForm(forms.ModelForm):
 
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+    
+class AddCommentBackfillForm(forms.Form):
+    backfill_notes = forms.CharField(label='Notes from admin (optional)', max_length=200, required=False)
 
 class AssetsRequestForm(forms.ModelForm):
     asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')

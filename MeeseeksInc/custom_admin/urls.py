@@ -56,4 +56,6 @@ urlpatterns = [
     url(r'^csv/guide/$',inventory.views.csv_guide_page,name='csv_help'),
     url(r'^upload/$', views.upload_page, name='upload_page'),
     url(r'^backfill/from/loan/(?P<pk>[\w\-\ ]+)/$', views.create_backfill_from_loan, name='backfill_from_loan'),
+    url(r'^backfill/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_accept, name='add_comment_to_backfill_accept'),
+    url(r'^backfill/deny/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_deny, name='add_comment_to_backfill_deny'),
 ]

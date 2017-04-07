@@ -381,10 +381,8 @@ class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     backfill_quantity = serializers.IntegerField(required=True)
     loan_id = serializers.CharField(read_only=True)
-    backfill_time_requested = serializers.DateTimeField(
-        default=timezone.localtime(timezone.now()),
-        read_only=True
-    )
+    backfill_status = serializers.CharField(read_only=True)
+    backfill_time_requested = serializers.DateTimeField(read_only=True)
     class Meta:
         model = Loan
         fields = ('loan_id', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_time_requested')
@@ -400,6 +398,9 @@ class LoanBackfillPostSerializer(serializers.ModelSerializer):
         elif (value > loan.total_quantity):
             raise serializers.ValidationError("Backfill quantity can't be more than the loan quantity")
         return value
+    
+    def validate_backfill_time_requested(self, value):
+        return timezone.localtime(timezone.now())
     
 class BackfillAcceptDenySerializer(serializers.ModelSerializer):
     backfill_notes = serializers.CharField(required=False, allow_blank=True)

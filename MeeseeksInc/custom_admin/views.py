@@ -29,7 +29,7 @@ from rest_framework.authtoken.models import Token
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -1153,6 +1153,47 @@ def create_backfill_from_loan(request, pk):
     return render(request, 'custom_admin/backfill_from_loan.html', {'form': form, 'pk':pk})
         
             
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_accept(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/approve/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_accept_comment.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_deny(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            print("DENYING")
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/deny/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_deny_comment.html', {'form': form, 'pk':pk})
+
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
