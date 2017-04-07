@@ -483,8 +483,6 @@ class APIApproveRequest(APIView):
             # change status of request to approved
             if serializer.is_valid():
                 serializer.save(status="Approved")
-                Log.objects.create(request_id=indiv_request.request_id, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Approve", 
-                       affected_user=indiv_request.user_id, change_occurred="Disbursed " + str(indiv_request.request_quantity))
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
@@ -544,6 +542,72 @@ class APIDenyRequest(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class APIApproveRequestWithAssets(APIView):
+    """
+    approve a request with assets and an additional comment.
+    """
+    permission_classes = (IsAdminOrUser,)
+    serializer_class = RequestAcceptDenySerializer
+    
+    def get_object(self, pk):
+        try:
+            return Request.objects.get(request_id=pk)
+        except Request.DoesNotExist:
+            raise Http404
+        
+    def put(self, request, pk, format=None):
+        indiv_request = self.get_object(pk)
+        if not indiv_request.status == "Pending":
+            return Response("Already approved or denied.", status=status.HTTP_400_BAD_REQUEST)
+        serializer = RequestAcceptDenySerializer(indiv_request, data={'comment': request.data['comment']}, partial=True)
+        item = Item.objects.get(item_name = indiv_request.item_name.item_name)
+        comment = request.data['comment']
+        asset_ids = request.data['asset_ids']
+        if item.quantity >= indiv_request.request_quantity:
+            # decrement quantity in item
+            item.quantity = F('quantity')-indiv_request.request_quantity
+            item.save()
+            if indiv_request.type == 'Dispersal':
+                disbursement = Disbursement(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment=comment,
+                                            total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
+                disbursement.save()
+                for asset_id in asset_ids:
+                    asset = Asset.objects.get(asset_id=asset_id)
+                    asset.disbursement = disbursement
+                    asset.save()
+                    Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Disbursed asset tag " + asset_id)        
+            else:
+                loan = Loan(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment=comment,
+                                            total_quantity=indiv_request.request_quantity, time_loaned=timezone.localtime(timezone.now()))
+                loan.save()
+                for asset_id in asset_ids:
+                    asset = Asset.objects.get(asset_id=asset_id)
+                    asset.loan = loan
+                    asset.save()
+                    Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, 
+                                   nature_of_event="Approve", affected_user=indiv_request.user_id, change_occurred="Loaned asset tag " + asset_id)
+            if serializer.is_valid():
+                serializer.save(status="Approved")
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Request approval'
+                to = [self.request.user.email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':self.request.user,
+                    'item':item.item_name,
+                    'quantity':indiv_request.request_quantity,
+                }
+                message=render_to_string('inventory/request_approval_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 ########################################## Disbursement ###########################################
 class APIDisbursementList(APIView):
     """

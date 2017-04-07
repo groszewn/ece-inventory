@@ -158,7 +158,9 @@ function clickEvent(){
         	{% endif %}
             <li toActivate="loanContent" style="width:100%;"><a>Loans</a></li>
             <li toActivate="disbursementContent" style="width:100%;"><a>Disbursements</a></li>
+            {% if user.is_staff %}
             <li toActivate="logContent" style="width:100%;"><a>Logs</a></li>
+            {% endif %}
         </ul>
       </nav>
     </div>

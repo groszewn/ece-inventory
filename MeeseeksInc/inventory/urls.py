@@ -39,6 +39,7 @@ urlpatterns = [
     url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIRequestDetail.as_view()),
     url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveRequest.as_view()),
     url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyRequest.as_view()),
+    url(r'^api/requests/approve_with_assets/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveRequestWithAssets.as_view()),
     url(r'^api/disbursements/$', inventory.api.APIDisbursementList.as_view()),
     url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDirectDisbursement.as_view()),
     url(r'^api/users/$', inventory.api.APIUserList.as_view()),
