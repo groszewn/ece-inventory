@@ -1,6 +1,9 @@
 from datetime import date, datetime, timedelta
-
+from json.encoder import JSONEncoder
+import pickle
+from appdirs import unicode
 from dal import autocomplete
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -22,7 +25,6 @@ from django.views import generic
 from django.views.generic.edit import FormView
 import requests, json
 from rest_framework.authtoken.models import Token
-from django import forms
 
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet
 from custom_admin.tasks import loan_reminder_email as task_email
@@ -250,6 +252,10 @@ def make_asset_request_form(item):
     return AssetsRequestForm
 
 
+def obj_dict(obj):
+    return obj.__dict__
+
+    
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def request_accept_with_assets(request, pk):
@@ -260,22 +266,21 @@ def request_accept_with_assets(request, pk):
         formset = AssetsRequestFormset(request.POST)
         commentForm = AddCommentRequestForm(request.POST)
         if all([commentForm.is_valid(), formset.is_valid()]):
-            if indiv_request.type == 'Dispersal':
-                disbursement = Disbursement(orig_request=indiv_request, admin_name=request.user.username, user_name=xindiv_request.user_id, item_name=indiv_request.item_name, comment="COMMENT FOR NOW",
-                                            total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
-                disbursement.save()
-                for form in formset:
-                    asset = Asset.objects.get(asset_id=form['asset_id'].value())
-                    asset.disbursement = disbursement
-                    asset.save()
-            else:
-                loan = Loan(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment="COMMENT FOR NOW",
-                                            total_quantity=indiv_request.request_quantity, time_loaned=timezone.localtime(timezone.now()))
-                loan.save()
-                for form in formset:
-                    asset = Asset.objects.get(asset_id=form['asset_id'].value())
-                    asset.loan = loan
-                    asset.save()
+            comment = commentForm['comment'].value()
+            token, create = Token.objects.get_or_create(user=request.user)
+            http_host = get_host(request)
+            url=http_host+'/api/requests/approve_with_assets/'+pk+'/'
+            asset_ids = []
+            for form in formset:
+                asset_ids.append(form['asset_id'].value())
+            payload = {'comment':comment, 'asset_ids': asset_ids}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload, default=obj_dict))
+            if indiv_request.type == "Dispersal": 
+                messages.success(request, ('Successfully disbursed assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            elif indiv_request.type == "Loan":
+                messages.success(request, ('Successfully loaned assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
             return redirect(reverse('custom_admin:index'))
         else:
             form_errors = formset.non_form_errors()
