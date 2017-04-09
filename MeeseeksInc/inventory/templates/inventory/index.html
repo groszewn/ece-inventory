@@ -1141,7 +1141,8 @@
     	        	{ label: "Quantity", name: "quantity" },
     	        {% endif %}
     	        { label: "Model Number", name: "model_number" },
-    	        { label: "Description", name: "description" }
+    	        { label: "Description", name: "description" },
+    	        { label: "Minimum Stock", name: "threshold_quantity" }
     	        ]
     	} ); 
     	// Disable KeyTable while the main editing form is open
@@ -1182,7 +1183,8 @@
     	columns = [{ data: "item_name" },
     	        { data: "quantity" },
     	        { data: "model_number" },
-    	        { data: "description" }];
+    	        { data: "description" },
+    	        { data: "threshold_quantity" }];
     	var djangoCustomFieldNameList = [];
     	{% for field in custom_fields %} 
     		djangoCustomFieldNameList.push("{{ field.field_name }}");
