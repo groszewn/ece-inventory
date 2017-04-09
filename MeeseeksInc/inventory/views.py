@@ -28,7 +28,6 @@ from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Fie
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 
-
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
 
@@ -218,7 +217,7 @@ class CartListView(LoginRequiredMixin, UserPassesTestMixin, generic.CreateView):
         }
         for user in SubscribedUsers.objects.all():
             to.append(user.email)
-        message=render_to_string('inventory/request_confirmation_email.txt', ctx)
+        message = render_to_string('inventory/request_confirmation_email.txt', ctx)
         EmailMessage(subject, message, bcc=to, from_email=from_email).send()
          
         # DELETE ALL CART INSTANCES

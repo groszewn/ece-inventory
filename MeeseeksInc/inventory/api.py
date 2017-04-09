@@ -470,6 +470,23 @@ class APIApproveRequest(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+                # check if stock less than minimum stock 
+            if (item.threshold_enabled and item.threshold_quantity > item.quantity):
+                #send email
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct Dispersal'
+                to = [User.objects.get(username=recipient).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':recipient,
+                    'item':item.item_name,
+                    'quantity':item.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                }
+                message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
             if indiv_request.type == "Dispersal": 
                 # add new disbursement item to table
                 disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
@@ -653,20 +670,38 @@ class APIDirectDisbursement(APIView):
         if request.data.get('type') == "Loan":
             serializer = LoanPostSerializer(data=request.data, context=context)
         if serializer.is_valid():
-            if item_to_disburse.quantity >= int(request.data.get('total_quantity')):
+            if item_to_disburse.quantity >= int(request.data.get('total_quantity')):   
                 # decrement quantity in item
                 item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
+                # check if stock less than minimum stock 
+                if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
+                    #send email
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Direct Dispersal'
+                    to = [User.objects.get(username = recipient).email]
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':recipient,
+                        'item':item_to_disburse.item_name,
+                        'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                    }
+                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send() 
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
-                recipient=data['user_name']
-                quantity = data['total_quantity']
+                recipient = data['user_name']
+                quantity  = data['total_quantity']
                 if request.data.get('type') == "Dispersal":
                     Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name = item_to_disburse.item_name, initiating_user=request.user, nature_of_event="Disburse", 
                                        affected_user=recipient, change_occurred="Disbursed " + str(quantity))
                 if request.data.get('type') == "Loan":
                     Log.objects.create(request_id=None, item_id=item_to_disburse.item_id, item_name=item_to_disburse.item_name, initiating_user=request.user, nature_of_event='Loan', 
                                        affected_user=recipient, change_occurred="Loaned " + str(quantity))
+
                 try:
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:

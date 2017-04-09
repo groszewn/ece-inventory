@@ -21,18 +21,20 @@
     <input type="submit"/>
 </form>
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-        <tr>
-            <th>Item Name</th>
-            <th>Quantity</th>
-            <th>Item Model Number</th>
-            <th>Item Description</th>
-            {% for field in custom_fields%}
-            <th>{{field.field_name}}</th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody></tbody>
+<thead>
+    <tr>
+	<th>Item Name</th>
+	<th>Quantity</th>
+	<th>Item Model Number</th>
+	<th>Item Description</th>
+	<th>Item Minimum Stock Info</th>
+	{% for field in custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
+</tr>
+</thead>
+<tbody>
+</tbody>
 </table>
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
