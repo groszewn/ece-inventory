@@ -494,7 +494,8 @@
                     	<td>{{ loan.backfill_notes }}</td>
                     {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
-                    <td>{{ loan.backfill_time_requested}}</td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
                     {% if user.is_staff %}
                     <td>
                     	{% block comment_complete_backfill %}
@@ -529,7 +530,8 @@
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
-                    <td>{{ loan.backfill_time_requested}}</td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
                     {% if user.is_staff %}
                     <td>
                     	{% block comment_accept_backfill %}
@@ -567,7 +569,8 @@
                     	<td>{{ loan.backfill_notes }}</td>
                     {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
-                    <td>{{ loan.backfill_time_requested}}</td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -595,7 +598,8 @@
                     	<td>{{ loan.backfill_notes }}</td>
                     {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
-                    <td>{{ loan.backfill_time_requested}}</td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -1014,22 +1018,19 @@
         "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-approved').dataTable({
-        "order": [[ 3, "desc" ]]
+        "order": [[ 4, "desc" ]]
         });
         $('#inventory-backfill-pending').dataTable({
         "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-denied').dataTable({
-        "order": [[ 3, "desc" ]]
+        "order": [[ 4, "desc" ]]
         });
         $('#inventory-backfill-completed').dataTable({
-        "order": [[ 3, "desc" ]]
-        });
-        $('#inventory-backfill-failed').dataTable({
-        "order": [[ 3, "desc" ]]
+        "order": [[ 4, "desc" ]]
         });
     });
     $('#included-tags').select2(); // making multiple select
