@@ -7,6 +7,15 @@
 
 <center> <h1>  Loan for: {{ loan.item_name }} </h1> </center> 
 <center> <h3>  Quantity Remaining of Item: {{ loan.item_name.quantity }} </h3> </center> 
+{% if loan.status == "Checked Out"%}
+<center> <h1 style="color:yellow">  Status: {{ loan.status }} </h1> </center> 
+{% endif %}
+{% if loan.status == "Checked In"%}
+<center> <h1 style="color:green">  Status: {{ loan.status }} </h1> </center> 
+{% endif %}
+{% if loan.status == "Backfilled"%}
+<center> <h1 style="color:green">  Status: {{ loan.status }} </h1> </center> 
+{% endif %}
 
 				<table id="loan-detail-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 		        <thead>
@@ -42,9 +51,11 @@
 	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
 {% endblock editLoan %}
 {% endif %}
+{% if user.get_username == loan.user_name %}
 {% block backfillRequest %}
 	<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
 {% endblock backfillRequest %}
+{% endif %}
 
 <h3> Original Request Information </h3>
 				<table id="inventory-request" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
