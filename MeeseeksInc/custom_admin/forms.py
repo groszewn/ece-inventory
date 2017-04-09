@@ -48,10 +48,11 @@ class ConvertLoanForm(forms.Form):
 class CheckInLoanForm(forms.Form):
     def __init__(self, amount, *args, **kwargs):
         super(CheckInLoanForm, self).__init__(*args, **kwargs)
-        self.fields['items_to_check_in'] = forms.IntegerField(required=True, min_value=1, max_value=amount, initial=amount)
+        self.fields['items_to_check_in'] = forms.IntegerField(label='How many items would you like to check in?',required=True, min_value=1, max_value=amount, initial=amount)
     
 class EditLoanForm(forms.ModelForm):
     total_quantity = forms.IntegerField(min_value=1)
+    comment = forms.CharField(required=False)
     class Meta:
         model = Loan
         fields = ('total_quantity','comment')

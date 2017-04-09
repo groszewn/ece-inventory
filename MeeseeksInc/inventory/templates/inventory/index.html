@@ -36,253 +36,331 @@
 </table>
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
-<h2>Requests</h2>
-<ul class="nav nav-tabs">
-    <li><a href="#all" data-toggle="tab">All Requests</a></li>
-    <li><a href="#accepted" data-toggle="tab">Approved</a></li>
-    <li class="active"><a href="#pending" data-toggle="tab">Pending</a></li>
-    <li><a href="#denied" data-toggle="tab">Denied</a></li>
-</ul>
-<div class="tab-content">
-    <div class="tab-pane" id="all">
-        <table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th>Request for</th>
-                    <th>Quantity</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    {% if user.is_staff %}
-                    <th>Requested by</th>
-                    {% endif %}
-                    <th>Student Reason</th>
-                    <th>Admin Comment</th>
-                    <th>Time Requested</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for request in request_list %}
-                <tr>
-                    <td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
-                    <td>{{ request.request_quantity }}</td>
-                    <td>{{ request.type }}</td>
-                    <td>{{ request.status }}</td>
-                    {% if user.is_staff %}
-                    <td>{{ request.user_id }}</td>
-                    {% endif %}
-                    <td>{{ request.reason}}</td>
-                    <td>{{ request.comment }}</td>
-                    <td>
-                        <span style="display: none;">{{ request.time_requested|date:"c" }}</span>
-                        {{ request.time_requested }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="tab-pane" id="accepted">
-        <table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th>Request for</th>
-                    <th>Quantity</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    {% if user.is_staff %}
-                    <th>Requested by</th>
-                    {% endif %}
-                    <th>Student Reason</th>
-                    <th>Admin Comment</th>
-                    <th>Time Requested</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for request in approved_request_list %}
-                <tr>
-                    <td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
-                    <td>{{ request.request_quantity }}</td>
-                    <td>{{ request.type }}</td>
-                    <td>{{ request.status }}</td>
-                    {% if user.is_staff %}
-                    <td>{{ request.user_id }}</td>
-                    {% endif %}
-                    <td>{{ request.reason}}</td>
-                    <td>{{ request.comment }}</td>
-                    <td>
-                        <span style="display: none;">{{ request.time_requested|date:"c" }}</span>
-                        {{ request.time_requested }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="tab-pane active" id="pending">
-        <table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col width="170">
-            <thead>
-                <tr>
-                    <th>Request for</th>
-                    <th>Quantity</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    {% if user.is_staff %}
-                    <th>Requested by</th>
-                    {% endif %}
-                    <th>Student Reason</th>
-                    <th>Time Requested</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for request in pending_request_list %}
-                <tr>
-                    <td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
-                    <td>{{ request.request_quantity }}</td>
-                    <td>{{ request.type }}</td>
-                    <td>{{ request.status }}</td>
-                    {% if user.is_staff %}
-                    <td>{{ request.user_id }}</td>
-                    {% endif %}
-                    <td>{{ request.reason}}</td>
-                    <td>
-                        <span style="display: none;">{{ request.time_requested|date:"c" }}</span>
-                        {{ request.time_requested }}
-                    </td>
-                    <td>
-                        {% if user.is_staff %}
-                        {% if request.item_name.is_asset %}
-                        {% block comment_accept_with_asset %}
-                        <a id = "accept-with-asset" request-id="{{ request.request_id }}" class="accept-with-asset btn btn-success">Approve</a>
-                        {% endblock comment_accept_with_asset %}
-                        {% else %}
-                        {% block comment_accept %}
-                        <a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
-                        {% endblock comment_accept %}
-                        {% endif %}
-                        {% block comment_deny %}
-                        <a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
-                        {% endblock comment_deny %}
-                        {% endif %}
-                        {% if not user.is_staff %}
-                        {% block requestEdit %}
-                        <a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
-                        {% endblock requestEdit %}
-                        <a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="tab-pane" id="denied">
-        <table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th>Request for</th>
-                    <th>Quantity</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    {% if user.is_staff %}
-                    <th>Requested by</th>
-                    {% endif %}
-                    <th>Student Reason</th>
-                    <th>Admin Comment</th>
-                    <th>Time Requested</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for request in denied_request_list %}
-                <tr>
-                    <td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
-                    <td>{{ request.request_quantity }}</td>
-                    <td>{{ request.type }}</td>
-                    <td>{{ request.status }}</td>
-                    {% if user.is_staff %}
-                    <td>{{ request.user_id }}</td>
-                    {% endif %}
-                    <td>{{ request.reason}}</td>
-                    <td>{{ request.comment }}</td>
-                    <td>
-                        <span style="display: none;">{{ request.time_requested|date:"c" }}</span>
-                        {{ request.time_requested }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% else %}
-<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
-{% endif %}
+	<h2>Requests</h2>
+	<ul class="nav nav-tabs">
+	  <li><a href="#all" data-toggle="tab">All Requests</a></li>
+	  <li><a href="#accepted" data-toggle="tab">Approved</a></li>
+	  <li class="active"><a href="#pending" data-toggle="tab">Pending</a></li>
+	  <li><a href="#denied" data-toggle="tab">Denied</a></li>
+	</ul>
+	<div class="tab-content">
+        <div class="tab-pane" id="all">
+			<table id="inventory-request-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Type</th>
+				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
+				<th>Student Reason</th>
+				<th>Admin Comment</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for request in request_list %}
+	        		<tr>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
+						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
+						<td>{{ request.reason}}</td>
+						<td>{{ request.comment }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane" id="accepted">
+			<table id="inventory-request-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Type</th>
+				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
+				<th>Student Reason</th>
+				<th>Admin Comment</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for request in approved_request_list %}
+	        		<tr>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
+						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
+						<td>{{ request.reason}}</td>
+						<td>{{ request.comment }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane active" id="pending">
+			<table id="inventory-request-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        	<col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="170">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Type</th>
+				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
+				<th>Student Reason</th>
+				<th>Time Requested</th>
+				<th>Actions</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for request in pending_request_list %}
+	        		<tr>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
+						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
+						<td>{{ request.reason}}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
+						<td>
+						{% if user.is_staff %}
+							{% block comment_accept %}
+								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
+							{% endblock comment_accept %}
+							{% block comment_deny %}
+								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
+							{% endblock comment_deny %}
+						{% endif %}
+						{% if not user.is_staff %}
+							{% block requestEdit %}
+								<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
+							{% endblock requestEdit %}
+							<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
+						{% endif %}
+						</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+        <div class="tab-pane" id="denied">
+			<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+	        <thead>
+	            <tr>
+				<th>Request for</th>
+				<th>Quantity</th>
+				<th>Type</th>
+				<th>Status</th>
+				{% if user.is_staff %}
+					<th>Requested by</th>
+				{% endif %}
+				<th>Student Reason</th>
+				<th>Admin Comment</th>
+				<th>Time Requested</th>
+			</tr>
+	        </thead>
+	        <tbody>
+	        	{% for request in denied_request_list %}
+	        		<tr>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td>{{ request.request_quantity }}</td>
+						<td>{{ request.type }}</td>
+						<td>{{ request.status }}</td>
+						{% if user.is_staff %}
+							<td>{{ request.user_id }}</td>
+						{% endif %}
+						<td>{{ request.reason}}</td>
+						<td>{{ request.comment }}</td>
+						<td>
+						  		<span style="display: none;">{{ request.time_requested|date:"c" }}</span>
+								  {{ request.time_requested }}
+						</td>
+					</tr>
+				{% endfor %}
+	        </tbody>
+	    </table>
+        </div>
+	</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No Requests To Display.</p>
+	{% endif %}
+
 {% if user.is_staff %}
 <a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 <a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 {% endif %}
 {########################## LOANS #####################}	
 {% if loan_list %}
-<h2>Loans</h2>
-<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-    <col>
-    <col>
-    <col>
-    <col>
-    <col>
-    <col>
-    <col width="308">
-    <thead>
-        <tr>
-            <th>Loan for</th>
-            <th>Item Quantity </th>
-            <th>Loaned to</th>
-            <th>User Reason</th>
-            <th>Admin Comment</th>
-            <th>Time Loaned</th>
-            {% if user.is_staff %}
-            <th>Actions</th>
-            {% endif %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for loan in loan_list %}
-        <tr>
-            <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
-            <td>{{ loan.total_quantity }}</td>
-            <td>{{ loan.user_name }}</td>
-            <td>{{ loan.orig_request.reason}}</td>
-            <td>{{ loan.comment}}</td>
-            <td>
-                <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
-                {{ loan.time_loaned }}
-            </td>
-            {% if user.is_staff %}
-            <td>
-                {% block checkIn %}
-                <a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
-                {% endblock checkIn %}
-                {% block convert %}
-                <a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
-                {% endblock convert %}
-                {% block  editLoan %}
-                <a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
-                {% endblock editLoan %}
-            </td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
+		<h2>Loans</h2>
+			<ul class="nav nav-tabs">
+	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
+	  			<li><a href="#checkedIn" data-toggle="tab">Checked In</a></li>
+	 	    	<li class="active"><a href="#checkedOut" data-toggle="tab">Checked Out</a></li>
+	 	    
+			</ul>
+	<div class="tab-content">
+		<div class="tab-pane" id="allLoan">
+		<table id="inventory-loaned-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Quantity </th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		 </div>
+		 <div class="tab-pane" id="checkedIn">
+		<table id="inventory-loaned-in" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_checked_in %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+		    <div class="tab-pane active" id="checkedOut">
+		<table id="inventory-loaned-out" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col width="308">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Quantity </th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+					{% if user.is_staff %}
+					<th>Actions</th>
+					{% endif %}
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_checked_out %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+							{% if user.is_staff %}
+							<td>
+								{% block checkIn %}
+								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+								{% endblock checkIn %}
+								{% block convert %}
+								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+								{% endblock convert %}
+								{% block  editLoan %}
+								<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+								{% endblock editLoan %}
+							</td>
+							{% endif %}
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+	</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No Loans To Display.</p
+	{% endif %}
+
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
 <h2>Disbursements</h2>
@@ -887,12 +965,18 @@
         $('#inventory-disbursed').dataTable({
             "order": [[ 6, "desc" ]]
         });
-        $('#user-table').dataTable();
+        //$('#user-table').dataTable();
         //inventory_item_table.MakeCellsEditable({
     	//    "onUpdate": myCallbackFunction
     	//});
-        $('#inventory-loaned').dataTable({
+        $('#inventory-loaned-all').dataTable({
+        "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-loaned-in').dataTable({
         "order": [[ 5, "desc" ]]
+        });
+        $('#inventory-loaned-out').dataTable({
+        "order": [[ 6, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
         "order": [[ 4, "desc" ]]

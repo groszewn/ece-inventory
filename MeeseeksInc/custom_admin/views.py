@@ -361,7 +361,7 @@ def add_comment_to_request_deny(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def convert_loan(request, pk): #redirect to main if deleted
+def convert_loan(request, pk): 
     loan = Loan.objects.get(loan_id=pk)
     loan_orig_quantity = loan.total_quantity
     if request.method == "POST":
@@ -383,30 +383,28 @@ def convert_loan(request, pk): #redirect to main if deleted
     return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
     
 @login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/') #redirect to main if deleted
+@user_passes_test(staff_check, login_url='/login/') 
 def check_in_loan(request, pk):
     loan = Loan.objects.get(loan_id=pk)
-    if request.method == "POST":
-        loan = Loan.objects.get(loan_id=pk)
-        loan_orig_quantity = loan.total_quantity
+    loan_orig_quantity = loan.total_quantity
+    if request.method == "POST":        
         form = CheckInLoanForm(loan.total_quantity, request.POST) 
         if form.is_valid():
             item = loan.item_name
             items_checked_in = form['items_to_check_in'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/checkin/'+pk+'/'
+            url=get_host(request)+'/api/loan/checkin/'+pk+'/'
             payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.post(url, headers = header, data = json.dumps(payload))
-            messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            header = get_header(request)
+            response = requests.post(url, headers = header, data = json.dumps(payload))
+            if response.status_code == 200:          
+                messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            else:
+                messages.error(request, ('Sorry, we were unable to check in the requested items.'))
             if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0 and "item" not in request.META.get('HTTP_REFERER'):
                  return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER'))
     else:
-        form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
+        form = CheckInLoanForm(loan.total_quantity)
     return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
   
 @login_required(login_url='/login/')
@@ -417,21 +415,19 @@ def edit_loan(request, pk):
         form = EditLoanForm(request.POST, instance=loan) 
         if form.is_valid():
             post = form.save(commit=False)
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/update/'+loan.loan_id+'/'
+            url=get_host(request)+'/api/loan/update/'+loan.loan_id+'/'
             payload = {'comment': post.comment,'total_quantity':post.total_quantity}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
+            header = get_header(request)
             response = requests.put(url, headers = header, data=json.dumps(payload))
             if response.status_code == 304:
                 messages.error(request, ('You cannot loan more items than the quantity available.'))
-                return redirect(request.META.get('HTTP_REFERER'))
-            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            elif response.status_code == 200:
+                messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            else:
+                messages.error(request, ('Sorry, we were unable to edit the loan.'))
             return redirect(request.META.get('HTTP_REFERER'))
     else:
-        form = EditLoanForm(instance=loan) # blank request form with no data yet
+        form = EditLoanForm(instance=loan)
     return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})
     
 @login_required(login_url='/login/')

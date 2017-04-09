@@ -267,7 +267,7 @@ class FullLoanSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     class Meta:
         model = Loan
-        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_notes') 
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned', 'status', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_notes') 
     
 class LoanUpdateSerializer(serializers.ModelSerializer):
     comment = serializers.CharField(required=False, allow_blank=True)
@@ -283,33 +283,13 @@ class LoanUpdateSerializer(serializers.ModelSerializer):
         read_only=True
         )
     item_name = serializers.CharField(read_only=True)
-    
+    total_quantity = serializers.IntegerField(required=True)
     class Meta:
         model = Loan
         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')
         
 class LoanCheckInSerializer(serializers.Serializer):
-    loan = FullLoanSerializer(read_only=True)
     check_in = serializers.IntegerField(required=True)
-    class Meta:
-        fields = ('loan','check_in')
-#     comment = serializers.CharField(read_only=True)
-#     time_loaned = serializers.DateTimeField(
-#         default=timezone.localtime(timezone.now()),
-#         read_only=True
-#     )
-#     admin_name = serializers.CharField(
-#         default=serializers.CurrentUserDefault(), 
-#         read_only=True
-#     )
-#     user_name = serializers.CharField(
-#         read_only=True
-#         )
-#     item_name = serializers.CharField(read_only=True)
-#     total_quantity = serializers.IntegerField(read_only=True)
-#     class Meta:
-#         model = Loan
-#         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned','check_in')
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)

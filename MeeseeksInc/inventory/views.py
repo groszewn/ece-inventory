@@ -11,7 +11,7 @@ from django.dispatch.dispatcher import receiver
 from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
@@ -56,6 +56,8 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['backfill_completed'] = Loan.objects.filter(backfill_status='Completed')
             context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
+            context['loans_checked_in'] = Loan.objects.filter(status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(status='Checked Out')
             context['my_template'] = 'custom_admin/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False) 
@@ -70,6 +72,8 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['backfill_completed'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Completed')
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username) 
+            context['loans_checked_in'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked Out')
             context['my_template'] = 'inventory/base.html'
         context['item_list'] = Item.objects.all()
         context['current_user'] = self.request.user.username

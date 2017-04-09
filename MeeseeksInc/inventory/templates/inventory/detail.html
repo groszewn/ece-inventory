@@ -78,6 +78,7 @@ $(function() {
 
 <div>
 {% if user.is_staff %}
+
 <script>
 function changeToAsset(){
     if (confirm("Are you sure you want to convert this to an asset?")) {
@@ -105,12 +106,12 @@ function clickEvent(){
 {% endblock edit_specific_item %}
 	    
 {% block tag_item %}
-<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Tags</a>									
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
 {% endblock tag_item %}
 	
 {% if user.is_superuser %}
+<button type="button" onclick="changeToAsset();" class="btn btn-primary">Change Item to Asset</button>
 <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
-<button type="button" onclick="changeToAsset();" class="btn btn-primary">Change to Asset</button>
 {% endif %}
 
 
@@ -242,8 +243,8 @@ function clickEvent(){
 									
 									{% if request.user_id == current_user%}
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
-									{% endif %}
-								{% else %}
+									{% endif %}									
+								 {% else %}
 									{% block requestEdit %}
 										<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
 									{% endblock requestEdit %}
