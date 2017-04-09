@@ -58,6 +58,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['loan_list'] = Loan.objects.all()
             context['loans_checked_in'] = Loan.objects.filter(status='Checked In')
             context['loans_checked_out'] = Loan.objects.filter(status='Checked Out')
+            context['loans_backfilled'] = Loan.objects.filter(status="Backfilled")
             context['my_template'] = 'custom_admin/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False) 

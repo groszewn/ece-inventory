@@ -230,6 +230,7 @@
 			<ul class="nav nav-tabs">
 	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
 	  			<li><a href="#checkedIn" data-toggle="tab">Checked In</a></li>
+	  			<li><a href="#backfilled" data-toggle="tab">Backfilled</a></li>
 	 	    	<li class="active"><a href="#checkedOut" data-toggle="tab">Checked Out</a></li>
 	 	    
 			</ul>
@@ -286,6 +287,35 @@
 		        </thead>
 		        <tbody>
 		        	{% for loan in loans_checked_in %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+		     <div class="tab-pane" id="backfilled">
+		<table id="inventory-loaned-backfilled" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_backfilled %}
 		        		<tr>
 							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
 							<td>{{ loan.status }}</td>
@@ -977,6 +1007,9 @@
         });
         $('#inventory-loaned-out').dataTable({
         "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-loaned-backfilled').dataTable({
+        "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
         "order": [[ 4, "desc" ]]
