@@ -5,7 +5,8 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset, BackfillRequest
+
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(allow_blank = False)
@@ -122,9 +123,15 @@ class CustomValueSerializer(serializers.ModelSerializer):
         depth = 1
         
 class CustomValueSerializerNoItem(serializers.ModelSerializer):
+    
+    id = serializers.ReadOnlyField(source='field.id')
+    field_name = serializers.ReadOnlyField(source='field.field_name')
+    is_private = serializers.ReadOnlyField(source='field.is_private')
+    field_type = serializers.ReadOnlyField(source='field.field_type')
+    
     class Meta:
         model = Custom_Field_Value
-        fields = ('field','field_value_short_text','field_value_long_text', 'field_value_integer', 'field_value_floating')      
+        fields = ('id','field_name', 'is_private', 'field_type', 'value')      
         depth = 1
 
 
@@ -259,7 +266,7 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
 class FullLoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
-        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned') 
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned','status') 
     
 class LoanUpdateSerializer(serializers.ModelSerializer):
     comment = serializers.CharField(required=False, allow_blank=True)
@@ -275,33 +282,13 @@ class LoanUpdateSerializer(serializers.ModelSerializer):
         read_only=True
         )
     item_name = serializers.CharField(read_only=True)
-    
+    total_quantity = serializers.IntegerField(required=True)
     class Meta:
         model = Loan
         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')
         
 class LoanCheckInSerializer(serializers.Serializer):
-    loan = FullLoanSerializer(read_only=True)
     check_in = serializers.IntegerField(required=True)
-    class Meta:
-        fields = ('loan','check_in')
-#     comment = serializers.CharField(read_only=True)
-#     time_loaned = serializers.DateTimeField(
-#         default=timezone.localtime(timezone.now()),
-#         read_only=True
-#     )
-#     admin_name = serializers.CharField(
-#         default=serializers.CurrentUserDefault(), 
-#         read_only=True
-#     )
-#     user_name = serializers.CharField(
-#         read_only=True
-#         )
-#     item_name = serializers.CharField(read_only=True)
-#     total_quantity = serializers.IntegerField(read_only=True)
-#     class Meta:
-#         model = Loan
-#         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned','check_in')
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
@@ -363,3 +350,33 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanSendDates
         fields = ('date',)
+        
+class AssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ('asset_id','item')
+        
+class BackfillRequestSerializer(serializers.ModelSerializer):
+    pdf = serializers.FileField(max_length=None, use_url=True)
+    status = serializers.CharField(read_only=True)
+    class Meta:
+        model = BackfillRequest
+        fields = ('pdf', 'item', 'loan', 'quantity', 'user', 'status')
+        
+    def validate_user(self, value):
+        """
+        Check that the user is real
+        """
+        try:
+            return User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value
+    
+    def validate_quantity(self, value):
+        """
+        Check that the request is positive
+        """
+        if value<=0:
+            raise serializers.ValidationError("Quantity needs to be greater than 0")
+        return value

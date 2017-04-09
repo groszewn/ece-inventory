@@ -1,63 +1,42 @@
-from datetime import date, time, datetime, timedelta
+from datetime import date, datetime, timedelta
+import json
 import sys
 
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
 from django.db.models.query_utils import Q
-from django.db.models.signals import post_save
-from django.dispatch.dispatcher import receiver
-from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory, ModelMultipleChoiceField
-from django.http import HttpResponseRedirect
 from django.http.response import Http404, HttpResponse
-from django.shortcuts import render, redirect, render_to_response
-from django.template import Context
-from django.template.loader import render_to_string, get_template
-from django.test import Client
-from django.urls import reverse
+from django.template.loader import render_to_string
 from django.utils import timezone
-from django.views import generic
-from django.views.generic.base import View, TemplateResponseMixin
-from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
+from django.views.generic.base import View
+from django.shortcuts import render, redirect, render_to_response
 import django_filters
-from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter
+from django_filters.filters import ModelChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
-import requests, json, urllib, subprocess
-from rest_framework import status, permissions, viewsets
+from rest_framework import status
 import rest_framework
-from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, ListAPIView
-from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from MeeseeksInc.celery import app
 from MeeseeksInc.celery import app as celery_app
-from custom_admin.forms import AdminRequestEditForm, DisburseForm
-from custom_admin.tasks import loan_reminder_email as task_email
-from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.forms import EditCartAndAddRequestForm
-from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
+from inventory.models import Asset
+from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
     DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
-    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer
+    SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
+    AssetSerializer, BackfillRequestSerializer
 
-from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates
+from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates, BackfillRequest
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -142,26 +121,31 @@ class APIItemList(ListCreateAPIView):
             name = request.data.get('item_name',None)
             item = Item.objects.get(item_name = name)
             custom_field_values = request.data.get('values_custom_field')
+            
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
-                    value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
+                    value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         custom_val = Custom_Field_Value(item=item, field=field)
-                        if field.field_type == 'Short':    
-                            custom_val.field_value_short_text = value['field_value_short_text']
-                        if field.field_type == 'Long':
-                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if value['value']=='':
+                            continue
+                        if field.field_type == 'Short' and len(value['value'])<=400 or \
+                            field.field_type == 'Long' and len(value['value'])<=1000:
+                            custom_val.value = value['value']
                         if field.field_type == 'Int':
-                            if value != '':
-                                custom_val.field_value_integer = value['field_value_integer']
-                            else:
-                                custom_val.field_value_integer = None
+                            try:
+                                int(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be an integer", status=status.HTTP_400_BAD_REQUEST)
                         if field.field_type == 'Float':
-                            if value != '':
-                                custom_val.field_value_floating = value['field_value_floating'] 
-                            else:
-                                custom_val.field_value_floating = None
+                            try:
+                                float(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
             context = {
             "request": self.request,
             "pk": item.item_id,
@@ -221,29 +205,33 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
+            print(request.data)
             if custom_field_values is not None:
                 for field in Custom_Field.objects.all():
-                    value = next((x for x in custom_field_values if x['field']['field_name'] == field.field_name), None) 
+                    value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         if Custom_Field_Value.objects.filter(item = item, field = field).exists():
                             custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                         else:
                             custom_val = Custom_Field_Value(item=item, field=field)
-                        if field.field_type == 'Short':    
-                            custom_val.field_value_short_text = value['field_value_short_text']
-                        if field.field_type == 'Long':
-                            custom_val.field_value_long_text = value['field_value_long_text']
+                        if value['value']=='':
+                            continue
+                        if field.field_type == 'Short' and len(value['value'])<=400 or \
+                            field.field_type == 'Long' and len(value['value'])<=1000:
+                            custom_val.value = value['value']
                         if field.field_type == 'Int':
-                            if value != '':
-                                custom_val.field_value_integer = value['field_value_integer']
-                            else:
-                                custom_val.field_value_integer = None
+                            try:
+                                int(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be an integer", status=status.HTTP_400_BAD_REQUEST)
                         if field.field_type == 'Float':
-                            if value != '':
-                                custom_val.field_value_floating = value['field_value_floating'] 
-                            else:
-                                custom_val.field_value_floating = None
-                        custom_val.save()
+                            try:
+                                float(value['value'])
+                                custom_val.value = value['value']
+                            except ValueError:
+                                return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
+                        custom_val.save()  
             context = {
             "request": self.request,
             "pk": pk,
@@ -905,20 +893,20 @@ class ItemUpload(APIView):
                     return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), createdItems)
                 if actual_field.field_type == "Short":
                     if len(row[j])<=400:
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_short_text=row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, value=row[j])
                         value.save()
                     else:
                         return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not short text. Length is too long", createdItems) 
                 elif actual_field.field_type == "Long":
                     if len(row[j])<=1000:
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_long_text=row[j])
+                        value = Custom_Field_Value(item=item, field=actual_field, value=row[j])
                         value.save()
                     else:
                         return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not long text. Length is too long", createdItems)  
                 elif actual_field.field_type == "Int":
                     try:
                         int(row[j])
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_integer=int(row[j]))
+                        value = Custom_Field_Value(item=item, field=actual_field, value=int(row[j]))
                         value.save()
                     except ValueError:
                         if row[j] == "":
@@ -928,7 +916,7 @@ class ItemUpload(APIView):
                 elif actual_field.field_type == "Float":
                     try:
                         float(row[j])
-                        value = Custom_Field_Value(item=item, field=actual_field, field_value_floating=float(row[j]))
+                        value = Custom_Field_Value(item=item, field=actual_field, value=float(row[j]))
                         value.save()
                     except ValueError:
                         if row[j] == "":
@@ -951,41 +939,52 @@ class ItemUpload(APIView):
 
 
 ########################################## LOAN ###########################################    
-class APILoanList(APIView):
+class LoanFilter(FilterSet):
+    class Meta:
+        model = Loan
+        fields = ['loan_id','admin_name', 'user_name','item_name','orig_request','total_quantity','comment','time_loaned','status']
+
+class APILoanList(ListAPIView): #FILTER LOANS
     permission_classes = (IsAdminOrUser,)
+    serializer_class = FullLoanSerializer
+    filter_class = LoanFilter
+    model = Loan
+    queryset = Loan.objects.all()
     
     def get(self, request, format=None):
-        if 'item_name' in request.data: # these nested ifs allow for a user to filter based on a regular item_name string (not an item_id) using the item_name field, use item_name_id to filter by id
-            request.data['item_name'] = Item.objects.get(item_name=request.data['item_name'])
-        loans = Loan.objects.filter(**request.data)
-        if not User.objects.get(username=request.user.username).is_staff:
-            loans = Loan.objects.filter(user_name = request.user.username,**request.data)
+        loans = [];
+        if User.objects.get(username=request.user.username).is_staff:
+            loans = self.filter_queryset(Loan.objects.all())
+        else:
+            loans = self.filter_queryset(Loan.objects.filter(user_id=request.user.username))
         serializer = FullLoanSerializer(loans, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-class APILoanUpdate(APIView):
+class APILoanUpdate(APIView): #EDIT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanUpdateSerializer
     
     def get(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id = pk)
         serializer = FullLoanSerializer(loan)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def put(self, request, pk, format=None): # edit loan
+    def put(self, request, pk, format=None): #find way to allow no total quant, check on gui, apigui, and command line
         loan = Loan.objects.get(loan_id=pk)
-        orig_quant = loan.total_quantity
-        new_quant = int(request.data['total_quantity'])
-        item = loan.item_name
-        quantity_changed = new_quant - orig_quant
-        item_quant = item.quantity - quantity_changed
-        serializer = FullLoanSerializer(loan, data=request.data, partial=True)
-        if item_quant < 0 or new_quant < 1:
-            return Response(status=status.HTTP_304_NOT_MODIFIED)
-        item.quantity = item_quant
-        item.save()
-        change_list=[]
+        serializer = LoanUpdateSerializer(loan,data=request.data, partial=True)
         if serializer.is_valid():
+            orig_quant = loan.total_quantity
+            new_requested_quant = int(request.data['total_quantity'])
+            quantity_changed = new_requested_quant - orig_quant
+            item = loan.item_name
+            new_item_quant = item.quantity - quantity_changed
+            if new_item_quant < 0:
+                return Response(status=status.HTTP_304_NOT_MODIFIED)
+            if new_requested_quant < 1:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+            item.quantity = new_item_quant
+            item.save()
+            change_list=[]
             if int(serializer.validated_data['total_quantity']) != int(loan.total_quantity):
                 change_list.append(('total quantity', loan.total_quantity, serializer.validated_data['total_quantity']))
             if serializer.validated_data['comment'] != loan.comment:
@@ -993,125 +992,118 @@ class APILoanUpdate(APIView):
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-#             try:
-#                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-#             except (ObjectDoesNotExist, IndexError) as e:
-#                 prepend = ''
-#             subject = prepend + 'Loan edit'
-#             to = [User.objects.get(username=loan.user_name).email]
-#             from_email='noreply@duke.edu'
-#             ctx = {
-#                 'user':request.user,
-#                 'changes':change_list,
-#             }
-#             message=render_to_string('inventory/request_edit_email.txt', ctx)
-#             if len(change_list)>0:
-#                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            serializer = LoanUpdateSerializer(loan, data=request.data, partial=True)
-            if serializer.is_valid():
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan edit'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.user,
+                'changes':change_list,
+            }
+            message=render_to_string('inventory/request_edit_email.txt', ctx)
+            if len(change_list)>0:
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-class APILoanCheckIn(APIView):
+class APILoanCheckIn(APIView): #CHECK IN LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanCheckInSerializer
     
     def get(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id = pk)
         serializer = FullLoanSerializer(loan)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def post(self, request, pk, format=None): # check in loan
+    def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
-        requested_quant = int(request.data['check_in'])   
-        original_quantity = loan.total_quantity
-        if requested_quant > 0 and requested_quant <= loan.total_quantity:
-            loan.total_quantity = loan.total_quantity - requested_quant
-            item = loan.item_name
-            item.quantity = item.quantity + requested_quant
-            loan.save()
-            item.save()
-            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(requested_quant) + " instances.")
-            fullserializer = FullLoanSerializer(loan, data={'total_quantity':loan.total_quantity}, partial=True)
-            if fullserializer.is_valid():
-                fullserializer.save()
-                #try:
-                #    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                #except (ObjectDoesNotExist, IndexError) as e:
-                #    prepend = ''
-                #subject = prepend + 'Loan checkin'
-                #to = [User.objects.get(username=loan.user_name).email]
-                #from_email='noreply@duke.edu'
-                #checked_in = [(loan.item_name, requested_quant, original_quantity)]
-                #ctx = {
-                #    'user':request.user,
-                #    'checked_in':checked_in,
-                #}
-                #message=render_to_string('inventory/loan_checkin_email.txt', ctx)
-                #EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-                #serializer = LoanCheckInSerializer(data={'admin_name':loan.admin_name,'user_name':loan.user_name,'item_name':loan.item_name,'total_quantity':loan.total_quantity,'comment':loan.comment,'check_in':request.data['check_in']},partial=True)
-                data = {'check_in':request.data['check_in'],'loan':loan}
-                serializer = LoanCheckInSerializer(data=data,partial=True)
+        serializer = LoanCheckInSerializer(data=request.data) 
+        if serializer.is_valid():
+            requested_checkin_quant = int(request.data['check_in'])   
+            original_quantity = loan.total_quantity
+            if requested_checkin_quant > 0 and requested_checkin_quant <= loan.total_quantity:
+                loan.total_quantity = loan.total_quantity - requested_checkin_quant
+                item = loan.item_name
+                item.quantity = item.quantity + requested_checkin_quant
+                item.save()
+                loan.save()
+                Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                       nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(requested_checkin_quant) + " instances.")
+                    
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan checkin'
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, requested_checkin_quant, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'checked_in':checked_in,
+                }
+                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+
                 if loan.total_quantity == 0:
                     loan.status = 'Checked In'
-             
-                if serializer.is_valid():
-                    #response = Response(serializer.data, status=status.HTTP_200_OK)
-                    #return redirect(request.META.get('HTTP_REFERER'))
-                    #return self.get(request, pk)
-                    return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+                    loan.save()
+                return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-class APILoanConvert(APIView):
+class APILoanConvert(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanConvertSerializer  
     
     def get(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id = pk)
         serializer = FullLoanSerializer(loan)
-        return Response(serializer.data)  
+        return Response(serializer.data, status=status.HTTP_200_OK)  
   
-    def post(self, request, pk, format=None): # convert loan
+    def post(self, request, pk, format=None): 
         loan = Loan.objects.get(loan_id=pk)
         admin_name = request.user.username
         user_name = loan.user_name
         item = loan.item_name
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
-        quantity_disbursed = int(request.data['number_to_convert'])
-        if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
-            original_quantity = loan.total_quantity
-            loan.total_quantity = loan.total_quantity - quantity_disbursed
-            loan.save()
-            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
-            disbursement.save()
-            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+        serializer = LoanConvertSerializer(data=request.data) 
+        if serializer.is_valid():
+            quantity_disbursed = int(request.data['number_to_convert'])
+            if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
+                original_quantity = loan.total_quantity
+                loan.total_quantity = loan.total_quantity - quantity_disbursed
+                loan.save()
+                disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+                disbursement.save()
+                Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
-            serializer = LoanConvertSerializer(loan,data=request.data, partial=True)
-            if loan.total_quantity == 0:
-                loan.status = 'Checked In'
-            #serializer = DisbursementSerializer(data={'admin_name':admin_name,'comment':comment, 'total_quantity':quantity_disbursed, 'time_disbursed':time_disbursed}, partial=True)
-            #if serializer.is_valid():
-            #   serializer.save()
-           # try:
-           #     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-           # except (ObjectDoesNotExist, IndexError) as e:
-           #     prepend = ''
-           # subject = prepend + 'Loan convert'
-           # to = [User.objects.get(username=loan.user_name).email]
-           # from_email='noreply@duke.edu'
-           # convert=[(loan.item_name, quantity_disbursed, original_quantity)]
-           # ctx = {
-           #     'user':request.user,
-           #     'convert':convert,
-           # }
-           # message=render_to_string('inventory/convert_email.txt', ctx)
-           # EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            if serializer.is_valid():
-               # return Response(status=status.HTTP_201_CREATED)
-               return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
-        return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST)
+                if loan.total_quantity == 0:
+                    loan.status = 'Checked In'
+                    loan.save()
+
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan convert'
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'convert':convert,
+                }
+                message=render_to_string('inventory/convert_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+           
+                return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        return Response(status=status.HTTP_400_BAD_REQUEST)
         
 ########################################## Subscription ###########################################    
 
@@ -1191,9 +1183,59 @@ class APILoanEmailClearDates(APIView):
     def delete(self, request, format=None):
         celery_app.control.purge()
         LoanSendDates.objects.all().delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-  
-        
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+
+########################################## Backfill Requests ###########################################   
+class APIBackfillRequest(ListCreateAPIView):
+    """
+    creation of backfill requests
+    """
+    permission_classes = (IsAtLeastUser,)
+    queryset = BackfillRequest.objects.all()
+    serializer_class = BackfillRequestSerializer
+    
+    def post(self, request, format=None):
+        data = request.data.copy()
+        print(data)
+        serializer = BackfillRequestSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+
+########################################## Asset-tracking ###########################################   
+class APIItemToAsset(APIView):
+    """
+    Converts an item to per-asset
+    """
+    permission_classes = (IsAdmin,)
+    
+    def get(self, request, pk, format=None):
+        item = Item.objects.get(item_id=pk)
+        if not Asset.objects.filter(item=pk):
+            item.is_asset = True
+            for i in range(item.quantity):
+                print('asset creating')
+                asset = Asset(item=item)
+                asset.save()
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)
+    
+class APIAssetToItem(APIView):
+    """
+    Converts an item back to non-per-asset
+    """
+    permission_classes = (IsAdmin,)
+    
+    def get(self, request, pk, format=None):
+        # what should happen when an item is converted back to non-per-asset
+        # assets should be deleted, 
+        # NOT DONE YET!!!
+        item = Item.objects.get(item_id=pk)
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)   
+########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """
     Return a JSON serialized HTTP response
@@ -1247,7 +1289,6 @@ class MyAPI(JSONViewMixin, View):
         start_date = params.get('datetime')
         
         obj_list = klass.objects.all()
-#         obj_list = klass.objects.annotate(item_exists=Item.objects.filter(item_id='item_id').exists())
        
         sort_dir_prefix = (sort_dir=='desc' and '-' or '')
         if sort_col_name in col_name_map:

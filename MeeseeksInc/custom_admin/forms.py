@@ -45,10 +45,11 @@ class ConvertLoanForm(forms.Form):
 class CheckInLoanForm(forms.Form):
     def __init__(self, amount, *args, **kwargs):
         super(CheckInLoanForm, self).__init__(*args, **kwargs)
-        self.fields['items_to_check_in'] = forms.IntegerField(required=True, min_value=1, max_value=amount, initial=amount)
+        self.fields['items_to_check_in'] = forms.IntegerField(label='How many items would you like to check in?',required=True, min_value=1, max_value=amount, initial=amount)
     
 class EditLoanForm(forms.ModelForm):
     total_quantity = forms.IntegerField(min_value=1)
+    comment = forms.CharField(required=False)
     class Meta:
         model = Loan
         fields = ('total_quantity','comment')
@@ -107,13 +108,13 @@ class ItemEditForm(forms.ModelForm):
             for val in custom_values:
                 if val.field == field:
                     if field.field_type == 'Short':
-                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_short_text,required=False)                    
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,required=False)                    
                     if field.field_type == 'Long':
-                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.field_value_long_text,widget=forms.Textarea,required=False) 
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,widget=forms.Textarea,required=False) 
                     if field.field_type == 'Int':
-                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.field_value_integer,required=False) 
+                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
                     if field.field_type == 'Float':
-                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.field_value_floating,required=False)
+                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)

@@ -1,35 +1,27 @@
 from dal import autocomplete
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.mail import EmailMessage
-from django.db import connection, transaction
-from django.db import models
 from django.db.models import F
 from django.http import HttpResponseRedirect
-from django.http.response import Http404
-from django.shortcuts import render, get_object_or_404, redirect, get_list_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.template.defaulttags import comment
-from django.template import Context
-from django.template.loader import render_to_string, get_template
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.urls import reverse_lazy 
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-from django.core.mail import send_mail
 from django.core import mail
-from django.conf import settings
-from datetime import date, time, datetime, timedelta
+from datetime import date,datetime, timedelta
 from custom_admin.tasks import loan_reminder_email as task_email
-from MeeseeksInc.celery import app
-import requests, json, urllib, subprocess
+import requests, json
 from rest_framework.authtoken.models import Token
-from inventory.models import Instance, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from inventory.forms import RequestForm
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, RequestEditForm, ChangeLoanReminderBodyForm
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -69,7 +61,7 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+        return Item.objects.order_by('item_name')[:5]
 
     def test_func(self):
         return self.request.user.is_staff
@@ -97,24 +89,6 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         
     def get_queryset(self):
         return Log.objects.all()
-    def test_func(self):
-        return self.request.user.is_staff
- 
-class DetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView): ## DetailView to display detail for the object
-    login_url = "/login/"
-    permission_required = 'is_staff'
-    model = Instance
-    template_name = 'inventory/detail.html' # w/o this line, default would've been inventory/<model_name>.html
-    
-    def test_func(self):
-        return self.request.user.is_staff
- 
-class DisburseView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView): ## DetailView to display detail for the object
-    login_url = "/login/"
-    permission_required = 'is_staff'
-    model = Instance
-    template_name = 'custom_admin/single_disburse.html' # w/o this line, default would've been inventory/<model_name>.html
-    
     def test_func(self):
         return self.request.user.is_staff
  
@@ -220,7 +194,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
         return context
     def get_queryset(self):
         """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5]
+        return Item.objects.order_by('item_name')[:5]
     def test_func(self):
         return self.request.user.is_staff
 
@@ -282,20 +256,7 @@ def edit_item_module(request, pk):
                     custom_val = Custom_Field_Value.objects.get(item = item, field = field)
                 else:
                     custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_integer = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value 
-                    else:
-                        custom_val.field_value_floating = None
+                custom_val.value = field_value
                 custom_val.save()
 #             user = request.user
 #             token, create = Token.objects.get_or_create(user=user)
@@ -340,7 +301,7 @@ def add_comment_to_request_deny(request, pk):
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
-def convert_loan(request, pk): #redirect to main if deleted
+def convert_loan(request, pk): 
     loan = Loan.objects.get(loan_id=pk)
     loan_orig_quantity = loan.total_quantity
     if request.method == "POST":
@@ -362,30 +323,28 @@ def convert_loan(request, pk): #redirect to main if deleted
     return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
     
 @login_required(login_url='/login/')
-@user_passes_test(staff_check, login_url='/login/') #redirect to main if deleted
+@user_passes_test(staff_check, login_url='/login/') 
 def check_in_loan(request, pk):
     loan = Loan.objects.get(loan_id=pk)
-    if request.method == "POST":
-        loan = Loan.objects.get(loan_id=pk)
-        loan_orig_quantity = loan.total_quantity
+    loan_orig_quantity = loan.total_quantity
+    if request.method == "POST":        
         form = CheckInLoanForm(loan.total_quantity, request.POST) 
         if form.is_valid():
             item = loan.item_name
             items_checked_in = form['items_to_check_in'].value()
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/checkin/'+pk+'/'
+            url=get_host(request)+'/api/loan/checkin/'+pk+'/'
             payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
-            requests.post(url, headers = header, data = json.dumps(payload))
-            messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            header = get_header(request)
+            response = requests.post(url, headers = header, data = json.dumps(payload))
+            if response.status_code == 200:          
+                messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
+            else:
+                messages.error(request, ('Sorry, we were unable to check in the requested items.'))
             if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0 and "item" not in request.META.get('HTTP_REFERER'):
                  return redirect('/customadmin')
             return redirect(request.META.get('HTTP_REFERER'))
     else:
-        form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
+        form = CheckInLoanForm(loan.total_quantity)
     return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})
   
 @login_required(login_url='/login/')
@@ -396,21 +355,19 @@ def edit_loan(request, pk):
         form = EditLoanForm(request.POST, instance=loan) 
         if form.is_valid():
             post = form.save(commit=False)
-            user = request.user
-            token, create = Token.objects.get_or_create(user=user)
-            http_host = get_host(request)
-            url=http_host+'/api/loan/update/'+loan.loan_id+'/'
+            url=get_host(request)+'/api/loan/update/'+loan.loan_id+'/'
             payload = {'comment': post.comment,'total_quantity':post.total_quantity}
-            header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
+            header = get_header(request)
             response = requests.put(url, headers = header, data=json.dumps(payload))
             if response.status_code == 304:
                 messages.error(request, ('You cannot loan more items than the quantity available.'))
-                return redirect(request.META.get('HTTP_REFERER'))
-            messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            elif response.status_code == 200:
+                messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
+            else:
+                messages.error(request, ('Sorry, we were unable to edit the loan.'))
             return redirect(request.META.get('HTTP_REFERER'))
     else:
-        form = EditLoanForm(instance=loan) # blank request form with no data yet
+        form = EditLoanForm(instance=loan)
     return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})
     
 @login_required(login_url='/login/')
@@ -709,25 +666,9 @@ def edit_item(request, pk):
             form.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
-                if Custom_Field_Value.objects.filter(item = item, field = field).exists():
-                    custom_val = Custom_Field_Value.objects.get(item = item, field = field)
-                else:
-                    custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_integer = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value 
-                    else:
-                        custom_val.field_value_floating = None
-                custom_val.save()
+                custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
+                custom_val.save() 
+            print("HIHIHIHIHIHIHIHIHI")
             return redirect('/item/' + pk)
     else:
         form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
@@ -889,7 +830,7 @@ def log_item(request):
 @login_required(login_url='/login/')    
 @user_passes_test(active_check, login_url='/login/')
 def api_guide_page(request):
-    if(not request.user.is_staff):
+    if not request.user.is_staff:
         my_template = 'inventory/base.html'
     else:
         my_template = 'custom_admin/base.html'
@@ -951,6 +892,30 @@ def delete_item(request, pk):
     return redirect(reverse('custom_admin:index'))
 
 @login_required(login_url='/login/')
+@user_passes_test(admin_check, login_url='/login/')
+def toggleAsset(request, pk):
+    user = request.user
+    token, create = Token.objects.get_or_create(user=user)
+    http_host = get_host(request)
+    if Item.objects.get(item_id=pk).is_asset:
+        # change back to non-asset
+        url=http_host+'/api/requests/deny/'+pk+'/'
+        payload = {'comment':''}
+        header = {'Authorization': 'Token '+ str(token), 
+                  "Accept": "application/json", "Content-type":"application/json"}
+        requests.put(url, headers = header, data = json.dumps(payload))
+    else:
+        # change to asset
+        url=http_host+'/api/requests/deny/'+pk+'/'
+        payload = {'comment':''}
+        header = {'Authorization': 'Token '+ str(token), 
+                  "Accept": "application/json", "Content-type":"application/json"}
+        requests.put(url, headers = header, data = json.dumps(payload))
+        
+    
+    return redirect(reverse('custom_admin:index'))
+
+@login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def delete_tag(request, pk, item):
     item = Item.objects.get(item_id=item)
@@ -989,22 +954,9 @@ def create_new_item(request):
                     item.save()
             for field in custom_fields:
                 field_value = form[field.field_name].value()
-                custom_val = Custom_Field_Value(item=item, field=field)
-                if field.field_type == 'Short':    
-                    custom_val.field_value_short_text = field_value
-                if field.field_type == 'Long':
-                    custom_val.field_value_long_text = field_value
-                if field.field_type == 'Int':
-                    if field_value != '':
-                        custom_val.field_value_integer = field_value
-                    else:
-                        custom_val.field_value_floating = None
-                if field.field_type == 'Float':
-                    if field_value != '':
-                        custom_val.field_value_floating = field_value
-                    else:
-                        custom_val.field_value_floating = None
-                custom_val.save()
+                custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
+                custom_val.save()  
+            
             return redirect('/customadmin')
         else:
             messages.error(request, ("An error occurred while trying to create " + form['item_name'].value() + "."))
@@ -1202,6 +1154,9 @@ def change_email_prepend(request):
     else:
         form = ChangeEmailPrependForm(initial={'text':text})
     return render(request, 'custom_admin/change_prepend.html', {'form': form})
+
+
+
 
 ################### DJANGO CRIPSY FORM STUFF ###################
 class AjaxTemplateMixin(object):

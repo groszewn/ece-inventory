@@ -223,7 +223,7 @@
         </div>
 	</div>
 	{% else %}
-		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
+		<p class="lead" style="padding: 15px 15px">No Requests To Display.</p>
 	{% endif %}
 
 {% if user.is_staff %}
@@ -234,7 +234,83 @@
 {########################## LOANS #####################}	
 {% if loan_list %}
 		<h2>Loans</h2>
-		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+			<ul class="nav nav-tabs">
+	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
+	  			<li><a href="#checkedIn" data-toggle="tab">Checked In</a></li>
+	 	    	<li class="active"><a href="#checkedOut" data-toggle="tab">Checked Out</a></li>
+	 	    
+			</ul>
+	<div class="tab-content">
+		<div class="tab-pane" id="allLoan">
+		<table id="inventory-loaned-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Quantity </th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		 </div>
+		 <div class="tab-pane" id="checkedIn">
+		<table id="inventory-loaned-in" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_checked_in %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+		    <div class="tab-pane active" id="checkedOut">
+		<table id="inventory-loaned-out" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
 		        <col>
 		        <col>
 		        <col>
@@ -245,7 +321,8 @@
 		        <thead>
 		            <tr>
 					<th>Loan for</th>
-					<th>Item Quantity </th>
+					<th>Quantity </th>
+					<th>Status</th>
 					<th>Loaned to</th>
 					<th>User Reason</th>
 					<th>Admin Comment</th>
@@ -256,10 +333,11 @@
 				</tr>
 		        </thead>
 		        <tbody>
-		        	{% for loan in loan_list %}
+		        	{% for loan in loans_checked_out %}
 		        		<tr>
 							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
 							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
 							<td>{{ loan.user_name }}</td>
 							<td>{{ loan.orig_request.reason}}</td>
 							<td>{{ loan.comment}}</td>
@@ -284,6 +362,10 @@
 					{% endfor %}
 		        </tbody>
 		    </table>
+		    </div>
+	</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No Loans To Display.</p
 	{% endif %}
 
 {########################## DISBURSEMENTS #####################}
@@ -541,9 +623,15 @@ $(document).ready(function(){
     //inventory_item_table.MakeCellsEditable({
 	//    "onUpdate": myCallbackFunction
 	//});
-    $('#inventory-loaned').dataTable({
+    $('#inventory-loaned-all').dataTable({
+    "order": [[ 6, "desc" ]]
+	});
+	$('#inventory-loaned-in').dataTable({
     "order": [[ 5, "desc" ]]
-});
+	});
+	$('#inventory-loaned-out').dataTable({
+    "order": [[ 6, "desc" ]]
+	});
 });
 $('#included-tags').select2(); // making multiple select
 $('#excluded-tags').select2(); // making multiple select
@@ -554,10 +642,20 @@ editor = new $.fn.dataTable.Editor( {
 			if(d.action === 'create') {
 				for(id in d.data) {
 			    	var output = { data: [] };
-			    	var data = JSON.stringify(d.data[id]);
+			    	var pushToData = d.data[id];
+			    	pushToData['values_custom_field'] = [];
+			    	for(changedColumn in d.data[id]) {
+			    		{% for fields in custom_fields %}
+							if("{{fields.field_name}}" == changedColumn) {
+								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
+				    		}
+						{% endfor %}
+			    	}
+			    	var data = JSON.stringify(pushToData);
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"POST",
 						url: '{% url 'inventory:api_item_list' %}',
@@ -565,9 +663,9 @@ editor = new $.fn.dataTable.Editor( {
 						dataType: 'json',
 				        data: data,
 				        success: function(json) {
-				        	d.data[id].id = json.item_id;
-				        	d.data[id]['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
-				        	output.data.push(d.data[id]);
+				        	pushToData.id = json.item_id;
+				        	pushToData['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
+				        	output.data.push(pushToData);
 				        	console.log(output);
 				        	successCallback(output);
 				        },
@@ -579,16 +677,25 @@ editor = new $.fn.dataTable.Editor( {
 			} else if(d.action==='edit') {
 				for(id in d.data) {
 			    	d.data[id].id = id;
+			    	var pushToData = d.data[id];
+			    	pushToData['values_custom_field'] = [];
 			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
 			    	for(changedColumn in d.data[id]) {
 			    		result[changedColumn] = d.data[id][changedColumn];
+			    		var custom_fields = result['values_custom_field'];
+			    		{% for fields in custom_fields %}
+							if("{{fields.field_name}}" == changedColumn) {
+								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
+				    		}
+						{% endfor %}
 			    	}
 			    	var output = { data: [] };
 			    	output.data.push(result);
-			    	var data = JSON.stringify(d.data[id]);
+			    	var data = JSON.stringify(pushToData);
 			    	$.ajax({
 			    		beforeSend: function(xhr, settings) {
 					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+					    	alert("Are you sure you want to edit this?");
 					    },
 						type:"PUT",
 						url: '{% url 'inventory:api_item_list'%}' + id+'/',
@@ -598,12 +705,18 @@ editor = new $.fn.dataTable.Editor( {
 				        success: function(json) {
 				        	successCallback(output);
 				        },
-				        error: function(error) {
-				        	errorCallback();
+				        error: function (xhr, error, thrown) {
+				        	//if (xhr.status == 100) {
+				        		console.log(xhr);
+							    //this.error();
+							    errorCallback(xhr.responseJSON);
+							//}
 				        }
+				        
 					});
 			    }
 		    } else if(d.action==='remove') {
+		    	console.log(d.data);
 		    	for(id in d.data) {
 		    		var output = { data: [] };
 		    		console.log(id);
@@ -614,6 +727,7 @@ editor = new $.fn.dataTable.Editor( {
 						type:"DELETE",
 						url: '{% url 'inventory:api_item_list' %}' + id+'/',
 				        success: function(result) {
+				        	console.log("DELETING ONCE");
 				        	successCallback(output);
 				        }
 					});
@@ -640,6 +754,11 @@ editor
     .on( 'close', function () {
         table.keys.enable();
     } );
+//editor.on('submit',function ( e, xhr, err, thrown, data ){
+//    data = JSON.parse(xhr.responseText);
+//    this.error(JSON.parse(xhr.responseText).error);
+//    return true;
+//});
 get_search_data(true); // initialize item data
 $('#search-form').on('submit', function(event){
     event.preventDefault();
@@ -694,23 +813,13 @@ function get_search_data(first) {
 				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
 				    		var custom_field_object = json[i].values_custom_field[count];
 				    		var field = custom_field_object.field;
-							var indexOfField = djangoCustomFieldNameList.indexOf(field.field_name);
+							var indexOfField = djangoCustomFieldNameList.indexOf(custom_field_object.field_name);
 							if(indexOfField == -1) {
 				    			continue;
 				    		}
-				    		if (field.field_type == "Short") {
-								json[i][field.field_name] = custom_field_object.field_value_short_text;
-							} else if(field.field_type == "Long") {
-								json[i][field.field_name] = custom_field_object.field_value_long_text;
-							} else if(field.field_type == "Int") {
-								if(custom_field_object.field_value_integer) {
-									json[i][field.field_name] = custom_field_object.field_value_integer;
-								}
-							} else if(field.field_type == "Float") {
-								if(custom_field_object.field_value_floating) {
-									json[i][field.field_name] = custom_field_object.field_value_floating;
-								}
-							}
+				    		if(custom_field_object.value) {
+				    			json[i][custom_field_object.field_name] = custom_field_object.value;
+				    		}
 				    	}
 				    }
 	        	}
@@ -721,7 +830,7 @@ function get_search_data(first) {
 		columns: columns,
 		{% if user.is_staff %}
 			keys: {
-		        columns: ':nth-child(2),:nth-child(3),:nth-child(4)',
+		        columns: ':not(:nth-child(1))',
 		        editor:  editor
 		    },
 		    select: {
@@ -731,8 +840,8 @@ function get_search_data(first) {
 		    },
 		    {% if user.is_superuser %}
 		    buttons: [
-		        { extend: "create", editor: editor },
-		        //{ extend: "edit",   editor: editor },
+		       // { extend: "create", editor: editor },
+		        { extend: "edit",   editor: editor },
 		        { extend: "remove", editor: editor }
 		    ]
 		    {% endif %}

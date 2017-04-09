@@ -4,68 +4,63 @@
 
 {% block content %}
 
+<script>
+$(function() {
+    $('nav li a').click(function() {
+    	console.log($($(this).parent()).attr("toActivate"));
+       $('nav li').removeClass();
+       $($(this).parent()).addClass('active');
+       $('#assetContent').hide();
+       $('#requestContent').hide();
+       $('#loanContent').hide();
+       $('#disbursementContent').hide();
+       $('#logContent').hide();
+       $('#'+$($(this).parent()).attr("toActivate")).show();
+    });
+ });
+</script>
+
 <center> <h1>  Item: {{ item.item_name }} </h1> </center> 
-
 <br>
-
-			</table>
-				<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-		        <thead>
-		            <tr>
-					<th>Quantity:</th>
-					<th>Model Number:</th>
-					<th>Description:</th>
-					{% for field in custom_fields%}
-					<th>{{field.field_name}}:</th>
-					{% endfor %}
-					<th> Tags: </th>
-				</tr>
-		        </thead>
-		        <tbody>
-		        		<tr>
-		        			<td>{{ item.quantity }}</td>
-							<td>{{ item.model_number }}</td>
-							<td>{{ item.description }}</td>
-							{% for field in custom_fields%}
-							<td default = "">
-							{% for value in custom_vals%}
-								{% if value.item == item and value.field == field %}
-									{% if field.field_type == "Short"%}
-										{{value.field_value_short_text}}
-									{% endif %}
-									{% if field.field_type == "Long"%}
-										{{value.field_value_long_text}}
-									{% endif %}
-									{% if field.field_type == "Int"%}
-										{% if value.field_value_integer != None%}
-											{{value.field_value_integer}}
-										{% else %}
-											{{""}}
-										{% endif %}
-									{% endif %}
-									{% if field.field_type == "Float"%}
-										{% if value.field_value_floating != None%}
-											{{value.field_value_floating}}
-										{% else %}
-											{{""}}
-										{% endif %}
-									{% endif %}
-								{% endif %}
-							{% endfor %}
-							</td>
-						{% endfor %}
-						<td>
-							{% for oneTag in tag_list %}
-								 {% if not forloop.last %}
-								 {{oneTag.tag}},
-								 {% else %}
-								 {{oneTag.tag}}
-								 {% endif %}
-							{% endfor %}
-						</td>
-						</tr>
-		        </tbody>
-		    </table>
+</table>
+<table id="item_detail" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+	<th>Quantity:</th>
+	<th>Model Number:</th>
+	<th>Description:</th>
+	{% for field in custom_fields%}
+	<th>{{field.field_name}}:</th>
+	{% endfor %}
+	<th> Tags: </th>
+</tr>
+</thead>
+<tbody>
+		<tr>
+			<td>{{ item.quantity }}</td>
+			<td>{{ item.model_number }}</td>
+			<td>{{ item.description }}</td>
+			{% for field in custom_fields%}
+			<td default = "">
+			{% for value in custom_vals%}
+				{% if value.item == item and value.field == field %}
+					{{value.value}}
+				{% endif %}
+			{% endfor %}
+			</td>
+		{% endfor %}
+		<td>
+			{% for oneTag in tag_list %}
+				 {% if not forloop.last %}
+				 {{oneTag.tag}},
+				 {% else %}
+				 {{oneTag.tag}}
+				 {% endif %}
+			{% endfor %}
+		</td>
+		</tr>
+</tbody>
+</table>
 
       
 <table id="set_up" cellspacing="0" width="100%">
@@ -82,28 +77,45 @@
 <td>
 
 <div>
-	{% if user.is_staff %}
-	<script>
-	function clickEvent(){
-	    if (confirm("Delete this item?")) {
-	    	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
-	    }
-	}
-	</script>
+{% if user.is_staff %}
+
+<script>
+function changeToAsset(){
+    if (confirm("Are you sure you want to convert this to an asset?")) {
+    	$.ajax({
+    		url:'{% url 'inventory:item_to_asset' item.item_id %}',
+    		type:'GET',
+    		success: function(e) {
+    			window.location.reload();
+    		},
+    		error: function(e) {
+    			// TODO: add error message for changing to asset
+    		}
+    	});
+    }
+}
+function clickEvent(){
+    if (confirm("Delete this item?")) {
+    	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
+    }
+}
+</script>
 	
 {% block edit_specific_item %}
 <a id = "edit" item-id = "{{ item.item_id }}" class="edit btn btn-primary">Edit Item</a>									
 {% endblock edit_specific_item %}
 	    
 {% block tag_item %}
-<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Tags</a>									
+<a id = "tag" item-id = "{{ item.item_id }}" class="tag btn btn-primary">Add, Create, or Edit Item Tags</a>									
 {% endblock tag_item %}
 	
 {% if user.is_superuser %}
+<button type="button" onclick="changeToAsset();" class="btn btn-primary">Change Item to Asset</button>
 <button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
 {% endif %}
-	
-	{% endif %}	
+
+
+{% endif %}	
 </div>
 
 <br>
@@ -132,6 +144,60 @@
 </tbody>
 </table>
 
+{#################### Sidebar and content DIV / NAV #####################}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3 col-lg-2">
+      <nav class="navbar navbar-default navbar-fixed-side">
+        <!-- normal collapsible navbar markup -->
+        <ul class="nav navbar-nav">
+        	{% if asset_list %}
+        	<li toActivate="assetContent" style="width:100%;" class="active"><a>Assets</a></li>
+        	<li toActivate="requestContent" style="width:100%;"><a>Requests</a></li>
+        	{% else %}
+        	<li toActivate="requestContent" style="width:100%;" class="active"><a>Requests</a></li>
+        	{% endif %}
+            <li toActivate="loanContent" style="width:100%;"><a>Loans</a></li>
+            <li toActivate="disbursementContent" style="width:100%;"><a>Disbursements</a></li>
+            <li toActivate="logContent" style="width:100%;"><a>Logs</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="col-sm-9 col-lg-10">
+
+{#################### Asset table #####################}
+<div id="assetContent">
+{% if asset_list%}
+<h2>Assets:</h2>
+	<table id="inventory-asset" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+		            <th>Asset Tag</th>
+					<th>Actions</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for asset in asset_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							<td>hi</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+	
+	<script>
+	$(document).ready(function(){
+	    $('#inventory-asset').dataTable({
+	        "order": [[ 1, "desc" ]]
+	    });
+	});
+	</script>
+{% endif %}
+</div>
+
+{#################### Request table #####################}
+<div id="requestContent">
 {% if request_list%}
 <h2>Outstanding Requests for This Item:  </h2>
 	<table id="inventory-request-indiv-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -160,7 +226,6 @@
 							<td>{{ request.reason }}</td>
 							<td>
 								{% if user.is_staff %}
-								{# TODO: ADD ACCEPT AND DENY MODALS#}
 									{% block comment_accept %}
 									<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
 									{% endblock comment_accept %}
@@ -172,7 +237,8 @@
 									<a onclick="return confirm('Confirm request cancel?')" href="{% url 'inventory:request_cancel' request.request_id %}" class="btn btn-danger">Cancel</a>
 									{% endif %}
 									
-								{% else %}
+								 {% else %}
+								 
 									{% block requestEdit %}
 										<a id = "requestEdit" request-id="{{ request.request_id }}" class="requestEdit btn btn-primary">Edit</a>	
 									{% endblock requestEdit %}
@@ -195,8 +261,10 @@
 	    });
 	});
 	</script>
-{% endif %} 
-	
+{% endif %}
+</div>
+{#################### Loan table #####################}
+<div style="display:none;" id="loanContent">
 {% if loan_list %}
 <h2>Loans for This Item:  </h2>
 	<table id="inventory-loan-indiv-item" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -260,7 +328,9 @@
 	});
 	</script>
 {% endif %}
-
+</div>
+{#################### Disbursement table #####################}
+<div style="display:none;" id="disbursementContent">
 {% if disbursed_list %}
 <h2>Disbursements for This Item:</h2>
 	<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -303,6 +373,70 @@
 	});
 	</script>
 {% endif %}
+</div>   
+
+{#################### Log table #####################}
+<div style="display:none;" id="logContent">
+{% if user.is_staff %}
+<div>
+	<h2 style='float:left;margin-top:0px;'>Log</h2>
+	<div style='float:right;'>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+</div>
+{% block js %}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+$(function(){ 
+    $('#startdate').datepicker({
+        dateFormat: 'yy-mm-dd'
+    });
+    
+});
+</script>
+<br>
+{% endblock js %}
+
+<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+        <th>Nature of event</th>
+		<th>Initiated by</th>
+		<th>Item</th>
+		<th>Affected User</th>
+		<th>Type of Change</th>
+		<th>Time Occurred</th>
+	</tr>
+    </thead>
+    
+    <tbody>
+        {% for instance in log_list %}
+			<tr>
+				{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
+					<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
+				{% else %}
+					<td>{{ instance.nature_of_event }}</td>
+				{% endif %}
+				<td>{{ instance.initiating_user }}</td>
+				<td>{{instance.item_name}}</td>
+				<td>{{ instance.affected_user }}</td>
+				<td>{{ instance.change_occurred }}</td>
+				<td>
+				  		<span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>
+						  {{ instance.time_occurred }}
+				</td>
+			</tr>
+		{% endfor %}
+    </tbody>
+</table>
+{% endif %}
+</div>
+    </div>
+  </div>
+</div>
+
+
+
+
 		
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
@@ -620,61 +754,7 @@
 
 
 
-{% if user.is_staff %}
-{#################### Log table #####################}
-<br><br><br>
-<a id='togglebutton' class="request btn btn-info">Show/hide log</a>
-<br>
-<div id='logtable_toggle'>
-	<div align='right'>Start Date : <input id="startdate" type="text" name='startdate' /></div>
-	{% block js %}
-	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-	<script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-	<script>
-	$(function(){ 
-	    $('#startdate').datepicker({
-	        dateFormat: 'yy-mm-dd'
-	    });
-	    
-	});
-	</script>
-	<br>
-	{% endblock js %}
-	
-	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-	        <thead>
-	            <tr>
-	            <th>Nature of event</th>
-				<th>Initiated by</th>
-				<th>Item</th>
-				<th>Affected User</th>
-				<th>Type of Change</th>
-				<th>Time Occurred</th>
-			</tr>
-	        </thead>
-	        
-	        <tbody>
-	            {% for instance in log_list %}
-					<tr>
-						{% if instance.request_id in request_list and instance.nature_of_event == "Request" %}
-							<td><a href="{% url 'inventory:request_detail' instance.request_id %}">Request</a></td>
-						{% else %}
-							<td>{{ instance.nature_of_event }}</td>
-						{% endif %}
-						<td>{{ instance.initiating_user }}</td>
-						<td>{{instance.item_name}}</td>
-						<td>{{ instance.affected_user }}</td>
-						<td>{{ instance.change_occurred }}</td>
-						<td>
-						  		<span style="display: none;">{{ instance.time_occurred|date:"c" }}</span>
-								  {{ instance.time_occurred }}
-						</td>
-					</tr>
-				{% endfor %}
-	        </tbody>
-	    </table>
-</div>
-{% endif %}
+
     
 {########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
@@ -684,13 +764,16 @@
  
 $.fn.dataTable.ext.search.push(
 function (settings, data, dataIndex) {
-    var startDate = Date.parse($('#startdate').val(), 10);
-    var convert = data[5].split('T')[0];
-    var columnDate = Date.parse(convert); // use data for the age column
-    if ((isNaN(startDate)) || (startDate <= columnDate)) {
-        return true;
+	if(settings.nTable.id!=="inventory-asset") {
+	    var startDate = Date.parse($('#startdate').val(), 10);
+	    var convert = data[5].split('T')[0];
+	    var columnDate = Date.parse(convert); // use data for the age column
+	    if ((isNaN(startDate)) || (startDate <= columnDate)) {
+	        return true;
+	    }
+	     return false;
     }
-    return false;
+    return true;
 });
 	$(document).ready(function(){
 	    var table = $('#log-table').dataTable({
@@ -699,19 +782,7 @@ function (settings, data, dataIndex) {
 		$('#startdate').change(function () {
 	    	table.fnDraw();
 		});
-		document.getElementById('logtable_toggle').style.display='none';
 	});
-	
-	var button = document.getElementById('togglebutton');
-	button.onclick = function() {
-	    var div = document.getElementById('logtable_toggle');
-	    if (div.style.display !== 'none') {
-	        div.style.display = 'none';
-	    }
-	    else {
-	        div.style.display = 'block';
-	    }
-};
 	</script>
 	
 {% endblock %}

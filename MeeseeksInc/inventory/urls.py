@@ -1,4 +1,6 @@
 from django.conf.urls import url
+from django.conf.urls.static import static
+from django.conf import settings
 
 import custom_admin.views
 import inventory.api
@@ -27,6 +29,7 @@ urlpatterns = [
  #   url(r'^loan/detail/checkIn/loan/(?P<pk>[\w\-\ ]+)/$', custom_admin.views.check_in_loan, name='check_in_loan'), 
     url(r'^loan/detail/edit/loan/(?P<pk>[\w\-\ ]+)/$', custom_admin.views.edit_loan, name='edit_loan'), 
     url(r'^loan/detail/(?P<pk>[\w\-\ ]+)/$', views.LoanDetailView.as_view(), name='loan_detail'),
+    url(r'^asset/(?P<pk>[\w\-\ ]+)/$', views.AssetDetailView.as_view(), name='asset_detail'),
     ################################### API URLS #######################################
     url(r'^api/items/$', inventory.api.APIItemList.as_view(), name='api_item_list'),
     url(r'^api/items/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIItemDetail.as_view(), name='api_item_detail'),
@@ -54,5 +57,7 @@ urlpatterns = [
     url(r'^api/loan/email/body/$', inventory.api.APILoanEmailBody.as_view(), name='email_body'),
     url(r'^api/loan/email/dates/configure/$', inventory.api.APILoanEmailConfigureDates.as_view(), name='email_send_dates'),
     url(r'^api/loan/email/dates/delete/$', inventory.api.APILoanEmailClearDates.as_view(), name='loan_email_delete_dates'),
+    url(r'^api/backfill/request/create/', inventory.api.APIBackfillRequest.as_view(), name='backfill_create'),
+    url(r'^api/to_asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
-]
+]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

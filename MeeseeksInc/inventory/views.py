@@ -1,48 +1,29 @@
-from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
-from django.db.models.expressions import F
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
 from django.core.mail import EmailMessage
-from django.forms.formsets import formset_factory
-from django.forms.models import inlineformset_factory, modelformset_factory, ModelMultipleChoiceField
+from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect
-from django.http.response import Http404
-from django.shortcuts import render, redirect, render_to_response
-from django.test import Client
-from django.template import Context
+from django.shortcuts import render, redirect
 from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
-from django.views.generic.base import View, TemplateResponseMixin
-from django.views.generic.edit import FormMixin, ModelFormMixin, ProcessFormView
-import django_filters
-from django_filters.filters import ModelChoiceFilter, ModelMultipleChoiceFilter, \
-    DateTimeFilter
-from django_filters.rest_framework.filterset import FilterSet
-import requests, json, urllib, subprocess
-import rest_framework
-from rest_framework import status, permissions, viewsets
+from django.views.generic.edit import FormMixin
+import requests, json
 from rest_framework.authtoken.models import Token
-from rest_framework.generics import ListCreateAPIView, ListAPIView
-from rest_framework.renderers import TemplateHTMLRenderer
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from custom_admin.forms import AdminRequestEditForm, DisburseForm
 from inventory.forms import EditCartAndAddRequestForm
 from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Instance, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates
+from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates, Asset, BackfillRequest
 from django.core.exceptions import ObjectDoesNotExist
-from MeeseeksInc.celery import app
 
 
 def get_host(request):
@@ -67,6 +48,8 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['denied_request_list'] = Request.objects.filter(status="Denied")
             context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
+            context['loans_checked_in'] = Loan.objects.filter(status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(status='Checked Out')
             context['my_template'] = 'custom_admin/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False) 
@@ -76,15 +59,14 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username) 
+            context['loans_checked_in'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked Out')
             context['my_template'] = 'inventory/base.html'
         context['item_list'] = Item.objects.all()
         context['current_user'] = self.request.user.username
         context['tags'] = Tag.objects.distinct('tag')
         return context
 
-    def get_queryset(self):
-        """Return the last five published questions."""
-        return Instance.objects.order_by('item')[:5] 
     def test_func(self):
         return self.request.user.is_active
                           
@@ -117,6 +99,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         context['custom_vals'] = Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         context['current_user'] = self.request.user.username
+        context['asset_list'] = Asset.objects.filter(item=self.get_object())
         return context
     
     def post(self, request, *args, **kwargs): 
@@ -314,7 +297,6 @@ class RequestDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailV
             form = RequestSpecificForm() # blank request form with no data yet
         return render(request, 'inventory/request_specific_item_inner.html', {'form': form, 'pk':pk, 'num_available':Item.objects.get(item_id=pk).quantity, 'item_name':Item.objects.get(item_id=pk).item_name})
 
-
 class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     login_url = "/login/"
     model = Loan
@@ -331,7 +313,26 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
     
     def test_func(self):
         return self.request.user.is_active
- 
+
+class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
+    login_url = "/login/"
+    model = Asset
+    template_name = 'inventory/asset_detail.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super(AssetDetailView, self).get_context_data(**kwargs)
+        context['asset'] = self.get_object()
+        if self.request.user.is_staff:
+            context['my_template'] = 'custom_admin/base.html'
+        else:
+            context['my_template'] = 'inventory/base.html'
+        return context
+    
+    def test_func(self):
+        return self.request.user.is_active
+    
+
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
