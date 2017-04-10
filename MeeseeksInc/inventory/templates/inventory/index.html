@@ -31,7 +31,10 @@
 	<th>Quantity</th>
 	<th>Item Model Number</th>
 	<th>Item Description</th>
+	{% if user.is_staff %}
 	<th>Item Minimum Stock Info</th>
+	<th>Item Minimum Stock Enabled</th>
+	{% endif %}
 	{% for field in custom_fields%}
 		<th>{{field.field_name}}</th>
 	{% endfor %}
@@ -655,7 +658,11 @@ editor = new $.fn.dataTable.Editor( {
 	        {% endif %}
 	        { label: "Model Number", name: "model_number" },
 	        { label: "Description", name: "description" },
-	        { label: "Minimum Stock", name: "threshold_quantity" }
+	        {% if user.is_staff %}
+	        { label: "Minimum Stock", name: "threshold_quantity" },
+	        { label: "Minimum Stock", name: "threshold_enabled" },	
+	        {% endif %}
+
 	        ]
 	} ); 
 	// Disable KeyTable while the main editing form is open
@@ -697,7 +704,10 @@ function get_search_data(first) {
 	        { data: "quantity" },
 	        { data: "model_number" },
 	        { data: "description" },
-	        { data: "threshold_quantity" }
+	        {% if user.is_staff %}
+	        { data: "threshold_quantity" },
+	        { data: "threshold_enabled" },
+	        {% endif %}
 	        ];
 	var djangoCustomFieldNameList = [];
 	{% for field in custom_fields %} 
