@@ -1139,9 +1139,10 @@
     	    },
     	    table: "#inventory-search",
     	    idSrc:  'item_id',
-    	    fields: [ { label: "Item Name", name: "item_name" },
+    	    fields: [ 
+    	    	{ label: "Item Name", name: "item_name" },
     	    	{% if user.is_superuser %}
-    	        	{ label: "Quantity", name: "quantity" },
+    	        { label: "Quantity", name: "quantity" },
     	        {% endif %}
     	        { label: "Model Number", name: "model_number" },
     	        { label: "Description", name: "description" },
@@ -1149,6 +1150,7 @@
 	        	{ label: "Minimum Stock", name: "threshold_quantity" },
 	        	{ label: "Minimum Stock", name: "threshold_enabled" },	
 	        	{% endif %}
+	        	
     	        ]
     	} ); 
     	// Disable KeyTable while the main editing form is open
@@ -1193,7 +1195,8 @@
     	        {% if user.is_staff %}
 	        	{ data: "threshold_quantity" },
 	        	{ data: "threshold_enabled" },
-	        	{% endif %}];
+	        	{% endif %}
+	        	];
     	var djangoCustomFieldNameList = [];
     	{% for field in custom_fields %} 
     		djangoCustomFieldNameList.push("{{ field.field_name }}");
@@ -1267,7 +1270,6 @@
     		}
     	}
     	return index;
->>>>>>> 98038a4a57dda0e6b77be3c8acaed6383d74e777
     }
     $(document).ready(function(){
     	 // The event listener for the file upload
