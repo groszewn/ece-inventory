@@ -150,6 +150,7 @@ def make_loan_checkin_asset_form(loan):
         class Meta:
             model = Asset
             exclude = ('item','loan','disbursement')
+    return CheckInLoanAssetForm
 
 def obj_dict(obj):
     return obj.__dict__    
@@ -210,7 +211,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             if formset.is_valid():
                 token, create = Token.objects.get_or_create(user=request.user)
                 http_host = get_host(request)
-                url=http_host+'/api/requests/approve_with_assets/'+pk+'/'
+                url=http_host+'/api/loan/checkin_with_assets/'+pk+'/'
                 asset_ids = []
                 for form in formset:
                     asset_ids.append(form['asset_id'].value())
@@ -218,14 +219,14 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
-                messages.success(request, ('Successfully loaned assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                messages.success(request, ('Successfully checked-in ' + str(loan.total_quantity) + ' ' + loan.item_name.item_name))
                 return redirect(reverse('custom_admin:index'))
             else:
                 form_errors = formset.non_form_errors()
-                return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name, 'form_errors':form_errors})
+                return render(request, 'custom_admin/loan_check_in_assets_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name, 'form_errors':form_errors})
         else:
             formset = CheckInLoanAssetFormset()
-        return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name})
+        return render(request, 'custom_admin/loan_check_in_assets_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name})
 
     def edit_loan(request, pk):
         loan = Loan.objects.get(loan_id=pk)

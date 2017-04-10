@@ -1164,42 +1164,39 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
     
     def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
-        print(request.data)
-        serializer = LoanCheckInWithAssetSerializer(data=request.data, many=True) 
-        if serializer.is_valid():
-            checked_in_assets = request.data['asset_ids']   
-            original_quantity = loan.total_quantity
-            if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
-                loan.total_quantity = loan.total_quantity - len(checked_in_assets)
-                item = loan.item_name
-                item.quantity = item.quantity + len(checked_in_assets)
-                item.save()
-                loan.save()
-                for asset_id in checked_in_assets:
-                    asset = Asset.objects.get(asset_id=asset_id)
-                    asset.loan = None
-                    asset.save()
-                Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                       nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Loan checkin'
-                to = [User.objects.get(username=loan.user_name).email]
-                from_email='noreply@duke.edu'
-                checked_in = [(loan.item_name, len(checked_in_assets), original_quantity)]
-                ctx = {
-                    'user':request.user,
-                    'checked_in':checked_in,
-                }
-                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+        checked_in_assets = [x for x in request.data['asset_ids'] if x]
+        original_quantity = loan.total_quantity
+        if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
+            loan.total_quantity = loan.total_quantity - len(checked_in_assets)
+            item = loan.item_name
+            item.quantity = item.quantity + len(checked_in_assets)
+            item.save()
+            loan.save()
+            for asset_id in checked_in_assets:
+                asset = Asset.objects.get(asset_id=asset_id)
+                asset.loan = None
+                asset.save()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan checkin'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            checked_in = [(loan.item_name, len(checked_in_assets), original_quantity)]
+            ctx = {
+                'user':request.user,
+                'checked_in':checked_in,
+            }
+            message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
 
-                if loan.total_quantity == 0:
-                    loan.status = 'Checked In'
-                    loan.save()
-                return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+            if loan.total_quantity == 0:
+                loan.status = 'Checked In'
+                loan.save()
+            return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
 

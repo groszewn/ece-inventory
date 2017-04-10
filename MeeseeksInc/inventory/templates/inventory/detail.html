@@ -175,6 +175,7 @@ function clickEvent(){
 		        <thead>
 		            <tr>
 		            <th>Asset Tag</th>
+		            <th>Status</th>
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -182,6 +183,13 @@ function clickEvent(){
 		        	{% for asset in asset_list %}
 		        		<tr>
 							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							{% if asset.loan %}
+							<td><a href="{% url 'inventory:loan_detail' asset.loan.loan_id %}">Loaned out</a></td>
+							{% elif asset.disbursement %}
+							<td>Disbursed out</td>
+							{% else %}
+							<td></td>
+							{% endif %}
 							<td>hi</td>
 						</tr>
 					{% endfor %}
