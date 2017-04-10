@@ -6,6 +6,7 @@ import inventory
 
 from . import views
 
+
 #this app_name is important b/c Django needs to look through all the apps 
 # and we need to differentiate
 app_name = 'custom_admin'  
