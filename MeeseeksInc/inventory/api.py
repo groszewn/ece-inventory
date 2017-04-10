@@ -34,10 +34,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer
+    AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -887,6 +887,32 @@ class APICustomField(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class APIAssetCustomField(APIView):
+
+    permission_classes = (IsAdmin,)
+    serializer_class = AssetCustomFieldSerializer
+    
+    def get(self, request, format=None):
+        if self.request.user.is_staff:
+            fields = Asset_Custom_Field.objects.all()
+            serializer = AssetCustomFieldSerializer(fields, many=True)
+            return Response(serializer.data)
+        else:
+            fields = Asset_Custom_Field.objects.filter(is_private = False)
+            serializer = AssetCustomFieldSerializer(fields, many=True)
+            return Response(serializer.data)   
+        
+    def post(self, request, format=None):
+        serializer = AssetCustomFieldSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            data=serializer.data
+            field=data['field_name']
+            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
+                               affected_user='', change_occurred='Added asset custom field ' + str(field))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class APICustomFieldModify(APIView):
     """
     Delete specific custom field
@@ -914,7 +940,38 @@ class APICustomFieldModify(APIView):
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
         Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user='', change_occurred='Deleted custom field ' + str(field.field_name))
+                                       affected_user='', change_occurred='Deleted item custom field ' + str(field.field_name))
+        field.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class APIAssetCustomFieldModify(APIView):
+    """
+    Delete specific custom field
+    """
+    permission_classes = (IsAdminOrUser,)
+    
+    def get_object(self, pk):
+        try:
+            return Asset_Custom_Field.objects.get(id=pk)
+        except Asset_Custom_Field.DoesNotExist:
+            raise Http404
+        
+    def get(self, request, pk, format=None):
+        if self.request.user.is_staff:
+            field = self.get_object(pk)
+            serializer = AssetCustomFieldSerializer(field)
+            return Response(serializer.data)
+        else:
+            field = self.get_object(pk)
+            if not field.is_private:
+                serializer = AssetCustomFieldSerializer(field, many=True)
+                return Response(serializer.data)   
+            return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
+        
+    def delete(self, request, pk, format=None):
+        field = Asset_Custom_Field.objects.get(id = pk)
+        Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
+                                       affected_user='', change_occurred='Deleted asset custom field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

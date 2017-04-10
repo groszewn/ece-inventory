@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.forms.formsets import BaseFormSet
 
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
-    Asset
+    Asset, Asset_Custom_Field
 
 
 class DisburseForm(forms.ModelForm):
@@ -69,7 +69,6 @@ class AssetsRequestForm(forms.ModelForm):
         model = Asset
         exclude = ('item','loan','disbursement')
    
-    
 class BaseAssetsRequestFormSet(BaseFormSet):
     def clean(self):
         """
@@ -228,20 +227,34 @@ class CreateItemForm(forms.ModelForm):
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description','new_tags',)
 
-class CustomFieldForm(forms.ModelForm):  
-    class Meta:
-        model = Custom_Field
-        
-        fields = ('field_name','is_private','field_type',) 
+class CustomFieldForm(forms.Form):  
+    field_name = forms.CharField(required=True)
+    is_private = forms.BooleanField(required=False)
+    CHOICES = (
+        ('Short','Short-Form Text'),
+        ('Long','Long-Form Text'),
+        ('Int','Integer'),
+        ('Float','Floating-Point Number'),
+    )
+    field_type = forms.ChoiceField(choices=CHOICES, required=True, widget=forms.Select)
+    TYPES = (
+        ('Item Field','Item Field'),
+        ('Asset Field','Asset Field'),
+    )
+    type = forms.ChoiceField(label='Select Type Of Custom Field', choices=TYPES)
         
 class DeleteFieldForm(forms.Form):
-    def __init__(self, fields, *args, **kwargs):
+    def __init__(self, fields,asset_fields, *args, **kwargs):
         super(DeleteFieldForm, self).__init__(*args, **kwargs)
         choices = []
         for field in fields:
             choices.append([field.field_name, field.field_name])
-        self.fields['fields'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple(), label='Pick fields to delete...')
-          
+        self.fields['fields'] = forms.MultipleChoiceField(choices, required=False, widget=forms.CheckboxSelectMultiple(), label='Pick item fields to delete...')
+        asset_choices = []
+        for a_field in asset_fields:
+            asset_choices.append([a_field.field_name, a_field.field_name])
+        self.fields['asset_fields'] = forms.MultipleChoiceField(asset_choices, required=False, widget=forms.CheckboxSelectMultiple(), label='Pick asset fields to delete...')
+
 class RegistrationForm(forms.Form):
     username = forms.CharField(label='Username', max_length=30, required = True)
     email = forms.EmailField(label='Email', required = True)

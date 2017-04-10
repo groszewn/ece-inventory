@@ -84,6 +84,14 @@ class Loan(models.Model):
     backfill_time_requested = models.DateTimeField(null=True)
     def __str__(self):
         return self.loan_id
+
+class Asset(models.Model):
+    asset_id = models.CharField(primary_key=True, unique=True, default=uuid.uuid4, max_length=200)
+    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
+    loan = models.ForeignKey(Loan, null=True)
+    disbursement = models.ForeignKey(Disbursement, null=True)
+    def __str__(self):
+        return self.item.item_name + ' ' + self.asset_id
     
 class ShoppingCartInstance(models.Model):
     cart_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -119,7 +127,25 @@ class Custom_Field_Value(models.Model):
     value = models.TextField(null=True, blank=True)
     class Meta:
         unique_together = (("item", "field"),)
+    
+class Asset_Custom_Field(models.Model):
+    field_name = models.CharField(max_length=400, null=False, unique=True)
+    is_private = models.BooleanField(default = False)
+    CHOICES = (
+        ('Short','Short-Form Text'),
+        ('Long','Long-Form Text'),
+        ('Int','Integer'),
+        ('Float','Floating-Point Number'),
+    )
+    field_type = models.CharField(max_length=200, null=False, choices=CHOICES, default='Short') 
 
+class Asset_Custom_Field_Value(models.Model):
+    asset = models.ForeignKey(Asset, null=False, on_delete=models.CASCADE)
+    field = models.ForeignKey(Asset_Custom_Field, null=False, on_delete=models.CASCADE)
+    value = models.TextField(null=True, blank=True)
+    class Meta:
+        unique_together = (("asset", "field"),)
+    
 class Log(models.Model):
     request_id = models.CharField(max_length=200, null=True, default=None)
     item_id = models.CharField(max_length=200, null=True, default=None)
@@ -170,13 +196,4 @@ class LoanReminderEmailBody(models.Model):
     body = models.TextField() 
     
 class LoanSendDates(models.Model):
-    date = models.DateField()
-
-class Asset(models.Model):
-    asset_id = models.CharField(primary_key=True, unique=True, default=uuid.uuid4, max_length=200)
-    item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
-    loan = models.ForeignKey(Loan, null=True)
-    disbursement = models.ForeignKey(Disbursement, null=True)
-    def __str__(self):
-        return self.item.item_name + ' ' + self.asset_id
-    
+    date = models.DateField()    
