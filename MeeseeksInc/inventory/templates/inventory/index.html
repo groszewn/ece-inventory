@@ -161,9 +161,15 @@
 						</td>
 						<td>
 						{% if user.is_staff %}
-							{% block comment_accept %}
-								<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
-							{% endblock comment_accept %}
+							{% if request.item_name.is_asset %}
+								{% block comment_accept_with_asset %}
+									<a id = "accept-with-asset" request-id="{{ request.request_id }}" class="accept-with-asset btn btn-success">Approve</a>
+								{% endblock comment_accept_with_asset %}
+							{% else %}
+								{% block comment_accept %}
+									<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve</a>
+								{% endblock comment_accept %}
+							{% endif %}
 							{% block comment_deny %}
 								<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny</a>	
 							{% endblock comment_deny %}
@@ -372,9 +378,15 @@
 							</td>
 							{% if user.is_staff %}
 							<td>
-								{% block checkIn %}
-								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
-								{% endblock checkIn %}
+								{% if loan.orig_request.item_name.is_asset %}
+									{% block checkIn-with-assets %}
+										<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	
+									{% endblock checkIn-with-assets %}
+								{% else %}
+									{% block checkIn %}
+										<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+									{% endblock checkIn %}
+								{% endif %}
 								{% block convert %}
 								<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
 								{% endblock convert %}
@@ -762,6 +774,37 @@
     });
 </script>
 {% endblock js-checkIn %}
+
+{############################# CHECK IN WITH SPECIFIC ASSETS MODAL LOGIC ##############################}
+<div id="form-modal-checkIn-assets" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Check In Loan</h4>
+            </div>
+            <div id="form-modal-body-checkIn-assets" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-checkIn-assets %}
+<script>
+    $('.checkIn-assets').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-checkIn-assets').load(('checkin_with_assets/loan/'+loan_id), function () {
+            $('#form-modal-checkIn-assets').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-checkIn-assets %}
 {############################# EDIT LOAN MODAL LOGIC ##############################}
 <div id="form-modal-editLoan" class="modal fade">
     <div class="modal-dialog">
