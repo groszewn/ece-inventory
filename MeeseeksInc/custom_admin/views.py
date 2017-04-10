@@ -218,18 +218,14 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
-                if indiv_request.type == "Dispersal": 
-                    messages.success(request, ('Successfully disbursed assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
-                elif indiv_request.type == "Loan":
-                    messages.success(request, ('Successfully loaned assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+                messages.success(request, ('Successfully loaned assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
                 return redirect(reverse('custom_admin:index'))
             else:
                 form_errors = formset.non_form_errors()
-                return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name, 'form_errors':form_errors})
+                return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name, 'form_errors':form_errors})
         else:
-            commentForm = AddCommentRequestForm()
-            formset = AssetsRequestFormset()
-        return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
+            formset = CheckInLoanAssetFormset()
+        return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name})
 
     def edit_loan(request, pk):
         loan = Loan.objects.get(loan_id=pk)
