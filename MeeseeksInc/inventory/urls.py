@@ -51,6 +51,7 @@ urlpatterns = [
     url(r'^api/loan/checkin/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanCheckIn.as_view(), name='api_loan_checkin'),
     url(r'^api/loan/checkin_with_assets/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanCheckInWithAssets.as_view(), name='api_loan_checkin_with_assets'),
     url(r'^api/loan/convert/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanConvert.as_view(), name='api_loan_convert'),
+    url(r'^api/loan/convert_with_assets/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanConvertWithAssets.as_view(), name='api_loan_convert_with_assets'),
     url(r'^api/loan/update/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanUpdate.as_view(), name='api_loan_update'),
     url(r'^api/loan/$', inventory.api.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),

@@ -20,6 +20,7 @@ urlpatterns = [
 
     url(r'^edit/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.edit_loan, name='edit_loan'),
     url(r'^convert/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.convert_loan, name='convert_loan'),
+    url(r'^convert_with_assets/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.convert_loan_with_assets, name='convert_loan_with_assets'),
     url(r'^checkIn/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.check_in_loan, name='check_in_loan'),
     url(r'^checkin_with_assets/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.check_in_loan_with_assets, name='check_in_loan_with_assets'),
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.add_comment_to_request_accept, name='add_comment_to_request_accept'),

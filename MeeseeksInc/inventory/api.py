@@ -1217,6 +1217,7 @@ class APILoanConvert(APIView): #CONVERT LOAN
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         serializer = LoanConvertSerializer(data=request.data) 
+        print(request.data)
         if serializer.is_valid():
             quantity_disbursed = int(request.data['number_to_convert'])
             if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
@@ -1247,8 +1248,57 @@ class APILoanConvert(APIView): #CONVERT LOAN
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
            
                 return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        else:
+            print(serializer.errors)
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
+class APILoanConvertWithAssets(APIView): #CONVERT LOAN
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = LoanConvertSerializer  
+    
+    def post(self, request, pk, format=None): 
+        loan = Loan.objects.get(loan_id=pk)
+        admin_name = request.user.username
+        user_name = loan.user_name
+        item = loan.item_name
+        comment = loan.comment
+        time_disbursed = timezone.localtime(timezone.now())
+        converted_assets = [x for x in request.data['asset_ids'] if x]
+        quantity_disbursed = len(converted_assets)
+        if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
+            original_quantity = loan.total_quantity
+            loan.total_quantity = loan.total_quantity - quantity_disbursed
+            loan.save()
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement.save()
+            for asset_id in converted_assets:
+                asset = Asset.objects.get(asset_id=asset_id)
+                asset.loan = None
+                asset.disbursement = disbursement
+                asset.save()
+            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                               nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            if loan.total_quantity == 0:
+                loan.status = 'Checked In'
+                loan.save()
+
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan convert'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+            ctx = {
+                'user':request.user,
+                'convert':convert,
+            }
+            message=render_to_string('inventory/convert_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+       
+            return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     
 class APILoanBackfillPost(ListCreateAPIView):
     '''
