@@ -263,12 +263,37 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist")
         return value
-    
-class LoanSerializer(serializers.ModelSerializer):
-    comment = serializers.CharField(required=False, allow_blank=True)
+ 
+class FullLoanSerializer(serializers.ModelSerializer):
+    backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     class Meta:
         model = Loan
-        fields = ('total_quantity', 'comment',)
+        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned', 'status', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_notes') 
+    
+class LoanUpdateSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(required=False, allow_blank=True)
+    time_loaned = serializers.DateTimeField(
+        default=timezone.localtime(timezone.now()),
+        read_only=True
+    )
+    admin_name = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+    user_name = serializers.CharField(
+        read_only=True
+        )
+    item_name = serializers.CharField(read_only=True)
+    total_quantity = serializers.IntegerField(required=True)
+    class Meta:
+        model = Loan
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')
+        
+class LoanCheckInSerializer(serializers.Serializer):
+    check_in = serializers.IntegerField(required=True)
+    
+class LoanConvertSerializer(serializers.Serializer):
+    number_to_convert = serializers.IntegerField(required=True)
         
 class LoanPostSerializer(serializers.ModelSerializer):
     time_loaned = serializers.DateTimeField(
@@ -303,11 +328,6 @@ class LoanPostSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("User does not exist")
         return value
         
-class FullLoanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Loan
-        fields = ('loan_id','admin_name','user_name','item_name','orig_request','total_quantity', 'comment','time_loaned')
-        
 class SubscribeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscribedUsers
@@ -337,3 +357,37 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('asset_id','item')
+        
+class LoanBackfillPostSerializer(serializers.ModelSerializer):
+    backfill_pdf = serializers.FileField(max_length=200, use_url=True)
+    backfill_quantity = serializers.IntegerField(required=True)
+    loan_id = serializers.CharField(read_only=True)
+    backfill_status = serializers.CharField(read_only=True)
+    backfill_time_requested = serializers.DateTimeField(read_only=True)
+    class Meta:
+        model = Loan
+        fields = ('loan_id', 'backfill_pdf', 'backfill_status', 'backfill_quantity', 'backfill_time_requested')
+        
+    def validate_backfill_quantity(self, value):
+        """
+        Check that the quantity is positive and less than the total loan quantity
+        
+        """
+        loan = Loan.objects.get(loan_id=self.instance)
+        if (value <=0):
+            raise serializers.ValidationError("Backfill quantity needs to be greater than 0")
+        elif (value > loan.total_quantity):
+            raise serializers.ValidationError("Backfill quantity can't be more than the loan quantity")
+        return value
+    
+    def validate_backfill_time_requested(self, value):
+        return timezone.localtime(timezone.now())
+    
+class BackfillAcceptDenySerializer(serializers.ModelSerializer):
+    backfill_notes = serializers.CharField(required=False, allow_blank=True)
+    class Meta:
+        model = Loan
+        fields = ('backfill_notes',)
+        
+        
+        

@@ -1,11 +1,19 @@
+from datetime import date, datetime, timedelta
+from json.encoder import JSONEncoder
+import pickle
+from appdirs import unicode
 from dal import autocomplete
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.db.models import F
+from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.defaulttags import comment
@@ -15,13 +23,13 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormView
-from django.core import mail
-from datetime import date,datetime, timedelta
-from custom_admin.tasks import loan_reminder_email as task_email
 import requests, json
 from rest_framework.authtoken.models import Token
+
+from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet
+from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -57,7 +65,13 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['custom_fields'] = Custom_Field.objects.filter() 
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-        return context    
+        context['tags'] = Tag.objects.distinct('tag')
+        return context
+    
+    def get_queryset(self):
+        """Return the last five published questions."""
+        return Asset.objects.order_by('item')[:5]
+
     def test_func(self):
         return self.request.user.is_staff
 
@@ -200,6 +214,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})      
     def test_func(self):
         return self.request.user.is_staff
+    
 class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'
     permission_required = 'is_staff'
@@ -215,7 +230,7 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
                 payload = {'total_quantity':int(form['total_quantity'].value()), 
                        'comment':form['comment'].value(), 'type':form['type'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
-                      "Accept": "application/json", "Content-type":"application/json"}
+                          "Accept": "application/json", "Content-type":"application/json"}
                 requests.post(url, headers = header, data=json.dumps(payload))
                 if item.quantity < int(form['total_quantity'].value()):
                     messages.error(request, ('Not enough stock available for ' + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
@@ -223,9 +238,10 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
                 messages.success(request, 
                                  ('Successfully disbursed ' + form['total_quantity'].value() + " " + item.item_name + ' (' + User.objects.get(id=form['user_field'].value()).username +')'))
                 return redirect('/customadmin')
-            else:
-                form = DisburseForm() # blank request form with no data yet
-            return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})   
+        else:
+            form = DisburseForm() # blank request form with no data yet
+        return render(request, 'custom_admin/single_disburse_inner.html', {'form': form})   
+
     def post_new_disburse_specific(request, pk):
         item = Item.objects.get(item_id=pk)
         if request.method == "POST":
@@ -258,8 +274,57 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
         return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk, 'amount_left':item.quantity, 'item_name':item.item_name})
 
     def test_func(self):
-        return self.request.user.is_superuser
+        return self.request.user.is_staff
+
+def make_asset_request_form(item):
+    queryset = Asset.objects.exclude(loan__isnull=False).exclude(disbursement__isnull=False).filter(item=item)
+    print(queryset)
+    class AssetsRequestForm(forms.ModelForm):
+        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
+        class Meta:
+            model = Asset
+            exclude = ('item','loan','disbursement')
+    return AssetsRequestForm
+
+
+def obj_dict(obj):
+    return obj.__dict__
+
     
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def request_accept_with_assets(request, pk):
+    indiv_request = Request.objects.get(request_id=pk)
+    AssetsRequestForm = make_asset_request_form(indiv_request.item_name)
+    AssetsRequestFormset = formset_factory(AssetsRequestForm, extra=indiv_request.request_quantity, formset=BaseAssetsRequestFormSet)
+    if request.method == "POST":
+        formset = AssetsRequestFormset(request.POST)
+        commentForm = AddCommentRequestForm(request.POST)
+        if all([commentForm.is_valid(), formset.is_valid()]):
+            comment = commentForm['comment'].value()
+            token, create = Token.objects.get_or_create(user=request.user)
+            http_host = get_host(request)
+            url=http_host+'/api/requests/approve_with_assets/'+pk+'/'
+            asset_ids = []
+            for form in formset:
+                asset_ids.append(form['asset_id'].value())
+            payload = {'comment':comment, 'asset_ids': asset_ids}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload, default=obj_dict))
+            if indiv_request.type == "Dispersal": 
+                messages.success(request, ('Successfully disbursed assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            elif indiv_request.type == "Loan":
+                messages.success(request, ('Successfully loaned assets of ' + indiv_request.item_name.item_name + ' (' + indiv_request.user_id +')'))
+            return redirect(reverse('custom_admin:index'))
+        else:
+            form_errors = formset.non_form_errors()
+            return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name, 'form_errors':form_errors})
+    else:
+        commentForm = AddCommentRequestForm()
+        formset = AssetsRequestFormset()
+    return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
+
     
 class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'
@@ -323,7 +388,6 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
         indiv_request = Request.objects.get(request_id=pk)
         item = Item.objects.get(item_id=indiv_request.item_name_id)
         if item.quantity >= indiv_request.request_quantity:
-            user = request.user
             token, create = Token.objects.get_or_create(user=user)
             http_host = get_host(request)
             url=http_host+'/api/requests/approve/'+item.item_id+'/'
@@ -757,11 +821,159 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
         else:
             form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
         return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk}) 
-    
- 
+
+@login_required(login_url='/login/')
+@user_passes_test(active_check, login_url='/login/')
+def create_backfill_from_loan(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == 'POST':
+        form = BackfillRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/create/'+pk+'/'
+            payload = {'backfill_quantity':int(form['quantity'].value()), 'backfill_status':'Requested', 
+                       'loan_id':loan.loan_id}
+            files = {'backfill_pdf':form['pdf'].value()}
+            header = {'Authorization': 'Token '+ str(token)}#, 
+                 #     "Accept": "application/json", "Content-type":"application/json"} 
+            requests.post(url, headers=header, data=payload, files=files)
+            if int(form['quantity'].value()) > loan.total_quantity:
+                messages.error(request, ("You can't backfill more than is loaned."))
+            else:
+                messages.success(request, ('Successfully requested backfill.'))
+            return redirect(request.META.get('HTTP_REFERER')) 
+    else:
+        form = BackfillRequestForm()
+    return render(request, 'custom_admin/backfill_from_loan.html', {'form': form, 'pk':pk})
+        
+            
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_accept(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/approve/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_accept_comment.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_deny(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            print("DENYING")
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/deny/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_deny_comment.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_complete(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/complete/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_complete_comment.html', {'form': form, 'pk':pk})
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_fail(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/fail/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_fail_comment.html', {'form': form, 'pk':pk})
 
 
-
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def loan_reminder_body(request):
+    try:
+        body = LoanReminderEmailBody.objects.all()[0]
+    except (ObjectDoesNotExist, IndexError) as e:
+        body = LoanReminderEmailBody.objects.create(body='')
+    try:
+        start_dates = [str(x.date) for x in LoanSendDates.objects.all()]
+        selected_dates = []
+        for d in start_dates:
+            selected_dates.append(d)
+    except ObjectDoesNotExist:
+        selected_dates = None
+    if request.method == "POST":
+        form = ChangeLoanReminderBodyForm(request.POST or None, initial={'body':body.body})
+        if form.is_valid():
+            input_date_list = form['send_dates'].value().split(',')
+            #output_date_list = [datetime.strptime(x, "%m/%d/%Y") for x in input_date_list]
+            payload_send_dates=[]
+            for date in input_date_list:
+                if date != '':
+                    lst = date.split('/')
+                    formatted = lst[2]+'-'+lst[0]+'-'+lst[1]
+                    payload_send_dates.append({'date':formatted})
+              
+                #LoanSendDates.objects.create(date=date)
+                #task_email.apply_async(eta=date+timedelta(hours=3))
+            #LoanReminderEmailBody.objects.create(body=form['body'].value())
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url_send_dates=http_host+'/api/loan/email/dates/configure/'
+            url_loan_body = http_host+'/api/loan/email/body/'
+            payload_loan_body = {'body':form['body'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"} 
+            requests.post(url_loan_body, headers = header, data = json.dumps(payload_loan_body))
+            requests.post(url_send_dates, headers = header, data = json.dumps(payload_send_dates))
+            return redirect(reverse('custom_admin:change_loan_body'))
+    else:
+        form = ChangeLoanReminderBodyForm(initial= {'body':body.body})
+    return render(request, 'custom_admin/loan_email_body.html', {'form':form, 'selected_dates':sorted(selected_dates)})
 
 class EmailView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'  
@@ -865,6 +1077,9 @@ class EmailView(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_staff
         
+
+
+
 
 ################### DJANGO CRIPSY FORM STUFF ###################
 class AjaxTemplateMixin(object):

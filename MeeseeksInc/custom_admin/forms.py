@@ -7,7 +7,10 @@ from django import forms
 from django.contrib.admindocs.tests.test_fields import CustomField
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers
+from django.forms.formsets import BaseFormSet
+
+from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
+    Asset
 
 
 class DisburseForm(forms.ModelForm):
@@ -45,10 +48,11 @@ class ConvertLoanForm(forms.Form):
 class CheckInLoanForm(forms.Form):
     def __init__(self, amount, *args, **kwargs):
         super(CheckInLoanForm, self).__init__(*args, **kwargs)
-        self.fields['items_to_check_in'] = forms.IntegerField(required=True, min_value=1, max_value=amount, initial=amount)
+        self.fields['items_to_check_in'] = forms.IntegerField(label='How many items would you like to check in?',required=True, min_value=1, max_value=amount, initial=amount)
     
 class EditLoanForm(forms.ModelForm):
     total_quantity = forms.IntegerField(min_value=1)
+    comment = forms.CharField(required=False)
     class Meta:
         model = Loan
         fields = ('total_quantity','comment')
@@ -56,6 +60,42 @@ class EditLoanForm(forms.ModelForm):
 class AddCommentRequestForm(forms.Form):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
     
+class AddCommentBackfillForm(forms.Form):
+    backfill_notes = forms.CharField(label='Notes from admin (optional)', max_length=200, required=False)
+
+class AssetsRequestForm(forms.ModelForm):
+    asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
+    class Meta:
+        model = Asset
+        exclude = ('item','loan','disbursement')
+   
+    
+class BaseAssetsRequestFormSet(BaseFormSet):
+    def clean(self):
+        """
+        Adds validation to check that you choose distinct assets
+        """
+        if any(self.errors):
+            return
+        for i in range(self.total_form_count()):
+            if not self.forms[i].has_changed():
+                raise forms.ValidationError("All assets must be chosen.")
+        assets = []
+        duplicates = False
+        for form in self.forms:
+            if form.cleaned_data:
+                asset = form.cleaned_data['asset_id']
+                if asset:
+                    if asset in assets:
+                        duplicates = True
+                    assets.append(asset)
+                if duplicates:
+                    raise forms.ValidationError(
+                        'Assets must be distinct',
+                        code='duplicate_assets'
+                    )
+
+                      
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
@@ -155,8 +195,7 @@ class AddTagForm(forms.Form):
                 choices.append([myTag.tag,myTag.tag])
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
-            self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")
-        
+            self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")  
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags',)
          
@@ -242,3 +281,9 @@ class ChangeEmailPrependForm(forms.Form):
 class ChangeLoanReminderBodyForm(forms.Form):
     body = forms.CharField(label='Write email body to be included in all loan reminder emails.', required=False, widget=forms.Textarea)
     send_dates = forms.CharField(required=False)
+    
+class BackfillRequestForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1)
+    pdf = forms.FileField(max_length=200)
+    
+    

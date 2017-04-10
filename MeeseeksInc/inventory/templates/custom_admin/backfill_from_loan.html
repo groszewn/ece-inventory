@@ -1,0 +1,14 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+<h3>Create Backfill Request</h3>
+
+
+<div class="row">
+    <form id="formID-backfillRequest" action="{% url 'custom_admin:backfill_from_loan' pk %}" class="form-horizontal" method="post" enctype="multipart/form-data">
+{#        {% crispy form %}#}
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
+    </form>
+</div>

@@ -1,4 +1,6 @@
 from django.conf.urls import url
+from django.conf.urls.static import static
+from django.conf import settings
 
 import custom_admin.views
 import inventory.api
@@ -37,6 +39,7 @@ urlpatterns = [
     url(r'^api/requests/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIRequestDetail.as_view()),
     url(r'^api/requests/approve/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveRequest.as_view()),
     url(r'^api/requests/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyRequest.as_view()),
+    url(r'^api/requests/approve_with_assets/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveRequestWithAssets.as_view()),
     url(r'^api/disbursements/$', inventory.api.APIDisbursementList.as_view()),
     url(r'^api/disbursements/direct/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDirectDisbursement.as_view()),
     url(r'^api/users/$', inventory.api.APIUserList.as_view()),
@@ -45,7 +48,9 @@ urlpatterns = [
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICustomFieldModify.as_view()),
     url(r'^api/tags/$', inventory.api.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', inventory.api.APILogList.as_view(), name='api_log_list'),
-    url(r'^api/loan/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoan.as_view(), name='api_loan'),
+    url(r'^api/loan/checkin/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanCheckIn.as_view(), name='api_loan_checkin'),
+    url(r'^api/loan/convert/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanConvert.as_view(), name='api_loan_convert'),
+    url(r'^api/loan/update/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanUpdate.as_view(), name='api_loan_update'),
     url(r'^api/loan/$', inventory.api.APILoanList.as_view(), name='api_loan_list'),
     url(r'^api/guide/$', custom_admin.views.api_guide_page, name='api_guide'),
     url(r'^api/upload/$', inventory.api.ItemUpload.as_view(), name='upload'),    
@@ -53,6 +58,11 @@ urlpatterns = [
     url(r'^api/loan/email/body/$', inventory.api.APILoanEmailBody.as_view(), name='email_body'),
     url(r'^api/loan/email/dates/configure/$', inventory.api.APILoanEmailConfigureDates.as_view(), name='email_send_dates'),
     url(r'^api/loan/email/dates/delete/$', inventory.api.APILoanEmailClearDates.as_view(), name='loan_email_delete_dates'),
+    url(r'^api/loan/backfill/create/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanBackfillPost.as_view(), name='backfill_create'),
+    url(r'^api/loan/backfill/approve/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveBackfill.as_view(), name='backfill_approve'),
+    url(r'^api/loan/backfill/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyBackfill.as_view(), name='backfill_deny'),
+    url(r'^api/loan/backfill/complete/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICompleteBackfill.as_view(), name='backfill_complete'),
+    url(r'^api/loan/backfill/fail/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIFailBackfill.as_view(), name='backfill_fail'),
     url(r'^api/to_asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
-]
+]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

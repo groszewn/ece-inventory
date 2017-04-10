@@ -168,6 +168,9 @@ STATICFILES_DIRS = (
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
 # EMAIL
 EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_HOST_USER = 'groszewn'

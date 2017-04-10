@@ -67,10 +67,23 @@ class Loan(models.Model):
     CHOICES = (
         ('Checked Out', 'Checked Out'),
         ('Checked In', 'Checked In'),
+        ('Backfilled', 'Backfilled'),
     )
     status = models.CharField(max_length=200, null=False, choices=CHOICES, default='Checked Out')
+    backfill_pdf = models.FileField(null=True, upload_to='documents/%Y/%m/%d/')
+    BACKFILL_CHOICES = (
+        ('None', 'None'), # no backfill request
+        ('Requested', 'Requested'), # requested
+        ('Denied', 'Denied'), # request denied
+        ('In Transit', 'In Transit'), # items in transit
+        ('Completed', 'Completed'), # successful
+    )
+    backfill_status = models.CharField(max_length=200, null=False, choices=BACKFILL_CHOICES, default='None')
+    backfill_quantity = models.IntegerField(null=True)
+    backfill_notes = models.TextField(null=True)
+    backfill_time_requested = models.DateTimeField(null=True)
     def __str__(self):
-        return "Loan of " + self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
+        return self.loan_id
     
 class ShoppingCartInstance(models.Model):
     cart_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)
@@ -125,7 +138,8 @@ class Log(models.Model):
         ('Lost', 'Lost'), 
         ('Broken', 'Broken'),
         ('Loan', 'Loan'),
-        ('Check In', 'Check In')
+        ('Check In', 'Check In'),
+        ('Backfilled', 'Backfilled')
     )
     nature_of_event = models.CharField(max_length=200, null=False, choices=CHOICES)
     time_occurred = models.DateTimeField(default=timezone.now)
@@ -163,4 +177,6 @@ class Asset(models.Model):
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
     loan = models.ForeignKey(Loan, null=True)
     disbursement = models.ForeignKey(Disbursement, null=True)
-
+    def __str__(self):
+        return self.item.item_name + ' ' + self.asset_id
+    

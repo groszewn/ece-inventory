@@ -20,23 +20,19 @@ urlpatterns = [
     url(r'^edit/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.edit_loan, name='edit_loan'),
     url(r'^convert/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.convert_loan, name='convert_loan'),
     url(r'^checkIn/loan/(?P<pk>[\w\-\ ]+)/$', views.LoanView.check_in_loan, name='check_in_loan'),
-    
-    url(r'^disburse/item$', views.DisbursementView.post_new_disburse, name='post_new_disburse'),
-    url(r'^disburse/item/(?P<pk>[\w\-\ ]+)/$', views.DisbursementView.post_new_disburse_specific, name='post_specific_disburse'),
-    
     url(r'^request/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.add_comment_to_request_accept, name='add_comment_to_request_accept'),
     url(r'^request/deny/addcomment/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.add_comment_to_request_deny, name='add_comment_to_request_deny'),
+    url(r'^request/asset_accept/(?P<pk>[\w\-\ ]+)/$', views.request_accept_with_assets, name='request_accept_with_assets'),
+    url(r'^disburse/item$', views.DisbursementView.post_new_disburse, name='post_new_disburse'),
+    url(r'^disburse/item/(?P<pk>[\w\-\ ]+)/$', views.DisbursementView.post_new_disburse_specific, name='post_specific_disburse'),
     url(r'^deny/request/all$', views.RequestsView.deny_all_request, name='deny_all_requests'),
     url(r'^approve/request/all$', views.RequestsView.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.deny_request, name='deny_request'),
     url(r'^approve/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.approve_request, name='approve_request'),
-    
-    
     url(r'^edit/item/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item, name='edit_item'),
     url(r'^edit/item/module/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item_module, name='edit_item_module'),
     url(r'^create/item$', views.ItemView.create_new_item, name='create_new_item'),
     url(r'^delete/(?P<pk>[\w\-\ ]+)/$', views.ItemView.delete_item, name='delete_item'),
-    
     url(r'^$', inventory.views.IndexView.as_view(), name='index'),
     
     
@@ -66,4 +62,11 @@ urlpatterns = [
     
     url(r'^csv/guide/$',inventory.views.csv_guide_page,name='csv_help'),
     url(r'^upload/$', views.upload_page, name='upload_page'),
+    url(r'^backfill/from/loan/(?P<pk>[\w\-\ ]+)/$', views.create_backfill_from_loan, name='backfill_from_loan'),
+    url(r'^backfill/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_accept, name='add_comment_to_backfill_accept'),
+    url(r'^backfill/deny/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_deny, name='add_comment_to_backfill_deny'),
+    url(r'^backfill/complete/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_complete, name='add_comment_to_backfill_complete'),
+    url(r'^backfill/fail/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_fail, name='add_comment_to_backfill_fail'),
 ]
+
+

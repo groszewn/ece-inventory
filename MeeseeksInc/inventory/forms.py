@@ -57,3 +57,4 @@ class EditCartAndAddRequestForm(forms.ModelForm):
     class Meta:
         model = ShoppingCartInstance
         fields = ('quantity','type','reason')
+        

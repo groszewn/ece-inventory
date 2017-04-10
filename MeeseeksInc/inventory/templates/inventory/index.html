@@ -1,29 +1,25 @@
 {% extends my_template %} 
-
 {% load rest_framework %}
 {% load static %}
 {% load index %}
 {% block content %}
-
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
-
 <form id="search-form">
     <label>Included Tags:</label>
     <select id="included-tags" class="js-example-basic-multiple" multiple="multiple">
-    {% for tag in tags %} 
-    	<option value={{ tag.id }}>{{ tag.tag }}</option>
-    {% endfor %}
-	</select>
-	<label>Excluded Tags:</label>
-	<select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
-    {% for tag in tags %} 
-    	<option value={{ tag.id }}>{{ tag.tag }}</option>
-    {% endfor %}
-	</select>
+        {% for tag in tags %} 
+        <option value={{ tag.id }}>{{ tag.tag }}</option>
+        {% endfor %}
+    </select>
+    <label>Excluded Tags:</label>
+    <select id="excluded-tags" class="js-example-basic-multiple" multiple="multiple">
+        {% for tag in tags %} 
+        <option value={{ tag.id }}>{{ tag.tag }}</option>
+        {% endfor %}
+    </select>
     <input type="submit"/>
 </form>
-
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
@@ -43,7 +39,6 @@
 <tbody>
 </tbody>
 </table>
-
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
 	<h2>Requests</h2>
@@ -227,18 +222,123 @@
         </div>
 	</div>
 	{% else %}
-		<p class="lead" style="padding: 15px 15px">No outstanding Requests.</p>
+		<p class="lead" style="padding: 15px 15px">No Requests To Display.</p>
 	{% endif %}
 
 {% if user.is_staff %}
-	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
-	<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 {% endif %}
-	
 {########################## LOANS #####################}	
 {% if loan_list %}
 		<h2>Loans</h2>
-		<table id="inventory-loaned" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+			<ul class="nav nav-tabs">
+	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
+	  			<li><a href="#checkedIn" data-toggle="tab">Checked In</a></li>
+	  			<li><a href="#backfilled" data-toggle="tab">Backfilled</a></li>
+	 	    	<li class="active"><a href="#checkedOut" data-toggle="tab">Checked Out</a></li>
+	 	    
+			</ul>
+	<div class="tab-content">
+		<div class="tab-pane" id="allLoan">
+		<table id="inventory-loaned-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <col>
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Quantity </th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loan_list %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		 </div>
+		 <div class="tab-pane" id="checkedIn">
+		<table id="inventory-loaned-in" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_checked_in %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+		     <div class="tab-pane" id="backfilled">
+		<table id="inventory-loaned-backfilled" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <thead>
+		            <tr>
+					<th>Loan for</th>
+					<th>Status</th>
+					<th>Loaned to</th>
+					<th>User Reason</th>
+					<th>Admin Comment</th>
+					<th>Time Loaned</th>
+				</tr>
+		        </thead>
+		        <tbody>
+		        	{% for loan in loans_backfilled %}
+		        		<tr>
+							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+							<td>{{ loan.status }}</td>
+							<td>{{ loan.user_name }}</td>
+							<td>{{ loan.orig_request.reason}}</td>
+							<td>{{ loan.comment}}</td>
+							<td>
+								  <span style="display: none;">{{ loan.time_loaned|date:"c" }}</span>
+								  {{ loan.time_loaned }}
+							</td>
+						</tr>
+					{% endfor %}
+		        </tbody>
+		    </table>
+		    </div>
+		    <div class="tab-pane active" id="checkedOut">
+		<table id="inventory-loaned-out" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+		        <col>
 		        <col>
 		        <col>
 		        <col>
@@ -249,7 +349,8 @@
 		        <thead>
 		            <tr>
 					<th>Loan for</th>
-					<th>Item Quantity </th>
+					<th>Quantity </th>
+					<th>Status</th>
 					<th>Loaned to</th>
 					<th>User Reason</th>
 					<th>Admin Comment</th>
@@ -260,10 +361,11 @@
 				</tr>
 		        </thead>
 		        <tbody>
-		        	{% for loan in loan_list %}
+		        	{% for loan in loans_checked_out %}
 		        		<tr>
 							<td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
 							<td>{{ loan.total_quantity }}</td>
+							<td>{{ loan.status }}</td>
 							<td>{{ loan.user_name }}</td>
 							<td>{{ loan.orig_request.reason}}</td>
 							<td>{{ loan.comment}}</td>
@@ -288,44 +390,228 @@
 					{% endfor %}
 		        </tbody>
 		    </table>
+		    </div>
+	</div>
+	{% else %}
+		<p class="lead" style="padding: 15px 15px">No Loans To Display.</p
 	{% endif %}
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
-	<h2>Disbursements</h2>
-	<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
-	        <thead>
-	            <tr>
-				<th>Item Name</th>
-				<th>Quantity</th>
-				<th>Disbursed to</th>
-				<th>Disbursed by</th>
-				<th>User Reason</th>
-				<th>Admin Comment</th>
-				<th>Time Disbursed</th>
-			</tr>
-	        </thead>
-	        <tbody>
-	        	{% for disbursed in disbursed_list %}
-	        		<tr>
-						<td>{{ disbursed.item_name }}</td>
-						<td>{{ disbursed.total_quantity }}</td>
-						<td>{{ disbursed.user_name }}</td>
-						<td>{{ disbursed.admin_name }}</td>
-						<td>{{ disbursed.orig_request.reason}}</td>
-						<td>{{ disbursed.comment}}</td>
-						<td>
-						  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
-								  {{ disbursed.time_disbursed }}
-							</td>
-					</tr>
-				{% endfor %}
-	        </tbody>
-	    </table>
-	{#% else %#}
-		{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
-	{% endif %}
-
+<h2>Disbursements</h2>
+<table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Disbursed to</th>
+            <th>Disbursed by</th>
+            <th>User Reason</th>
+            <th>Admin Comment</th>
+            <th>Time Disbursed</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for disbursed in disbursed_list %}
+        <tr>
+            <td>{{ disbursed.item_name }}</td>
+            <td>{{ disbursed.total_quantity }}</td>
+            <td>{{ disbursed.user_name }}</td>
+            <td>{{ disbursed.admin_name }}</td>
+            <td>{{ disbursed.orig_request.reason}}</td>
+            <td>{{ disbursed.comment}}</td>
+            <td>
+                <span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+                {{ disbursed.time_disbursed }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{#% else %#}
+{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
+{% endif %}
+{########################## ALL BACKFILLS #####################}
+{% if backfill_list %}
+<h2>Backfills</h2>
+<ul class="nav nav-tabs">
+    <li><a href="#all-backfills" data-toggle="tab">All Backfills</a></li>
+    <li><a href="#completed-backfills" data-toggle="tab">Completed</a></li>
+    <li><a href="#in-transit-backfills" data-toggle="tab">In Transit</a></li>
+    <li class="active"><a href="#requested-backfills" data-toggle="tab">Requested</a></li>
+    <li><a href="#denied-backfills" data-toggle="tab">Denied</a></li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane" id="all-backfills">
+        <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Backfill for</th>
+                    <th>Status</th>
+                    <th>Quantity</th>
+                    {% if user.is_staff %}
+                    	<th>Notes</th>
+                    {% endif %}
+                    <th>Proof of Purchase</th>
+                    <th>Time Requested</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in backfill_list %}
+                <tr>
+                    <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+                    <td>{{ loan.backfill_status}}</td>
+                    <td>{{ loan.backfill_quantity }}</td>
+                    {% if user.is_staff %}
+                    	<td>{{ loan.backfill_notes }}</td>
+                    {% endif %}
+                    <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+                    <td>{{ loan.backfill_time_requested}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="tab-pane" id="in-transit-backfills">
+        <table id="inventory-backfill-approved" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Request for</th>
+                    <th>Quantity</th>
+                    {% if user.is_staff %}
+                    	<th>Notes</th>
+                    {% endif %}
+                    <th>Proof of Purchase</th>
+                    <th>Time Requested</th>
+                    {% if user.is_staff %}
+                    	<th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in backfill_approved %}
+                <tr>
+                    <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+                    <td>{{ loan.backfill_quantity }}</td>
+                    {% if user.is_staff %}
+                    	<td>{{ loan.backfill_notes }}</td>
+                    {% endif %}
+                    <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
+                    {% if user.is_staff %}
+                    <td>
+                    	{% block comment_complete_backfill %}
+                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
+                        {% endblock comment_complete_backfill %}
+                        {% block comment_fail_backfill %}
+                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Deny</a>
+                        {% endblock comment_fail_backfill %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="tab-pane active" id="requested-backfills">
+        <table id="inventory-backfill-pending" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Request for</th>
+                    <th>Quantity</th>
+                    <th>Proof of Purchase</th>
+                    <th>Time Requested</th>
+                    {% if user.is_staff %}
+                    	<th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in backfill_requested %}
+                <tr>
+                    <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+                    <td>{{ loan.backfill_quantity }}</td>
+                    <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
+                    {% if user.is_staff %}
+                    <td>
+                    	{% block comment_accept_backfill %}
+                        	<a id = "accept-backfill" loan-id="{{ loan.loan_id }}" class="accept-backfill btn btn-success">Approve</a>
+                        {% endblock comment_accept_backfill %}
+                        {% block comment_deny_backfill %}
+                        	<a id = "deny-backfill" loan-id="{{ loan.loan_id }}" class="deny-backfill btn btn-warning">Deny</a>
+                        {% endblock comment_deny_backfill %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="tab-pane" id="denied-backfills">
+        <table id="inventory-backfill-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Request for</th>
+                    <th>Quantity</th>
+                    {% if user.is_staff %}
+                    	<th>Notes</th>
+                    {% endif %}
+                    <th>Proof of Purchase</th>
+                    <th>Time Requested</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in backfill_denied %}
+                <tr>
+                    <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+                    <td>{{ loan.backfill_quantity }}</td>
+                    {% if user.is_staff %}
+                    	<td>{{ loan.backfill_notes }}</td>
+                    {% endif %}
+                    <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="tab-pane" id="completed-backfills">
+        <table id="inventory-backfill-completed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Request for</th>
+                    <th>Quantity</th>
+                    {% if user.is_staff %}
+                    	<th>Notes</th>
+                    {% endif %}
+                    <th>Proof of Purchase</th>
+                    <th>Time Requested</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in backfill_completed %}
+                <tr>
+                    <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
+                    <td>{{ loan.backfill_quantity }}</td>
+                    {% if user.is_staff %}
+                    	<td>{{ loan.backfill_notes }}</td>
+                    {% endif %}
+                    <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
+                    <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
+								  {{ loan.backfill_time_requested }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<p class="lead" style="padding: 15px 15px">No outstanding Backfills.</p>
+{% endif %}
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -340,9 +626,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-deny %}
 <script>
     $('.deny').click(function() {
@@ -354,7 +643,6 @@
     });
 </script>
 {% endblock js-deny %}
-
 {############################# REQUEST ACCEPT COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-accept" class="modal fade">
     <div class="modal-dialog">
@@ -369,9 +657,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-approve %}
 <script>
     $('.accept').click(function() {
@@ -383,7 +674,37 @@
     });
 </script>
 {% endblock js-approve %}
-
+{############################# REQUEST ACCEPT WITH ASSET + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept-with-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment & Asset Choice for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept-with-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-approve-with-asset %}
+<script>
+    $('.accept-with-asset').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept-with-asset').load(('request/asset_accept/'+request_id), function () {
+        	$('#formID-comment-accept-with-asset').attr("request-comment", request_id);
+            $('#form-modal-accept-with-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve-with-asset %}
 {############################# REQUEST EDIT MODAL LOGIC ##############################}
 <div id="form-modal-requestEdit" class="modal fade">
     <div class="modal-dialog">
@@ -398,9 +719,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-requestEdit %}
 <script>
     $('.requestEdit').click(function() {
@@ -411,7 +735,6 @@
     });
 </script>
 {% endblock js-requestEdit %}
-
 {############################# CHECK IN MODAL LOGIC ##############################}
 <div id="form-modal-checkIn" class="modal fade">
     <div class="modal-dialog">
@@ -426,9 +749,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-checkIn %}
 <script>
     $('.checkIn').click(function() {
@@ -439,7 +765,6 @@
     });
 </script>
 {% endblock js-checkIn %}
-
 {############################# EDIT LOAN MODAL LOGIC ##############################}
 <div id="form-modal-editLoan" class="modal fade">
     <div class="modal-dialog">
@@ -454,9 +779,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-editLoan %}
 <script>
     $('.editLoan').click(function() {
@@ -467,7 +795,6 @@
     });
 </script>
 {% endblock js-editLoan %}
-
 {############################# CONVERT LOAN MODAL LOGIC ##############################}
 <div id="form-modal-convert" class="modal fade">
     <div class="modal-dialog">
@@ -482,9 +809,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-convert %}
 <script>
     $('.convert').click(function() {
@@ -495,6 +825,136 @@
     });
 </script> 
 {% endblock js-convert %}
+
+{############################# BACKFILL ACCEPT + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Accept</h4>
+            </div>
+            <div id="form-modal-body-accept-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-approve-backfill %}
+<script>
+    $('.accept-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept-backfill').load(('backfill/accept/addcomment/'+loan_id), function () {
+        	$('#formID-comment-accept-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-accept-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve-backfill %}
+
+{############################# BACKFILL DENY + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Deny</h4>
+            </div>
+            <div id="form-modal-body-deny-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-deny-backfill %}
+<script>
+    $('.deny-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny-backfill').load(('backfill/deny/addcomment/'+loan_id), function () {
+        	$('#formID-comment-deny-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-deny-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny-backfill %}
+
+{############################# BACKFILL COMPLETE + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill %}
+<script>
+    $('.complete-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill').load(('backfill/complete/addcomment/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill %}
+
+
+{############################# BACKFILL FAIL + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-fail-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Failure</h4>
+            </div>
+            <div id="form-modal-body-fail-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-fail-backfill %}
+<script>
+    $('.fail-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-fail-backfill').load(('backfill/fail/addcomment/'+loan_id), function () {
+        	$('#formID-comment-fail-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-fail-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-fail-backfill %}
+
 
 {############################# CSV HELP PAGE MODAL ##############################}
 <div id="form-modal-csv" class="modal fade">
@@ -510,9 +970,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal --> 
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
 {% block js-csv %}
 <script>
     $('.csvHelp').click(function() {
@@ -523,356 +986,379 @@
 </script> 
 {% endblock js-csv %}
 <script>
-var csrftoken = $.cookie('csrftoken');
-$(document).ready(function(){
-	//var inventory_item_table = $('#inventory-item').DataTable();
-    $('#inventory-request-all').dataTable({
+    var csrftoken = $.cookie('csrftoken');
+    $(document).ready(function(){
+    	//var inventory_item_table = $('#inventory-item').DataTable();
+        $('#inventory-request-all').dataTable({
+            "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-request-approved').dataTable({
+            "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-request-pending').dataTable({
+            "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-request-denied').dataTable({
+            "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-disbursed').dataTable({
+            "order": [[ 6, "desc" ]]
+        });
+        //$('#user-table').dataTable();
+        //inventory_item_table.MakeCellsEditable({
+    	//    "onUpdate": myCallbackFunction
+    	//});
+        $('#inventory-loaned-all').dataTable({
         "order": [[ 6, "desc" ]]
-    });
-    $('#inventory-request-approved').dataTable({
+        });
+        $('#inventory-loaned-in').dataTable({
+        "order": [[ 5, "desc" ]]
+        });
+        $('#inventory-loaned-out').dataTable({
         "order": [[ 6, "desc" ]]
+        });
+        $('#inventory-loaned-backfilled').dataTable({
+        "order": [[ 5, "desc" ]]
+        });
+        $('#inventory-backfill-all').dataTable({
+        "order": [[ 5, "desc" ]]
+        });
+        $('#inventory-backfill-approved').dataTable({
+        "order": [[ 4, "desc" ]]
+        });
+        $('#inventory-backfill-pending').dataTable({
+        "order": [[ 3, "desc" ]]
+        });
+        $('#inventory-backfill-denied').dataTable({
+        "order": [[ 4, "desc" ]]
+        });
+        $('#inventory-backfill-completed').dataTable({
+        "order": [[ 4, "desc" ]]
+        });
     });
-    $('#inventory-request-pending').dataTable({
-        "order": [[ 6, "desc" ]]
+    $('#included-tags').select2(); // making multiple select
+    $('#excluded-tags').select2(); // making multiple select
+    var editor; // use a global for the submit and return data rendering in the examples
+    var table;
+    editor = new $.fn.dataTable.Editor( {
+    		ajax: function ( method, url, d, successCallback, errorCallback ) {
+    			if(d.action === 'create') {
+    				for(id in d.data) {
+    			    	var output = { data: [] };
+    			    	var pushToData = d.data[id];
+    			    	pushToData['values_custom_field'] = [];
+    			    	for(changedColumn in d.data[id]) {
+    			    		{% for fields in custom_fields %}
+    							if("{{fields.field_name}}" == changedColumn) {
+    								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
+    				    		}
+    						{% endfor %}
+    			    	}
+    			    	var data = JSON.stringify(pushToData);
+    			    	$.ajax({
+    			    		beforeSend: function(xhr, settings) {
+    					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+    					    	alert("Are you sure you want to edit this?");
+    					    },
+    						type:"POST",
+    						url: '{% url 'inventory:api_item_list' %}',
+    						contentType: 'application/json',
+    						dataType: 'json',
+    				        data: data,
+    				        success: function(json) {
+    				        	pushToData.id = json.item_id;
+    				        	pushToData['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
+    				        	output.data.push(pushToData);
+    				        	console.log(output);
+    				        	successCallback(output);
+    				        },
+    				        error: function(error) {
+    				        	errorCallback();
+    				        }
+    					});
+    			    }
+    			} else if(d.action==='edit') {
+    				for(id in d.data) {
+    			    	d.data[id].id = id;
+    			    	var pushToData = d.data[id];
+    			    	pushToData['values_custom_field'] = [];
+    			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
+    			    	for(changedColumn in d.data[id]) {
+    			    		result[changedColumn] = d.data[id][changedColumn];
+    			    		var custom_fields = result['values_custom_field'];
+    			    		{% for fields in custom_fields %}
+    							if("{{fields.field_name}}" == changedColumn) {
+    								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
+    				    		}
+    						{% endfor %}
+    			    	}
+    			    	var output = { data: [] };
+    			    	output.data.push(result);
+    			    	var data = JSON.stringify(pushToData);
+    			    	$.ajax({
+    			    		beforeSend: function(xhr, settings) {
+    					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+    					    	alert("Are you sure you want to edit this?");
+    					    },
+    						type:"PUT",
+    						url: '{% url 'inventory:api_item_list'%}' + id+'/',
+    						contentType: 'application/json',
+    						dataType: 'json',
+    				        data: data,
+    				        success: function(json) {
+    				        	successCallback(output);
+    				        },
+    				        error: function (xhr, error, thrown) {
+    				        	//if (xhr.status == 100) {
+    				        		console.log(xhr);
+    							    //this.error();
+    							    errorCallback(xhr.responseJSON);
+    							//}
+    				        }
+    				        
+    					});
+    			    }
+    		    } else if(d.action==='remove') {
+    		    	console.log(d.data);
+    		    	for(id in d.data) {
+    		    		var output = { data: [] };
+    		    		console.log(id);
+    		    		$.ajax({
+    		    			beforeSend: function(xhr, settings) {
+    					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
+    					    },
+    						type:"DELETE",
+    						url: '{% url 'inventory:api_item_list' %}' + id+'/',
+    				        success: function(result) {
+    				        	console.log("DELETING ONCE");
+    				        	successCallback(output);
+    				        }
+    					});
+    				}
+    		    }
+    	    },
+    	    table: "#inventory-search",
+    	    idSrc:  'item_id',
+    	    fields: [ { label: "Item Name", name: "item_name" },
+    	    	{% if user.is_superuser %}
+    	        	{ label: "Quantity", name: "quantity" },
+    	        {% endif %}
+    	        { label: "Model Number", name: "model_number" },
+    	        { label: "Description", name: "description" },
+    	        {% if user.is_staff %}
+	        	{ label: "Minimum Stock", name: "threshold_quantity" },
+	        	{ label: "Minimum Stock", name: "threshold_enabled" },	
+	        	{% endif %}
+    	        ]
+    	} ); 
+    	// Disable KeyTable while the main editing form is open
+    editor
+        .on( 'open', function ( e, mode, action ) {
+            if ( mode === 'main' ) {
+                table.keys.disable();
+            }
+        } )
+        .on( 'close', function () {
+            table.keys.enable();
+        } );
+    //editor.on('submit',function ( e, xhr, err, thrown, data ){
+    //    data = JSON.parse(xhr.responseText);
+    //    this.error(JSON.parse(xhr.responseText).error);
+    //    return true;
+    //});
+    get_search_data(true); // initialize item data
+    $('#search-form').on('submit', function(event){
+        event.preventDefault();
+        console.log("form submitted!")  // sanity check
+        get_search_data(false);
     });
-    $('#inventory-request-denied').dataTable({
-        "order": [[ 6, "desc" ]]
-    });
-    $('#inventory-disbursed').dataTable({
-        "order": [[ 6, "desc" ]]
-    });
-    $('#user-table').dataTable();
-    //inventory_item_table.MakeCellsEditable({
-	//    "onUpdate": myCallbackFunction
-	//});
-    $('#inventory-loaned').dataTable({
-    "order": [[ 5, "desc" ]]
-});
-});
-$('#included-tags').select2(); // making multiple select
-$('#excluded-tags').select2(); // making multiple select
-var editor; // use a global for the submit and return data rendering in the examples
-var table;
-editor = new $.fn.dataTable.Editor( {
-		ajax: function ( method, url, d, successCallback, errorCallback ) {
-			if(d.action === 'create') {
-				for(id in d.data) {
-			    	var output = { data: [] };
-			    	var pushToData = d.data[id];
-			    	pushToData['values_custom_field'] = [];
-			    	for(changedColumn in d.data[id]) {
-			    		{% for fields in custom_fields %}
-							if("{{fields.field_name}}" == changedColumn) {
-								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
-				    		}
-						{% endfor %}
-			    	}
-			    	var data = JSON.stringify(pushToData);
-			    	$.ajax({
-			    		beforeSend: function(xhr, settings) {
-					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-					    	alert("Are you sure you want to edit this?");
-					    },
-						type:"POST",
-						url: '{% url 'inventory:api_item_list' %}',
-						contentType: 'application/json',
-						dataType: 'json',
-				        data: data,
-				        success: function(json) {
-				        	pushToData.id = json.item_id;
-				        	pushToData['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
-				        	output.data.push(pushToData);
-				        	console.log(output);
-				        	successCallback(output);
-				        },
-				        error: function(error) {
-				        	errorCallback();
-				        }
-					});
-			    }
-			} else if(d.action==='edit') {
-				for(id in d.data) {
-			    	d.data[id].id = id;
-			    	var pushToData = d.data[id];
-			    	pushToData['values_custom_field'] = [];
-			    	var result = $.grep(table.rows().data(), function(e){ return e.item_id == id; })[0];
-			    	for(changedColumn in d.data[id]) {
-			    		result[changedColumn] = d.data[id][changedColumn];
-			    		var custom_fields = result['values_custom_field'];
-			    		{% for fields in custom_fields %}
-							if("{{fields.field_name}}" == changedColumn) {
-								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
-				    		}
-						{% endfor %}
-			    	}
-			    	var output = { data: [] };
-			    	output.data.push(result);
-			    	var data = JSON.stringify(pushToData);
-			    	$.ajax({
-			    		beforeSend: function(xhr, settings) {
-					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-					    	alert("Are you sure you want to edit this?");
-					    },
-						type:"PUT",
-						url: '{% url 'inventory:api_item_list'%}' + id+'/',
-						contentType: 'application/json',
-						dataType: 'json',
-				        data: data,
-				        success: function(json) {
-				        	successCallback(output);
-				        },
-				        error: function (xhr, error, thrown) {
-				        	//if (xhr.status == 100) {
-				        		console.log(xhr);
-							    //this.error();
-							    errorCallback(xhr.responseJSON);
-							//}
-				        }
-				        
-					});
-			    }
-		    } else if(d.action==='remove') {
-		    	console.log(d.data);
-		    	for(id in d.data) {
-		    		var output = { data: [] };
-		    		console.log(id);
-		    		$.ajax({
-		    			beforeSend: function(xhr, settings) {
-					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-					    },
-						type:"DELETE",
-						url: '{% url 'inventory:api_item_list' %}' + id+'/',
-				        success: function(result) {
-				        	console.log("DELETING ONCE");
-				        	successCallback(output);
-				        }
-					});
-				}
-		    }
-	    },
-	    table: "#inventory-search",
-	    idSrc:  'item_id',
-	    fields: [ { label: "Item Name", name: "item_name" },
-	    	{% if user.is_superuser %}
-	        	{ label: "Quantity", name: "quantity" },
-	        {% endif %}
-	        { label: "Model Number", name: "model_number" },
-	        { label: "Description", name: "description" },
-	        {% if user.is_staff %}
-	        { label: "Minimum Stock", name: "threshold_quantity" },
-	        { label: "Minimum Stock", name: "threshold_enabled" },	
-	        {% endif %}
-
-	        ]
-	} ); 
-	// Disable KeyTable while the main editing form is open
-editor
-    .on( 'open', function ( e, mode, action ) {
-        if ( mode === 'main' ) {
-            table.keys.disable();
-        }
-    } )
-    .on( 'close', function () {
-        table.keys.enable();
-    } );
-//editor.on('submit',function ( e, xhr, err, thrown, data ){
-//    data = JSON.parse(xhr.responseText);
-//    this.error(JSON.parse(xhr.responseText).error);
-//    return true;
-//});
-get_search_data(true); // initialize item data
-$('#search-form').on('submit', function(event){
-    event.preventDefault();
-    console.log("form submitted!")  // sanity check
-    get_search_data(false);
-});
-function get_search_data(first) {
-	var data = '';
-	var included_tags = $('#included-tags').select2('val');
-	var excluded_tags = $('#excluded-tags').select2('val')
-	if(included_tags) {
-		for(i in included_tags) {
-			data += 'included_tags=' + included_tags[i]+'&';
-		}
-	}
-	if(excluded_tags) { 
-		for(i in excluded_tags) {
-			data += 'excluded_tags=' + excluded_tags[i] + '&';
-		}
-	}
-	columns = [{ data: "item_name" },
-	        { data: "quantity" },
-	        { data: "model_number" },
-	        { data: "description" },
-	        {% if user.is_staff %}
-	        { data: "threshold_quantity" },
-	        { data: "threshold_enabled" },
-	        {% endif %}
-	        ];
-	var djangoCustomFieldNameList = [];
-	{% for field in custom_fields %} 
-		djangoCustomFieldNameList.push("{{ field.field_name }}");
-		if(first) {
-			editor.add( {
-			    label: "{{ field.field_name }}",
-			    name: "{{ field.field_name }}"
-			} );
-		}
-		columns.push({ data: "{{ field.field_name }}" });
-	{% endfor %}
-	table = $('#inventory-search').DataTable({
-		destroy: true,
-		dom: "Bfrtip",
-		ajax: {
-		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
-		    type: "GET",
-		    dataSrc: function ( json ) {
-		      $('#item_name').val(''); // remove the value from the input
-	        	var numCustomFields = {{ custom_fields|length }}
-	         	for(i in json) {
-	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
-	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
-	         			json[i][djangoCustomFieldNameList[p]] = "";
-	         		}
-				    var numCustomFieldsAvailable = json[i].values_custom_field.length;
-				    if(numCustomFieldsAvailable !== 0) {
-				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
-				    		var custom_field_object = json[i].values_custom_field[count];
-				    		var field = custom_field_object.field;
-							var indexOfField = djangoCustomFieldNameList.indexOf(custom_field_object.field_name);
-							if(indexOfField == -1) {
-				    			continue;
-				    		}
-				    		if(custom_field_object.value) {
-				    			json[i][custom_field_object.field_name] = custom_field_object.value;
-				    		}
-				    	}
-				    }
-	        	}
-	        	console.log(json);
-	        	return json;
-		    }
-		  },
-		columns: columns,
-		{% if user.is_staff %}
-			keys: {
-		        columns: ':not(:nth-child(1))',
-		        editor:  editor
-		    },
-		    select: {
-		        style:    'os',
-		        //selector: 'td:first-child',
-		        blurable: true
-		    },
-		    {% if user.is_superuser %}
-		    buttons: [
-		       // { extend: "create", editor: editor },
-		        { extend: "edit",   editor: editor },
-		        { extend: "remove", editor: editor }
-		    ]
-		    {% endif %}
-	    {% endif %}
-	});
-};
-function getIndexOfFieldName(list, name) {
-	var index = -1;
-	for(i in list) {
-		if(list[i].field_name == name) {
-			index = i;
-		}
-	}
-	return index;
-}
-$(document).ready(function(){
-	 // The event listener for the file upload
-    document.getElementById('txtFileUpload').addEventListener('change', upload, false);
-    // Method that checks that the browser supports the HTML5 File API
-    function browserSupportFileUpload() {
-        var isCompatible = false;
-        if (window.File && window.FileReader && window.FileList && window.Blob) {
-        isCompatible = true;
-        }
-        return isCompatible;
+    function get_search_data(first) {
+    	var data = '';
+    	var included_tags = $('#included-tags').select2('val');
+    	var excluded_tags = $('#excluded-tags').select2('val')
+    	if(included_tags) {
+    		for(i in included_tags) {
+    			data += 'included_tags=' + included_tags[i]+'&';
+    		}
+    	}
+    	if(excluded_tags) { 
+    		for(i in excluded_tags) {
+    			data += 'excluded_tags=' + excluded_tags[i] + '&';
+    		}
+    	}
+    	columns = [{ data: "item_name" },
+    	        { data: "quantity" },
+    	        { data: "model_number" },
+    	        { data: "description" },
+    	        {% if user.is_staff %}
+	        	{ data: "threshold_quantity" },
+	        	{ data: "threshold_enabled" },
+	        	{% endif %}];
+    	var djangoCustomFieldNameList = [];
+    	{% for field in custom_fields %} 
+    		djangoCustomFieldNameList.push("{{ field.field_name }}");
+    		if(first) {
+    			editor.add( {
+    			    label: "{{ field.field_name }}",
+    			    name: "{{ field.field_name }}"
+    			} );
+    		}
+    		columns.push({ data: "{{ field.field_name }}" });
+    	{% endfor %}
+    	table = $('#inventory-search').DataTable({
+    		destroy: true,
+    		dom: "Bfrtip",
+    		ajax: {
+    		    url: '{% url 'inventory:api_item_list' %}'+'?'+data,
+    		    type: "GET",
+    		    dataSrc: function ( json ) {
+    		      $('#item_name').val(''); // remove the value from the input
+    	        	var numCustomFields = {{ custom_fields|length }}
+    	         	for(i in json) {
+    	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+    	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
+    	         			json[i][djangoCustomFieldNameList[p]] = "";
+    	         		}
+    				    var numCustomFieldsAvailable = json[i].values_custom_field.length;
+    				    if(numCustomFieldsAvailable !== 0) {
+    				    	for(count = 0; count<numCustomFieldsAvailable; count++) {
+    				    		var custom_field_object = json[i].values_custom_field[count];
+    				    		var field = custom_field_object.field;
+    							var indexOfField = djangoCustomFieldNameList.indexOf(custom_field_object.field_name);
+    							if(indexOfField == -1) {
+    				    			continue;
+    				    		}
+    				    		if(custom_field_object.value) {
+    				    			json[i][custom_field_object.field_name] = custom_field_object.value;
+    				    		}
+    				    	}
+    				    }
+    	        	}
+    	        	console.log(json);
+    	        	return json;
+    		    }
+    		  },
+    		columns: columns,
+    		{% if user.is_staff %}
+    			keys: {
+    		        columns: ':not(:nth-child(1))',
+    		        editor:  editor
+    		    },
+    		    select: {
+    		        style:    'os',
+    		        //selector: 'td:first-child',
+    		        blurable: true
+    		    },
+    		    {% if user.is_superuser %}
+    		    buttons: [
+    		       // { extend: "create", editor: editor },
+    		        { extend: "edit",   editor: editor },
+    		        { extend: "remove", editor: editor }
+    		    ]
+    		    {% endif %}
+    	    {% endif %}
+    	});
+    };
+    function getIndexOfFieldName(list, name) {
+    	var index = -1;
+    	for(i in list) {
+    		if(list[i].field_name == name) {
+    			index = i;
+    		}
+    	}
+    	return index;
+>>>>>>> 98038a4a57dda0e6b77be3c8acaed6383d74e777
     }
-    
-	var csrftoken = $.cookie('csrftoken');
-	
-    // Method that reads and processes the selected file
-    function upload(evt) {
-    if (!browserSupportFileUpload()) {
-        alert('The File APIs are not fully supported in this browser!');
-        } else {
-            var data = null;
-            var file = evt.target.files[0];
-            var reader = new FileReader();
-            reader.readAsText(file);
-            reader.onload = function(event) {
-                var csvData = event.target.result;
-                data = $.csv.toArrays(csvData);
-                console.log(data)
-                if (data && data.length > 0) {
-                  $.ajax({
-				       url: '/api/upload/',
-				       //Ajax events
-				       beforeSend: function (xhr,settings) {
-				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
-				         alert('Are you sure you want to upload document.');
-				       },
-				       success: function (e) {
-				         //alert('Upload completed');
-				         window.location.reload();
-				       },
-				       error: function (e) {
-				         //alert('ERROR: ' + e.responseText);
-				          window.location.reload();
-				       },
-				       // Form data
-				       data: {'data[]' : data},
-				       type: 'POST',
-				    });
-                } else {
-                    alert('No data to import!');
-                }
-            };
-            reader.onerror = function() {
-                alert('Unable to read ' + file.fileName);
-            };
+    $(document).ready(function(){
+    	 // The event listener for the file upload
+        document.getElementById('txtFileUpload').addEventListener('change', upload, false);
+        // Method that checks that the browser supports the HTML5 File API
+        function browserSupportFileUpload() {
+            var isCompatible = false;
+            if (window.File && window.FileReader && window.FileList && window.Blob) {
+            isCompatible = true;
+            }
+            return isCompatible;
         }
-    }
-});
-$('#submit').click(function (event) {
-    event.preventDefault()
-   var file = $('#CSV').get(0).files[0];
-  $.get(file, function(data) {
-	   console.log(data);
-	}, 'text');
-   var formData = new FormData();
-   formData.append('file', file);
-   console.log(formData);
-   console.log("HI CSV");
-   $.ajax({
-       url: '/api/upload',
-       //Ajax events
-       beforeSend: function (e) {
-         alert('Are you sure you want to upload document.');
-       },
-       success: function (e) {
-         alert('Upload completed');
-       },
-       error: function (e) {
-         alert('error ' + e.message);
-       },
-       // Form data
-       data: formData,
-       type: 'POST',
-       //Options to tell jQuery not to process data or worry about content-type.
-       cache: false,
-       contentType: false,
-       processData: false
+        
+    	var csrftoken = $.cookie('csrftoken');
+    	
+        // Method that reads and processes the selected file
+        function upload(evt) {
+        if (!browserSupportFileUpload()) {
+            alert('The File APIs are not fully supported in this browser!');
+            } else {
+                var data = null;
+                var file = evt.target.files[0];
+                var reader = new FileReader();
+                reader.readAsText(file);
+                reader.onload = function(event) {
+                    var csvData = event.target.result;
+                    data = $.csv.toArrays(csvData);
+                    console.log(data)
+                    if (data && data.length > 0) {
+                      $.ajax({
+    				       url: '/api/upload/',
+    				       //Ajax events
+    				       beforeSend: function (xhr,settings) {
+    				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+    				         alert('Are you sure you want to upload document.');
+    				       },
+    				       success: function (e) {
+    				         //alert('Upload completed');
+    				         window.location.reload();
+    				       },
+    				       error: function (e) {
+    				         //alert('ERROR: ' + e.responseText);
+    				          window.location.reload();
+    				       },
+    				       // Form data
+    				       data: {'data[]' : data},
+    				       type: 'POST',
+    				    });
+                    } else {
+                        alert('No data to import!');
+                    }
+                };
+                reader.onerror = function() {
+                    alert('Unable to read ' + file.fileName);
+                };
+            }
+        }
     });
-    return false;
-});
-	
-	
+    $('#submit').click(function (event) {
+        event.preventDefault()
+       var file = $('#CSV').get(0).files[0];
+      $.get(file, function(data) {
+    	   console.log(data);
+    	}, 'text');
+       var formData = new FormData();
+       formData.append('file', file);
+       console.log(formData);
+       console.log("HI CSV");
+       $.ajax({
+           url: '/api/upload',
+           //Ajax events
+           beforeSend: function (e) {
+             alert('Are you sure you want to upload document.');
+           },
+           success: function (e) {
+             alert('Upload completed');
+           },
+           error: function (e) {
+             alert('error ' + e.message);
+           },
+           // Form data
+           data: formData,
+           type: 'POST',
+           //Options to tell jQuery not to process data or worry about content-type.
+           cache: false,
+           contentType: false,
+           processData: false
+        });
+        return false;
+    });
+    	
+    	
 </script>
 {% endblock %}

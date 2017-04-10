@@ -4,23 +4,29 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
-from django.core.mail import EmailMessage
 from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
 from django.views.generic.edit import FormMixin
 import requests, json
 from rest_framework.authtoken.models import Token
+
 from inventory.forms import EditCartAndAddRequestForm
-from .forms import RequestSpecificForm, AddToCartForm, RequestEditForm
-from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue
+from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, \
+    IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
+from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
+from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
+    LoanReminderEmailBody, LoanSendDates
 from django.core.exceptions import ObjectDoesNotExist
-from django.template.loader import render_to_string
+from MeeseeksInc.celery import app
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -42,8 +48,16 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['approved_request_list'] = Request.objects.filter(status="Approved")
             context['pending_request_list'] = Request.objects.filter(status="Pending")
             context['denied_request_list'] = Request.objects.filter(status="Denied")
+            context['backfill_list'] = Loan.objects.all().exclude(backfill_status="None")
+            context['backfill_requested'] = Loan.objects.filter(backfill_status='Requested')
+            context['backfill_approved'] = Loan.objects.filter(backfill_status='In Transit')
+            context['backfill_denied'] = Loan.objects.filter(backfill_status='Denied')
+            context['backfill_completed'] = Loan.objects.filter(backfill_status='Completed')
             context['disbursed_list'] = Disbursement.objects.all()
             context['loan_list'] = Loan.objects.all()
+            context['loans_checked_in'] = Loan.objects.filter(status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(status='Checked Out')
+            context['loans_backfilled'] = Loan.objects.filter(status="Backfilled")
             context['my_template'] = 'custom_admin/base.html'
         else:
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False) 
@@ -51,8 +65,15 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
             context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
             context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
+            context['backfill_list'] = Loan.objects.all().exclude(backfill_status="None")
+            context['backfill_requested'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Requested')
+            context['backfill_approved'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='In Transit')
+            context['backfill_denied'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Denied')
+            context['backfill_completed'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Completed')
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username)
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username) 
+            context['loans_checked_in'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked In')
+            context['loans_checked_out'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked Out')
             context['my_template'] = 'inventory/base.html'
         context['item_list'] = Item.objects.all()
         context['current_user'] = self.request.user.username
@@ -80,7 +101,7 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
-            context['disbursed_list'] = Disbursement.objects.filter(user_name=user.username)
+            context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id)
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
             context['custom_fields'] = Custom_Field.objects.all()
@@ -297,6 +318,7 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
     def get_context_data(self, **kwargs):
         context = super(LoanDetailView, self).get_context_data(**kwargs)
         context['loan'] = self.get_object()
+        context['file_name'] = str(self.get_object().backfill_pdf).split('/')[-1]
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
         else:
@@ -322,6 +344,8 @@ class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailVie
     
     def test_func(self):
         return self.request.user.is_active
+    
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
