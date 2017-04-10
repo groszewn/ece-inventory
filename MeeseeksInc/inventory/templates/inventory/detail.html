@@ -48,7 +48,7 @@ $(function() {
 				{% endif %}
 			{% endfor %}
 			</td>
-		{% endfor %}
+			{% endfor %}
 		<td>
 			{% for oneTag in tag_list %}
 				 {% if not forloop.last %}
@@ -175,6 +175,9 @@ function clickEvent(){
 		        <thead>
 		            <tr>
 		            <th>Asset Tag</th>
+		            {% for field in asset_custom_fields%}
+					<th>{{field.field_name}}</th>
+					{% endfor %}
 					<th>Actions</th>
 				</tr>
 		        </thead>
@@ -182,6 +185,15 @@ function clickEvent(){
 		        	{% for asset in asset_list %}
 		        		<tr>
 							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							{% for field in asset_custom_fields%}
+							<td default = "">
+							{% for value in asset_custom_vals%}
+							{% if value.asset == asset and value.field == field %}
+								{{value.value}}
+							{% endif %}
+							{% endfor %}
+							</td>
+							{% endfor %}
 							<td>hi</td>
 						</tr>
 					{% endfor %}
