@@ -20,12 +20,11 @@
     </select>
     <input type="submit"/>
 </form>
+
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
-    {% if user.is_staff %}
 	<th></th>
-	{% endif %}
 	<th>Item Name</th>
 	<th>Quantity</th>
 	<th>Item Model Number</th>
@@ -108,7 +107,7 @@
 	        <tbody>
 	        	{% for request in approved_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request. }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
@@ -1160,9 +1159,7 @@
     		}
     	}
     	columns = [
-    			{% if user.is_staff %}
 				{"defaultContent": ""},
-				{% endif %}
     			{ data: "item_name" },
     	        { data: "quantity" },
     	        { data: "model_number" },
@@ -1194,7 +1191,7 @@
     		      $('#item_name').val(''); // remove the value from the input
     	        	var numCustomFields = {{ custom_fields|length }}
     	         	for(i in json) {
-    	         		
+    	         		//json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
     	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
     	         			json[i][djangoCustomFieldNameList[p]] = "";
     	         		}
@@ -1218,7 +1215,6 @@
     		    }
     		  },
     		columns: columns,
-    		{% if user.is_staff %}
     		 	columnDefs: [ {
             		orderable: false,
             		className: 'select-checkbox',
@@ -1241,10 +1237,18 @@
     		        { extend: "remove", editor: editor }
     		    ]
     		    {% endif %}
-    	    {% endif %}
     	});
     };
-    function getIndexOfFieldName(list, name) {
+    $('#inventory-search').on( 'click', 'tbody td', function () {
+    	//table.cell( this ).edit( 'bubble' );
+    	//console.log('this:', table.cell(this));
+    	//console.log('index:', table.cell(this).index().column);
+    	if (table.cell(this).index().column == 1) {
+    		window.location = "/item" + "/" + table.cell(this).row().data().item_id;
+    	}
+    });
+    
+    function getIndexOfFieldName(list, name) {tr
     	var index = -1;
     	for(i in list) {
     		if(list[i].field_name == name) {
@@ -1264,7 +1268,6 @@
             }
             return isCompatible;
         }
-        
     	var csrftoken = $.cookie('csrftoken');
     	
         // Method that reads and processes the selected file
