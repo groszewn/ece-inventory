@@ -108,6 +108,7 @@ class APIItemList(ListCreateAPIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
+#         print('post of api item list')
         context = {
             "request": self.request,
         }
@@ -182,6 +183,7 @@ class APIItemDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
+        print('item detail put')
         item = self.get_object(pk)
         starting_quantity = item.quantity
         context = {
@@ -470,6 +472,7 @@ class APIApproveRequest(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
             if (item.threshold_enabled and item.threshold_quantity > item.quantity):
                 #send email
@@ -477,13 +480,13 @@ class APIApproveRequest(APIView):
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
-                subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username=recipient).email]
+                subject = prepend + 'Below Minimum Stock'
+                to = [User.objects.get(username = 'owenchung').email]
                 from_email='noreply@duke.edu'
                 ctx = {
-                    'user':recipient,
+                    'user':'Owen Chung',
                     'item':item.item_name,
-                    'quantity':item.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                    'quantity':item.quantity, 
                 }
                 message=render_to_string('inventory/belowthreshold_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
@@ -674,6 +677,7 @@ class APIDirectDisbursement(APIView):
                 # decrement quantity in item
                 item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
+                item_to_disburse = self.get_object(pk)
                 # check if stock less than minimum stock 
                 if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
                     #send email
@@ -681,11 +685,11 @@ class APIDirectDisbursement(APIView):
                         prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                     except (ObjectDoesNotExist, IndexError) as e:
                         prepend = ''
-                    subject = prepend + 'Direct Dispersal'
-                    to = [User.objects.get(username = recipient).email]
+                    subject = prepend + 'Below Minimum Stock'
+                    to = [User.objects.get(username = 'owenchung').email]
                     from_email='noreply@duke.edu'
                     ctx = {
-                        'user':recipient,
+                        'user':'Owen Chung',
                         'item':item_to_disburse.item_name,
                         'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
                     }
@@ -707,7 +711,7 @@ class APIDirectDisbursement(APIView):
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
                 subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username=recipient).email]
+                to = [User.objects.get(username = 'recipient').email]
                 from_email='noreply@duke.edu'
                 ctx = {
                     'user':recipient,
