@@ -15,7 +15,8 @@ from django.core.mail import EmailMessage
 from django.db.models import F
 from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect,\
+    render_to_response
 from django.template.defaulttags import comment
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -29,7 +30,7 @@ from rest_framework.authtoken.models import Token
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
     BaseAssetCheckInFormset
 from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -350,11 +351,6 @@ def make_asset_request_form(item):
             model = Asset
             exclude = ('item','loan','disbursement')
     return AssetsRequestForm
-
-
-def obj_dict(obj):
-    return obj.__dict__
-
     
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -528,26 +524,38 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     form_class = CustomFieldForm
     success_url = '/customadmin/'
     template_name = 'custom_admin/create_custom_field.html'
+    
     def form_valid(self, form):
         field_name = form['field_name'].value()
         field_type = form['field_type'].value()
         is_private = form['is_private'].value()
+        field_for = form['type'].value()
+        if field_for == "Asset Field" and Asset_Custom_Field.objects.filter(field_name=field_name).exists():
+            messages.error(self.request,"This custom asset field name is already taken.")
+            return redirect(self.request.META.get('HTTP_REFERER'))
+        if field_for == "Item Field" and Custom_Field.objects.filter(field_name=field_name).exists():
+            messages.error(self.request,"This custom item field name is already taken.")
+            return redirect(self.request.META.get('HTTP_REFERER'))
         user = self.request.user
         token, create = Token.objects.get_or_create(user=user)
         http_host = get_host(self.request)
         url=http_host+'/api/custom/field/'
+        if field_for == "Asset Field":
+            url=http_host+'/api/asset/custom/field/'
         payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
         header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
         requests.post(url, headers = header, data=json.dumps(payload))
         return super(CustomFieldView, self).form_valid(form)
+    
     def test_func(self):
         return self.request.user.is_superuser
     
     def delete_custom_field(request):
         fields = Custom_Field.objects.all()
+        asset_fields = Asset_Custom_Field.objects.all()
         if request.method == 'POST':
-            form = DeleteFieldForm(fields,request.POST)
+            form = DeleteFieldForm(fields,asset_fields,request.POST)
             if form.is_valid():
                 pickedFields = form.cleaned_data.get('fields')
                 if pickedFields:
@@ -560,9 +568,20 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                         header = {'Authorization': 'Token '+ str(token), 
                               "Accept": "application/json", "Content-type":"application/json"}
                         requests.delete(url, headers = header)
+                pickedAssetFields = form.cleaned_data.get('asset_fields')
+                if pickedAssetFields:
+                    for a_field in pickedAssetFields:
+                        delField = Asset_Custom_Field.objects.get(field_name=a_field)
+                        user = request.user
+                        token, create = Token.objects.get_or_create(user=user)
+                        http_host = get_host(request)
+                        url=http_host+'/api/asset/custom/field/modify/'+ str(delField.id)+ '/'
+                        header = {'Authorization': 'Token '+ str(token), 
+                              "Accept": "application/json", "Content-type":"application/json"}
+                        requests.delete(url, headers = header)  
                 return redirect(reverse('custom_admin:index'))
         else:
-            form = DeleteFieldForm(fields)
+            form = DeleteFieldForm(fields,asset_fields)
         return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
 
 class RegistrationView(LoginRequiredMixin, UserPassesTestMixin, FormView):
@@ -668,9 +687,6 @@ def toggleAsset(request, pk):
         
     
     return redirect(reverse('custom_admin:index'))
-
-
- 
 
 class TagView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'

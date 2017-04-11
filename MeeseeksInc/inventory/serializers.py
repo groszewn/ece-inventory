@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset, Asset_Custom_Field
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -115,6 +115,11 @@ class ItemSerializer(serializers.ModelSerializer):
 class CustomFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Custom_Field
+        fields = ('id','field_name','is_private','field_type')
+        
+class AssetCustomFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset_Custom_Field
         fields = ('id','field_name','is_private','field_type')
         
 class CustomValueSerializer(serializers.ModelSerializer):

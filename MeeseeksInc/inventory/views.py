@@ -24,7 +24,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, 
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 
@@ -99,17 +99,20 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
         user = User.objects.get(username=self.request.user.username)
         if(not user.is_staff): # if not admin or manager
             context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id)
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
             context['custom_fields'] = Custom_Field.objects.all()
+            context['asset_custom_fields'] = Asset_Custom_Field.objects.all()
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
             context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
             context['disbursed_list'] = Disbursement.objects.filter(item_name=self.get_object().item_id)
             context['my_template'] = 'custom_admin/base.html'  
         context['custom_vals'] = Custom_Field_Value.objects.all()
+        context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.all()
         context['log_list'] = Log.objects.filter(item_id=self.get_object().item_id)
         context['current_user'] = self.request.user.username
         context['asset_list'] = Asset.objects.filter(item=self.get_object())
