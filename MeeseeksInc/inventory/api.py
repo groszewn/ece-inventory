@@ -1498,7 +1498,6 @@ class APICompleteBackfill(APIView):
         
     def put(self, request, pk, format=None):
         loan = self.get_object(pk)
-        item = Item.objects.get(item_id=loan.item_name)
         if not loan.backfill_status=='In Transit':
             return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
