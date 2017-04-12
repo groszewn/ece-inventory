@@ -29,14 +29,10 @@
 	<th>Quantity</th>
 	<th>Item Model Number</th>
 	<th>Item Description</th>
-<<<<<<< HEAD
-	<th>Minimum Stock Amount</th>
-=======
 	{% if user.is_staff %}
 	<th>Item Minimum Stock Info</th>
 	<th>Item Minimum Stock Enabled</th>
 	{% endif %}
->>>>>>> 097ad53fa0254cc138b23386b4ef2da3cbbb966e
 	{% for field in custom_fields%}
 		<th>{{field.field_name}}</th>
 	{% endfor %}
