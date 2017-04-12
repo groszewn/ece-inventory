@@ -64,14 +64,18 @@
 {% block checkIn-with-assets %}
 	<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	
 {% endblock checkIn-with-assets %}
+{% block convert-with-assets %}
+	<a id = "convert-assets" loan-id="{{ loan.loan_id }}" class="convert-assets btn btn-info">Convert Loan</a>	
+{% endblock convert-with-assets %}
 {% else %}
 	{% block checkIn %}
 		<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 	{% endblock checkIn %}
-{% endif %}  
-{% block convert %}
+	{% block convert %}
 	<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
-{% endblock convert %}
+	{% endblock convert %}
+{% endif %}  
+
 {% block  editLoan %}
 	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
 {% endblock editLoan %}
@@ -254,6 +258,37 @@
     });
 </script> 
 {% endblock js-convert %}
+
+{############################# CONVERT LOAN WITH ASSETS MODAL LOGIC ##############################}
+<div id="form-modal-convert-with-assets" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Convert Loan</h4>
+            </div>
+            <div id="form-modal-body-convert-with-assets" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-convert-assets %}
+<script>
+    $('.convert-assets').click(function() {
+    	loan_id = $(this).attr("loan-id"); 
+        $('#form-modal-body-convert-with-assets').load(('../../../customadmin/convert_with_assets/loan/'+loan_id), function () {
+            $('#form-modal-convert-with-assets').modal('toggle');
+        });
+    });
+</script> 
+{% endblock js-convert-assets %}
 
 {############################# BACKFILL REQUEST MODAL LOGIC ##############################}
 <div id="form-modal-backfillRequest" class="modal fade">
