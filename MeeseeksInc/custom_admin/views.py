@@ -1208,6 +1208,13 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(name__istartswith=self.q)
 
         return qs  
+#     
+# class TagAutocomplete(autocomplete.Select2QuerySetView):
+#     def get_queryset(self):
+#         qs = Tag.objects.all()
+#         if self.q:
+#             qs = qs.filter(name__istartswith-self.q)
+#         return qs
 ################################################################
 
 @login_required(login_url='/login/')    

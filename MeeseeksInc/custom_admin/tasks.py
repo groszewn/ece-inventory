@@ -7,6 +7,7 @@ from datetime import datetime
 from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import render_to_string, get_template
+from django.core.exceptions import ObjectDoesNotExist
 #from inventory.models import Loan
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'MeeseeksInc.settings')

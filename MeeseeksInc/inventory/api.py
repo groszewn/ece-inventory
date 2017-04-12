@@ -486,7 +486,7 @@ class APIApproveRequest(APIView):
                 to = [User.objects.get(username = 'owenchung').email]
                 from_email='noreply@duke.edu'
                 ctx = {
-                    'user':'Owen Chung',
+                    'user':'user',
                     'item':item.item_name,
                     'quantity':item.quantity, 
                 }
@@ -1704,7 +1704,7 @@ class APILoanEmailClearDates(APIView):
     def delete(self, request, format=None):
         celery_app.control.purge()
         LoanSendDates.objects.all().delete()
-        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 # ########################################## Backfill Requests ###########################################   
 # class APIBackfillRequest(ListCreateAPIView):

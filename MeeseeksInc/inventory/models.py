@@ -15,7 +15,7 @@ class Item(models.Model):
     model_number = models.CharField(max_length=200, null=True)
     description = models.CharField(max_length=1000, null=True)
     tags = models.ManyToManyField(Tag, related_name='items', blank=True)
-    threshold_quantity = models.IntegerField(default = 0)
+    threshold_quantity = models.IntegerField(null=True, default = 0)
     threshold_enabled = models.BooleanField(default = False)
     is_asset = models.BooleanField(default=False)
     def __str__(self):
