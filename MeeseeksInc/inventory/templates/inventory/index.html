@@ -18,8 +18,8 @@
         <option value={{ tag.id }}>{{ tag.tag }}</option>
         {% endfor %}
     </select>
-    <input type="submit" name = "filter_tag" class="btn btn-submit">
-    <button type="button" id = "filter_minstock" class="btn btn-submit">Show Below Minimum Stock</button>
+    <input type="submit" name = "filter_tag" class="btn btn-primary">
+    <button type="button" id = "filter_minstock" class="btn btn-primary">Show Below Minimum Stock</button>
 </form>
 
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -1255,6 +1255,7 @@
     //    this.error(JSON.parse(xhr.responseText).error);
     //    return true;
     //});
+    
     get_search_data(true); // initialize item data
     $('#search-form').on('submit', function(event){
         event.preventDefault();
@@ -1262,12 +1263,10 @@
         get_search_data(false);
     });
     
-    $('#filter_minstock').on('click', function(event){
-    	event.preventDefault();
-     	console.log("button click!");  // sanity check
-     	get_search_data(false);
-    });
     function get_search_data(first) {
+    	button_click = false;
+    	var table = $('#inventory-search').DataTable();
+    	table.draw();
     	var data = '';
     	var included_tags = $('#included-tags').select2('val');
     	var excluded_tags = $('#excluded-tags').select2('val');
@@ -1362,6 +1361,18 @@
     		    {% endif %}
     	});
     };
+    $.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        var threshold_enabled = data[6];
+ 		var threshold_quantity = parseInt(data[5]);
+ 		var quantity = parseInt(data[2]);
+        if ( threshold_enabled  && (threshold_quantity < quantity) && button_click)
+        {
+            return false;
+        }
+        return true;
+    }
+	);
     $('#inventory-search').on( 'click', 'tbody td', function () {
     	//table.cell( this ).edit( 'bubble' );
     	//console.log('this:', table.cell(this));
@@ -1381,6 +1392,12 @@
     	return index;
     }
     $(document).ready(function(){
+    	var table = $('#inventory-search').DataTable();
+    	// Event listener
+    	$('#filter_minstock').on('click', function(event){
+     		console.log("button click!");  // sanity check
+     		table.draw();
+    	});
     	 // The event listener for the file upload
         document.getElementById('txtFileUpload').addEventListener('change', upload, false);
         // Method that checks that the browser supports the HTML5 File API
@@ -1467,6 +1484,14 @@
            processData: false
         });
         return false;
+    });
+    var table = $('#inventory-search').DataTable();
+    var button_click = false;
+    // Event listener
+    $('#filter_minstock').on('click', function(event){
+     	console.log("button click!");  // sanity check
+     	button_click = true;
+     	table.draw();
     });
     	
     	
