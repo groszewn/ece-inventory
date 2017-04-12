@@ -18,7 +18,8 @@
         <option value={{ tag.id }}>{{ tag.tag }}</option>
         {% endfor %}
     </select>
-    <input type="submit"/>
+    <input type="submit" name = "filter_tag" class="btn btn-submit">
+    <button type="button" id = "filter_minstock" class="btn btn-submit">Show Below Minimum Stock</button>
 </form>
 
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -1141,16 +1142,22 @@
     get_search_data(true); // initialize item data
     $('#search-form').on('submit', function(event){
         event.preventDefault();
-        console.log("form submitted!")  // sanity check
+        console.log("form submitted!");  // sanity check
         get_search_data(false);
+    });
+    
+    $('#filter_minstock').on('click', function(event){
+    	event.preventDefault();
+     	console.log("button click!");  // sanity check
+     	get_search_data(false);
     });
     function get_search_data(first) {
     	var data = '';
     	var included_tags = $('#included-tags').select2('val');
-    	var excluded_tags = $('#excluded-tags').select2('val')
+    	var excluded_tags = $('#excluded-tags').select2('val');
     	if(included_tags) {
     		for(i in included_tags) {
-    			data += 'included_tags=' + included_tags[i]+'&';
+    			data += 'included_tags=' + included_tags[i] + '&';
     		}
     	}
     	if(excluded_tags) { 
