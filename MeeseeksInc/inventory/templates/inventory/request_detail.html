@@ -51,9 +51,16 @@
 	
 	{% if user.is_staff %}
 	
-	{% block comment_accept %}
+	{% if request.item_name.is_asset %}
+		{% block comment_accept_with_asset %}
+			<a id = "accept-with-asset" request-id="{{ request.request_id }}" class="accept-with-asset btn btn-success">Approve This Request</a>
+		{% endblock comment_accept_with_asset %}
+	{% else %}
+		{% block comment_accept %}
 			<a id = "accept" request-id="{{ request.request_id }}" class="accept btn btn-success">Approve This Request</a>
-	{% endblock comment_accept %}
+		{% endblock comment_accept %}
+	{% endif %}
+
 	
 	{% block comment_deny %}
 			<a id = "deny" request-id="{{ request.request_id }}" class="deny btn btn-warning">Deny This Request</a>	
@@ -127,6 +134,38 @@
     });
 </script>
 {% endblock js-approve %}
+
+{############################# REQUEST ACCEPT WITH ASSET + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept-with-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment & Asset Choice for Request Accept</h4>
+            </div>
+            <div id="form-modal-body-accept-with-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-approve-with-asset %}
+<script>
+    $('.accept-with-asset').click(function() {
+    	request_id = $(this).attr("request-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept-with-asset').load(('../../customadmin/request/asset_accept/'+request_id), function () {
+        	$('#formID-comment-accept-with-asset').attr("request-comment", request_id);
+            $('#form-modal-accept-with-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve-with-asset %}
 
 {############################# REQUEST EDIT MODAL LOGIC ##############################}
 <div id="form-modal-requestEdit" class="modal fade">
