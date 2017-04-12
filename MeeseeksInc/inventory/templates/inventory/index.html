@@ -20,14 +20,23 @@
     </select>
     <input type="submit"/>
 </form>
+
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
+	<th></th>
 	<th>Item Name</th>
 	<th>Quantity</th>
 	<th>Item Model Number</th>
 	<th>Item Description</th>
+<<<<<<< HEAD
 	<th>Minimum Stock Amount</th>
+=======
+	{% if user.is_staff %}
+	<th>Item Minimum Stock Info</th>
+	<th>Item Minimum Stock Enabled</th>
+	{% endif %}
+>>>>>>> 097ad53fa0254cc138b23386b4ef2da3cbbb966e
 	{% for field in custom_fields%}
 		<th>{{field.field_name}}</th>
 	{% endfor %}
@@ -102,7 +111,7 @@
 	        <tbody>
 	        	{% for request in approved_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request. }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
@@ -1102,6 +1111,7 @@
     var csrftoken = $.cookie('csrftoken');
     $(document).ready(function(){
     	//var inventory_item_table = $('#inventory-item').DataTable();
+    	
         $('#inventory-request-all').dataTable({
             "order": [[ 6, "desc" ]]
         });
@@ -1155,42 +1165,9 @@
     var table;
     editor = new $.fn.dataTable.Editor( {
     		ajax: function ( method, url, d, successCallback, errorCallback ) {
-    			if(d.action === 'create') {
-    				for(id in d.data) {
-    			    	var output = { data: [] };
-    			    	var pushToData = d.data[id];
-    			    	pushToData['values_custom_field'] = [];
-    			    	for(changedColumn in d.data[id]) {
-    			    		{% for fields in custom_fields %}
-    							if("{{fields.field_name}}" == changedColumn) {
-    								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
-    				    		}
-    						{% endfor %}
-    			    	}
-    			    	var data = JSON.stringify(pushToData);
-    			    	$.ajax({
-    			    		beforeSend: function(xhr, settings) {
-    					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-    					    	alert("Are you sure you want to edit this?");
-    					    },
-    						type:"POST",
-    						url: '{% url 'inventory:api_item_list' %}',
-    						contentType: 'application/json',
-    						dataType: 'json',
-    				        data: data,
-    				        success: function(json) {
-    				        	pushToData.id = json.item_id;
-    				        	pushToData['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
-    				        	output.data.push(pushToData);
-    				        	console.log(output);
-    				        	successCallback(output);
-    				        },
-    				        error: function(error) {
-    				        	errorCallback();
-    				        }
-    					});
-    			    }
-    			} else if(d.action==='edit') {
+    			if(d.action === 'set_threshold_quantity') {
+    				
+    			} else if(d.action === 'edit') {
     				for(id in d.data) {
     			    	d.data[id].id = id;
     			    	var pushToData = d.data[id];
@@ -1252,13 +1229,18 @@
     	    },
     	    table: "#inventory-search",
     	    idSrc:  'item_id',
-    	    fields: [ { label: "Item Name", name: "item_name" },
+    	    fields: [ 
+    	    	{ label: "Item Name", name: "item_name" },
     	    	{% if user.is_superuser %}
-    	        	{ label: "Quantity", name: "quantity" },
+    	        { label: "Quantity", name: "quantity" },
     	        {% endif %}
     	        { label: "Model Number", name: "model_number" },
     	        { label: "Description", name: "description" },
-    	        { label: "Minimum Stock", name: "threshold_quantity" }
+    	        {% if user.is_staff %}
+	        	{ label: "Minimum Stock Quantity", name: "threshold_quantity" },
+	        	{ label: "Minimum Stock Enabled", name: "threshold_enabled" },	
+	        	{% endif %}
+	        	
     	        ]
     	} ); 
     	// Disable KeyTable while the main editing form is open
@@ -1296,11 +1278,17 @@
     			data += 'excluded_tags=' + excluded_tags[i] + '&';
     		}
     	}
-    	columns = [{ data: "item_name" },
+    	columns = [
+				{"defaultContent": ""},
+    			{ data: "item_name" },
     	        { data: "quantity" },
     	        { data: "model_number" },
     	        { data: "description" },
-    	        { data: "threshold_quantity" }];
+    	        {% if user.is_staff %}
+	        	{ data: "threshold_quantity" },
+	        	{ data: "threshold_enabled" },
+	        	{% endif %}
+	        	];
     	var djangoCustomFieldNameList = [];
     	{% for field in custom_fields %} 
     		djangoCustomFieldNameList.push("{{ field.field_name }}");
@@ -1312,6 +1300,7 @@
     		}
     		columns.push({ data: "{{ field.field_name }}" });
     	{% endfor %}
+    	
     	table = $('#inventory-search').DataTable({
     		destroy: true,
     		dom: "Bfrtip",
@@ -1322,7 +1311,7 @@
     		      $('#item_name').val(''); // remove the value from the input
     	        	var numCustomFields = {{ custom_fields|length }}
     	         	for(i in json) {
-    	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+    	         		//json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
     	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
     	         			json[i][djangoCustomFieldNameList[p]] = "";
     	         		}
@@ -1346,27 +1335,40 @@
     		    }
     		  },
     		columns: columns,
-    		{% if user.is_staff %}
+    		 	columnDefs: [ {
+            		orderable: false,
+            		className: 'select-checkbox',
+            		targets:   0
+        		} ],
     			keys: {
     		        columns: ':not(:nth-child(1))',
     		        editor:  editor
     		    },
     		    select: {
     		        style:    'os',
-    		        //selector: 'td:first-child',
+    		        selector: 'td:first-child',
     		        blurable: true
     		    },
     		    {% if user.is_superuser %}
     		    buttons: [
     		       // { extend: "create", editor: editor },
+    		       //	{ extend: "set_threshold_quantity",   editor: editor },
     		        { extend: "edit",   editor: editor },
     		        { extend: "remove", editor: editor }
     		    ]
     		    {% endif %}
-    	    {% endif %}
     	});
     };
-    function getIndexOfFieldName(list, name) {
+    $('#inventory-search').on( 'click', 'tbody td', function () {
+    	//table.cell( this ).edit( 'bubble' );
+    	//console.log('this:', table.cell(this));
+    	//console.log('index:', table.cell(this).index().column);
+    	if (table.cell(this).index().column == 1) {
+    		window.location = "/item" + "/" + table.cell(this).row().data().item_id;
+    	}
+    });
+    
+    function getIndexOfFieldName(list, name) {tr
     	var index = -1;
     	for(i in list) {
     		if(list[i].field_name == name) {
@@ -1386,7 +1388,6 @@
             }
             return isCompatible;
         }
-        
     	var csrftoken = $.cookie('csrftoken');
     	
         // Method that reads and processes the selected file
