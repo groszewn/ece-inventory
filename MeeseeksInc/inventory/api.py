@@ -1494,6 +1494,7 @@ class APICompleteBackfill(APIView):
         
     def put(self, request, pk, format=None):
         loan = self.get_object(pk)
+        item = Item.objects.get(item_id=loan.item_name)
         if not loan.backfill_status=='In Transit':
             return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
@@ -1569,7 +1570,59 @@ class APIFailBackfill(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class APICompleteBackfillWithAssets(APIView):
+    """
+    Complete a backfill and disburse the appropriate number of assets
+    """
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = BackfillAcceptDenySerializer
+    
+    def get_object(self, pk):
+        try:
+            return Loan.objects.get(loan_id=pk)
+        except Loan.DoesNotExist:
+            raise Http404
         
+    def put(self, request, pk, format=None):
+        loan = self.get_object(pk)
+        assets = Asset.objects.filter(loan=loan.loan_id)
+        if not loan.backfill_status=='In Transit':
+            return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
+        serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
+        if serializer.is_valid():
+            loan.total_quantity = loan.total_quantity - loan.backfill_quantity
+            if loan.total_quantity == 0:
+                loan.status = "Backfilled"
+            disbursement = Disbursement(admin_name=request.user.username, user_name=loan.user_name, orig_request=loan.orig_request, item_name=loan.item_name, comment="Backfilled Disburse", total_quantity=loan.backfill_quantity, time_disbursed=timezone.localtime(timezone.now()))
+            disbursement.save()
+            for asset in assets[:loan.backfill_quantity]:
+                asset.disbursement = disbursement
+                asset.save()
+                Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=loan.user_name, change_occurred="Disbursed " + str(asset.asset_id) + " due to backfill")
+            serializer.save(backfill_status="Completed", backfill_time_requested=timezone.localtime(timezone.now()))
+            Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Backfilled", 
+                       affected_user=loan.user_name, change_occurred="Backfill completed")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Backfill Completed'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':loan.user_name,
+                'item_name':loan.item_name.item_name,
+                'backfill_quantity':loan.backfill_quantity,
+                'loan_quantity':loan.total_quantity, 
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/backfill_completed_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
+
 ########################################## Subscription ###########################################    
 
 class APISubscriptionDetail(APIView):

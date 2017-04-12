@@ -514,11 +514,17 @@
 								  {{ loan.backfill_time_requested }}</td>
                     {% if user.is_staff %}
                     <td>
-                    	{% block comment_complete_backfill %}
-                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
-                        {% endblock comment_complete_backfill %}
+                    	{% if loan.item_name.is_asset %}
+	                    	{% block comment_complete_backfill_asset %}
+	                        	<a id = "complete-backfill-asset" loan-id="{{ loan.loan_id }}" class="complete-backfill-asset btn btn-success">Approve</a>
+	                        {% endblock comment_complete_backfill_asset %}
+	                    {% else %}
+	                    	{% block comment_complete_backfill %}
+	                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
+	                        {% endblock comment_complete_backfill %}
+	                    {% endif %}
                         {% block comment_fail_backfill %}
-                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Deny</a>
+                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Fail</a>
                         {% endblock comment_fail_backfill %}
                     </td>
                     {% endif %}
@@ -996,6 +1002,38 @@
     });
 </script>
 {% endblock js-complete-backfill %}
+
+{############################# BACKFILL COMPLETE WITH ASSET + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill-asset %}
+<script>
+    $('.complete-backfill-asset').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill-asset').load(('backfill/complete/addcomment/asset/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill-asset').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill-asset %}
 
 
 {############################# BACKFILL FAIL + COMMENT MODAL LOGIC ##############################}

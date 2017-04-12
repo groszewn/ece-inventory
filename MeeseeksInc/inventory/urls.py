@@ -67,6 +67,7 @@ urlpatterns = [
     url(r'^api/loan/backfill/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyBackfill.as_view(), name='backfill_deny'),
     url(r'^api/loan/backfill/complete/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICompleteBackfill.as_view(), name='backfill_complete'),
     url(r'^api/loan/backfill/fail/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIFailBackfill.as_view(), name='backfill_fail'),
+    url(r'^api/loan/backfill/complete/asset/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICompleteBackfillWithAssets.as_view(), name='backfill_complete_asset'),
     url(r'^api/to_asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
 ]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
