@@ -12,7 +12,6 @@ from django.forms.formsets import BaseFormSet
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
     Asset, Asset_Custom_Field
 
-
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.all())
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
@@ -94,6 +93,28 @@ class BaseAssetsRequestFormSet(BaseFormSet):
                         code='duplicate_assets'
                     )
 
+class AssetEditForm(forms.Form):
+    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+        super(AssetEditForm, self).__init__(*args, **kwargs)
+        for field in custom_fields:
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False,widget=forms.Textarea) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = forms.IntegerField(required=False) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = forms.FloatField(required=False)
+            for val in custom_values:
+                if val.field == field:
+                    if field.field_type == 'Short':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,required=False)                    
+                    if field.field_type == 'Long':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                    if field.field_type == 'Int':
+                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
+                    if field.field_type == 'Float':
+                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
                       
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):

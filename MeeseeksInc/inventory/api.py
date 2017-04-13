@@ -34,10 +34,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer
+    AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -1605,7 +1605,68 @@ class APIAssetToItem(APIView):
         # NOT DONE YET!!!
         item = Item.objects.get(item_id=pk)
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
-        return Response(serializer.data)   
+        return Response(serializer.data)
+    
+class APIAsset(APIView): #log and email
+    permission_classes = (IsAdmin,)
+    serializer_class = AssetWithCustomFieldSerializer
+        
+    def get(self, request, pk, format=None):
+        if (Asset.objects.filter(asset_id=pk).exists()):
+            asset = Asset.objects.get(asset_id=pk)
+            custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+            serializer = AssetWithCustomFieldSerializer(custom_values)
+            return Response(serializer.data)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,pk,format=None):
+        if (Asset.objects.filter(asset_id=pk).exists()):
+            asset = Asset.objects.get(asset_id=pk)
+            item = asset.item
+            asset.delete()
+            item.quantity = item.quantity - 1
+            item.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def put(self, request, pk, format=None):
+        asset = Asset.objects.get(asset_id=pk)
+        custom_fields = Asset_Custom_Field.objects.all()
+        custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+        serializer = AssetWithCustomFieldSerializer(custom_values,data=request.data, partial=True)
+        if serializer.is_valid():
+            data = serializer.data
+            fields = Asset_Custom_Field.objects.all()
+            for field in fields:
+                if field.field_name in data:
+                    value = data[field.field_name]  
+                    if value is not None:
+                        if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
+                            custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
+                        else:
+                            custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
+                        if field.field_type == 'Short' and len(value)<=400 or \
+                            field.field_type == 'Long' and len(value)<=1000:
+                            custom_val.value = value
+                        if field.field_type == 'Int':
+                            try:
+                                int(value)
+                                custom_val.value = value
+                            except ValueError:
+                                return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
+                        if field.field_type == 'Float':
+                            try:
+                                float(value)
+                                custom_val.value = value
+                            except ValueError:
+                                return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
+                        custom_val.save()          
+            return self.get(request, pk)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+       
 ########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """

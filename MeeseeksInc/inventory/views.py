@@ -341,8 +341,11 @@ class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailVie
         context['asset'] = self.get_object()
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
+            context['asset_custom_fields'] = Asset_Custom_Field.objects.all()
         else:
             context['my_template'] = 'inventory/base.html'
+            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(is_private=False)
+        context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.filter(asset=self.get_object())
         return context
     
     def test_func(self):

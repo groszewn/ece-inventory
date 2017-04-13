@@ -6,22 +6,33 @@
 {% block content %}
 
 <center> <h1>  Asset: {{ asset.item }} </h1> </center> 
-{#<center> <h3>  Quantity Remaining of Item: {{ loan.item_name.quantity }} </h3> </center> #}
 
+<h3><b>Model Number:</b> {{ asset.item.model_number }}</h3>
+<h3><b>Description:</b> {{ asset.item.description }}</h3>
+<br>
 <table id="asset-detail-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
     <th>Asset Tag</th>
-    <th>Model Number</th>
-    <th>Description</th>
-{#	TODO: add custom fields here#}
+    {% for field in asset_custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
 	</tr>
 </thead>
 <tbody>
 		<tr>
 			<td>{{ asset.asset_id }}</td>
-			<td>{{ asset.item.model_number }}</td>
-			<td>{{ asset.item.description }}</td>
+			
+				{% for field in asset_custom_fields%}
+					<td default = "">
+						{% for value in asset_custom_vals%}
+							{% if value.asset == asset and value.field == field %}
+								{{value.value}}
+							{% endif %}
+						{% endfor %}
+					</td>
+				{% endfor %}
+				
 		</tr>
 </tbody>
 </table>

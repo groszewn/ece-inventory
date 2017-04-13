@@ -218,8 +218,6 @@
 	    </table>
         </div>
 	</div>
-	{% else %}
-		<p class="lead" style="padding: 15px 15px">No Requests To Display.</p>
 	{% endif %}
 
 {% if user.is_staff %}
@@ -389,8 +387,6 @@
 		    </table>
 		    </div>
 	</div>
-	{% else %}
-		<p class="lead" style="padding: 15px 15px">No Loans To Display.</p
 	{% endif %}
 
 {########################## DISBURSEMENTS #####################}
@@ -425,8 +421,6 @@
         {% endfor %}
     </tbody>
 </table>
-{#% else %#}
-{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
 {% endif %}
 {########################## ALL BACKFILLS #####################}
 {% if backfill_list %}
@@ -606,8 +600,6 @@
         </table>
     </div>
 </div>
-{% else %}
-<p class="lead" style="padding: 15px 15px">No outstanding Backfills.</p>
 {% endif %}
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">

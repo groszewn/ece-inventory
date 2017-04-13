@@ -27,9 +27,9 @@ from django.views.generic.edit import FormView
 import requests, json
 from rest_framework.authtoken.models import Token
 
-from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet
+from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet, AssetEditForm
 from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -142,7 +142,45 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         return render(request, 'inventory/log_item.html', {'form': form})
     def test_func(self):
         return self.request.user.is_staff
+
+
+class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
+    login_url='/login/'
+    permission_required = 'is_staff'
     
+    def edit_asset(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        asset_custom_fields = Asset_Custom_Field.objects.all()
+        asset_custom_vals = Asset_Custom_Field_Value.objects.filter(asset=asset)
+        if request.method == "POST":
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, request.POST)
+            if form.is_valid():
+                url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
+                payload = {}
+                for field in asset_custom_fields:
+                    if form[field.field_name].value():
+                        payload[field.field_name] = form[field.field_name].value() 
+                header = get_header(request)
+                response = requests.put(url, headers = header, data=json.dumps(payload))
+                if response.status_code == 200:
+                    messages.success(request, ('Successfully edit asset (' + asset.asset_id + ')'))
+                else:
+                    messages.error(request, ('Failed to edit asset (' + asset.asset_id + ')'))
+                return redirect(request.META.get('HTTP_REFERER')) 
+        else:
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals) 
+        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_id':asset.asset_id, 'item_name':asset.item.item_name})
+            
+    def delete_asset(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
+        header = get_header(request)
+        response = requests.delete(url, headers = header)
+        if response.status_code == 204:
+            messages.success(request, ('Successfully deleted asset: ' + pk ))
+        else:
+            messages.error(request, ('Failed to delete asset: ' + pk ))
+        return redirect(request.META.get('HTTP_REFERER'))        
     
 class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
@@ -385,6 +423,7 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
             requests.put(url, headers = header, data = json.dumps(payload))
         messages.success(request, ('Denied all pending requests.'))
         return redirect(reverse('custom_admin:index'))
+    
     def approve_request(request, pk):
         indiv_request = Request.objects.get(request_id=pk)
         item = Item.objects.get(item_id=indiv_request.item_name_id)
