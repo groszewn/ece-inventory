@@ -1030,6 +1030,28 @@ def add_comment_to_backfill_complete(request, pk):
         form = AddCommentBackfillForm() # blank request form with no data yet
     return render(request, 'custom_admin/backfill_complete_comment.html', {'form': form, 'pk':pk})
 
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_asset_complete(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/complete/asset/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_complete_comment_asset.html', {'form': form, 'pk':pk})
+
+
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
 def add_comment_to_backfill_fail(request, pk):
@@ -1225,6 +1247,13 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(name__istartswith=self.q)
 
         return qs  
+#     
+# class TagAutocomplete(autocomplete.Select2QuerySetView):
+#     def get_queryset(self):
+#         qs = Tag.objects.all()
+#         if self.q:
+#             qs = qs.filter(name__istartswith-self.q)
+#         return qs
 ################################################################
 
 @login_required(login_url='/login/')    

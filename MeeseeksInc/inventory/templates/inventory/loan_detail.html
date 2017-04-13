@@ -81,9 +81,13 @@
 {% endblock editLoan %}
 {% endif %}
 {% if user.get_username == loan.user_name %}
-{% block backfillRequest %}
-	<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
-{% endblock backfillRequest %}
+	{% if loan.backfill_status != 'Completed'%}
+		{% if loan.backfill_status != 'In Transit'%}
+			{% block backfillRequest %}
+				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
+			{% endblock backfillRequest %}
+		{% endif %}
+	{% endif %}
 {% endif %}
 
 <h3> Original Request Information </h3>

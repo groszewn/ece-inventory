@@ -209,9 +209,11 @@ class ItemEditForm(forms.ModelForm):
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
+    threshold_quantity = forms.IntegerField(required=False, min_value = 0)
+    threshold_enabled = forms.BooleanField(required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description')
+        fields = ('item_name', 'quantity', 'model_number', 'description', 'threshold_quantity', 'threshold_enabled')
         
 class UserPermissionEditForm(forms.ModelForm):
     email = forms.EmailField(label='Email', required = True)
@@ -276,9 +278,11 @@ class CreateItemForm(forms.ModelForm):
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
+    threshold_quantity = forms.IntegerField(required = False, min_value = 0)
+    threshold_enabled = forms.BooleanField(required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags',)
+        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
 
 class CustomFieldForm(forms.Form):  
     field_name = forms.CharField(required=True)
