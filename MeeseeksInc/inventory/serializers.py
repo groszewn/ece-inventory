@@ -297,6 +297,11 @@ class LoanUpdateSerializer(serializers.ModelSerializer):
 class LoanCheckInSerializer(serializers.Serializer):
     check_in = serializers.IntegerField(required=True)
     
+class LoanCheckInWithAssetSerializer(serializers.Serializer):
+    class Meta:
+        model = Asset
+        fields = ('asset_id')
+    
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
         

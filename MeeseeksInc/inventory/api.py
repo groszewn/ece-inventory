@@ -10,10 +10,10 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.expressions import F
 from django.db.models.query_utils import Q
 from django.http.response import Http404, HttpResponse
+from django.shortcuts import render, redirect, render_to_response
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.generic.base import View
-from django.shortcuts import render, redirect, render_to_response
 import django_filters
 from django_filters.filters import ModelChoiceFilter
 from django_filters.rest_framework.filterset import FilterSet
@@ -22,9 +22,9 @@ import rest_framework
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from custom_admin.tasks import loan_reminder_email as task_email
 
 from MeeseeksInc.celery import app as celery_app
+from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset
 from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
@@ -34,10 +34,11 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer
+    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
+
 
 def get_host(request):
     return 'http://' + request.META.get('HTTP_HOST')
@@ -1212,7 +1213,49 @@ class APILoanCheckIn(APIView): #CHECK IN LOAN
                     loan.save()
                 return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = LoanCheckInWithAssetSerializer
     
+    def post(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id=pk)
+        checked_in_assets = [x for x in request.data['asset_ids'] if x]
+        original_quantity = loan.total_quantity
+        if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
+            loan.total_quantity = loan.total_quantity - len(checked_in_assets)
+            item = loan.item_name
+            item.quantity = item.quantity + len(checked_in_assets)
+            item.save()
+            loan.save()
+            for asset_id in checked_in_assets:
+                asset = Asset.objects.get(asset_id=asset_id)
+                asset.loan = None
+                asset.save()
+            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan checkin'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            checked_in = [(loan.item_name, len(checked_in_assets), original_quantity)]
+            ctx = {
+                'user':request.user,
+                'checked_in':checked_in,
+            }
+            message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+
+            if loan.total_quantity == 0:
+                loan.status = 'Checked In'
+                loan.save()
+            return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+
 class APILoanConvert(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanConvertSerializer  
@@ -1230,6 +1273,7 @@ class APILoanConvert(APIView): #CONVERT LOAN
         comment = loan.comment
         time_disbursed = timezone.localtime(timezone.now())
         serializer = LoanConvertSerializer(data=request.data) 
+        print(request.data)
         if serializer.is_valid():
             quantity_disbursed = int(request.data['number_to_convert'])
             if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
@@ -1260,8 +1304,57 @@ class APILoanConvert(APIView): #CONVERT LOAN
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()
            
                 return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        else:
+            print(serializer.errors)
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
+class APILoanConvertWithAssets(APIView): #CONVERT LOAN
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = LoanConvertSerializer  
+    
+    def post(self, request, pk, format=None): 
+        loan = Loan.objects.get(loan_id=pk)
+        admin_name = request.user.username
+        user_name = loan.user_name
+        item = loan.item_name
+        comment = loan.comment
+        time_disbursed = timezone.localtime(timezone.now())
+        converted_assets = [x for x in request.data['asset_ids'] if x]
+        quantity_disbursed = len(converted_assets)
+        if quantity_disbursed <= loan.total_quantity and quantity_disbursed > 0:
+            original_quantity = loan.total_quantity
+            loan.total_quantity = loan.total_quantity - quantity_disbursed
+            loan.save()
+            disbursement = Disbursement(admin_name=admin_name, user_name=user_name, orig_request=loan.orig_request, item_name=item, comment=comment, total_quantity=quantity_disbursed, time_disbursed=time_disbursed)
+            disbursement.save()
+            for asset_id in converted_assets:
+                asset = Asset.objects.get(asset_id=asset_id)
+                asset.loan = None
+                asset.disbursement = disbursement
+                asset.save()
+            Log.objects.create(request_id=disbursement.disburse_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                               nature_of_event="Disburse", affected_user=loan.user_name, change_occurred="Converted loan of " + str(quantity_disbursed) + " items to disburse.")
+            if loan.total_quantity == 0:
+                loan.status = 'Checked In'
+                loan.save()
+
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Loan convert'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            convert=[(loan.item_name, quantity_disbursed, original_quantity)]
+            ctx = {
+                'user':request.user,
+                'convert':convert,
+            }
+            message=render_to_string('inventory/convert_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+       
+            return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     
 class APILoanBackfillPost(ListCreateAPIView):
     '''

@@ -1,0 +1,18 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+<h3>How many {{item_name}}(s) from this loan do you want to permanently disburse?</h3>
+
+Quantity of <b>{{item_name}}</b> loaned: {{num_loaned}}
+<br/>
+
+<div class="row">
+    <form id="formID-convert-with-asset" action="{% url 'custom_admin:convert_loan_with_assets' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+		<table>
+			{{ formset }}
+	    <table>
+		{{ formset.management_form }}
+        <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
+    </form>
+</div>

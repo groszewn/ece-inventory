@@ -48,7 +48,14 @@ class CheckInLoanForm(forms.Form):
     def __init__(self, amount, *args, **kwargs):
         super(CheckInLoanForm, self).__init__(*args, **kwargs)
         self.fields['items_to_check_in'] = forms.IntegerField(label='How many items would you like to check in?',required=True, min_value=1, max_value=amount, initial=amount)
-    
+
+class CheckInLoanAssetForm(forms.Form):
+    asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
+    class Meta:
+        model = Asset
+        exclude = ('item','loan','disbursement')
+        
+   
 class EditLoanForm(forms.ModelForm):
     total_quantity = forms.IntegerField(min_value=1)
     comment = forms.CharField(required=False)
@@ -116,6 +123,31 @@ class AssetEditForm(forms.Form):
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
                       
+class BaseAssetCheckInFormset(BaseFormSet):
+    def clean(self):
+        """
+        Adds validation to check that you choose distinct assets
+        """
+        if any(self.errors):
+            return
+#         for i in range(self.total_form_count()):
+#             if not self.forms[i].has_changed():
+#                 raise forms.ValidationError("All assets must be chosen.")
+        assets = []
+        duplicates = False
+        for form in self.forms:
+            if form.cleaned_data:
+                asset = form.cleaned_data['asset_id']
+                if asset:
+                    if asset in assets:
+                        duplicates = True
+                    assets.append(asset)
+                if duplicates:
+                    raise forms.ValidationError(
+                        'Assets must be distinct',
+                        code='duplicate_assets'
+                    )
+
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)

@@ -27,7 +27,8 @@ from django.views.generic.edit import FormView
 import requests, json
 from rest_framework.authtoken.models import Token
 
-from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet, AssetEditForm
+from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
+    BaseAssetCheckInFormset, AssetEditForm
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
@@ -143,7 +144,6 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def test_func(self):
         return self.request.user.is_staff
 
-
 class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
     permission_required = 'is_staff'
@@ -181,6 +181,18 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
         return redirect(request.META.get('HTTP_REFERER'))        
+
+def make_loan_checkin_asset_form(loan):
+    queryset = Asset.objects.filter(loan=loan)
+    class CheckInLoanAssetForm(forms.Form):
+        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
+        class Meta:
+            model = Asset
+            exclude = ('item','loan','disbursement')
+    return CheckInLoanAssetForm
+
+def obj_dict(obj):
+    return obj.__dict__    
     
 class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
@@ -191,11 +203,11 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         if request.method == "POST":
             form = ConvertLoanForm(loan.total_quantity, request.POST)
             if form.is_valid():
-                url = get_host(request) + '/api/loan/' + loan.loan_id + '/'
-                payload = {'convert':form['items_to_convert'].value()}
+                url = get_host(request) + '/api/loan/convert/' + loan.loan_id + '/'
+                payload = {'number_to_convert':form['items_to_convert'].value()}
                 header = get_header(request)
                 response = requests.post(url, headers = header, data=json.dumps(payload))
-                if response.status_code == 201:
+                if response.status_code == 200:
                     messages.success(request, ('Converted ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
                 else:
                     messages.error(request, ('Failed to convert ' + form['items_to_convert'].value() + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
@@ -205,6 +217,33 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         else:
             form = ConvertLoanForm(loan.total_quantity) 
         return render(request, 'custom_admin/convert_loan_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})    
+    
+    def convert_loan_with_assets(request, pk): #redirect to main if deleted
+        loan = Loan.objects.get(loan_id=pk)
+        ConvertLoanAssetForm = make_loan_checkin_asset_form(loan)
+        ConvertLoanAssetFormset = formset_factory(ConvertLoanAssetForm, extra=loan.total_quantity, formset=BaseAssetCheckInFormset)
+        if request.method == "POST":
+            formset = ConvertLoanAssetFormset(request.POST)
+            if formset.is_valid():
+                token, create = Token.objects.get_or_create(user=request.user)
+                http_host = get_host(request)
+                url=http_host+'/api/loan/convert_with_assets/'+pk+'/'
+                asset_ids = []
+                for form in formset:
+                    asset_ids.append(form['asset_id'].value())
+                payload = {'asset_ids': asset_ids}
+                header = {'Authorization': 'Token '+ str(token), 
+                          "Accept": "application/json", "Content-type":"application/json"}
+                requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
+                messages.success(request, ('Converted ' + str(len([x for x in asset_ids if x])) + ' from loan of ' + loan.item_name.item_name + ' to disbursement. (' + loan.user_name +')'))
+                return redirect(reverse('custom_admin:index'))
+            else:
+                form_errors = formset.non_form_errors()
+                return render(request, 'custom_admin/convert_loan_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name, 'form_errors':form_errors})
+        else:
+            formset = ConvertLoanAssetFormset()
+        return render(request, 'custom_admin/convert_loan_with_asset_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name})
+ 
     def check_in_loan(request, pk):
         loan = Loan.objects.get(loan_id=pk)
         if request.method == "POST":
@@ -217,11 +256,11 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 user = request.user
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
-                url=http_host+'/api/loan/'+pk+'/'
+                url=http_host+'/api/loan/checkin/'+pk+'/'
                 payload = {'check_in':int(items_checked_in), 'total_quantity': loan.total_quantity, 'comment':loan.comment}
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
-                requests.delete(url, headers = header, data = json.dumps(payload))
+                requests.post(url, headers = header, data = json.dumps(payload))
                 messages.success(request, ('Successfully checked in ' + items_checked_in + ' ' + item.item_name + '.'))
                 if loan_orig_quantity - int(form['items_to_check_in'].value()) <= 0:
                     return redirect('/customadmin')
@@ -229,6 +268,32 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         else:
             form = CheckInLoanForm(loan.total_quantity) # blank request form with no data yet
         return render(request, 'custom_admin/loan_check_in_inner.html', {'form': form, 'pk':pk, 'num_loaned' : loan.total_quantity, 'item_name':loan.item_name.item_name})   
+    def check_in_loan_with_assets(request,pk):
+        loan = Loan.objects.get(loan_id=pk)
+        CheckInLoanAssetForm = make_loan_checkin_asset_form(loan)
+        CheckInLoanAssetFormset = formset_factory(CheckInLoanAssetForm, extra=loan.total_quantity, formset=BaseAssetCheckInFormset)
+        if request.method == "POST":
+            formset = CheckInLoanAssetFormset(request.POST)
+            if formset.is_valid():
+                token, create = Token.objects.get_or_create(user=request.user)
+                http_host = get_host(request)
+                url=http_host+'/api/loan/checkin_with_assets/'+pk+'/'
+                asset_ids = []
+                for form in formset:
+                    asset_ids.append(form['asset_id'].value())
+                payload = {'asset_ids': asset_ids}
+                header = {'Authorization': 'Token '+ str(token), 
+                          "Accept": "application/json", "Content-type":"application/json"}
+                requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
+                messages.success(request, ('Successfully checked-in ' + str(len([x for x in asset_ids if x])) + ' ' + loan.item_name.item_name))
+                return redirect(reverse('custom_admin:index'))
+            else:
+                form_errors = formset.non_form_errors()
+                return render(request, 'custom_admin/loan_check_in_assets_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name, 'form_errors':form_errors})
+        else:
+            formset = CheckInLoanAssetFormset()
+        return render(request, 'custom_admin/loan_check_in_assets_inner.html', {'formset': formset, 'pk':pk, 'num_loaned':loan.total_quantity, 'item_name':loan.item_name})
+
     def edit_loan(request, pk):
         loan = Loan.objects.get(loan_id=pk)
         if request.method == "POST":
@@ -324,11 +389,6 @@ def make_asset_request_form(item):
             model = Asset
             exclude = ('item','loan','disbursement')
     return AssetsRequestForm
-
-
-def obj_dict(obj):
-    return obj.__dict__
-
     
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -666,9 +726,6 @@ def toggleAsset(request, pk):
         
     
     return redirect(reverse('custom_admin:index'))
-
-
- 
 
 class TagView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'

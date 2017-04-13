@@ -180,6 +180,7 @@ function clickEvent(){
 		        <thead>
 		            <tr>
 		            <th>Asset Tag</th>
+		            <th>Status</th>
 		            {% for field in asset_custom_fields%}
 					<th>{{field.field_name}}</th>
 					{% endfor %}
@@ -192,6 +193,13 @@ function clickEvent(){
 		        	{% for asset in asset_list %}
 		        		<tr>
 							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							{% if asset.loan %}
+								<td><a href="{% url 'inventory:loan_detail' asset.loan.loan_id %}">Loaned out</a></td>
+							{% elif asset.disbursement %}
+								<td>Disbursed out</td>
+							{% else %}
+								<td></td>
+							{% endif %}
 							{% for field in asset_custom_fields%}
 								<td default = "">
 									{% for value in asset_custom_vals%}
@@ -219,7 +227,7 @@ function clickEvent(){
 	<script>
 	$(document).ready(function(){
 	    $('#inventory-asset').dataTable({
-	        "order": [[ 0, "desc" ]]
+	        "order": [[ 1, "desc" ]]
 	    });
 	});
 	</script>
