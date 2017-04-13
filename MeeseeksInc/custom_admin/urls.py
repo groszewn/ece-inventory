@@ -38,6 +38,8 @@ urlpatterns = [
     url(r'^delete/(?P<pk>[\w\-\ ]+)/$', views.ItemView.delete_item, name='delete_item'),
     url(r'^$', inventory.views.IndexView.as_view(), name='index'),
     
+    url(r'^asset/edit/(?P<pk>[\w\-\ ]+)/$', views.AssetView.edit_asset, name='edit_asset'),
+    url(r'^asset/delete/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset, name='delete_asset'),
     
     url(r'^edit/tags/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags_module, name='tags_module'),
     url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_tag, name='edit_tag'),

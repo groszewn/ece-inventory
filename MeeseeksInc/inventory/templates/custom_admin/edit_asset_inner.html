@@ -1,0 +1,27 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+ {% load template_filters %}
+ 
+<h3>Change the fields to edit this <b>{{item_name}}</b> asset.</h3>
+
+<p>Asset id: {{asset_id}}</p>
+<p>Asset item: <b>{{item_name}}</b> </p>
+
+<div class="row">
+    <form id="formID-specific-asset" request-comment ="" action="{% url 'custom_admin:edit_asset' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{% for field in form %}
+        <div class="fieldWrapper">
+            {{ field.errors }}
+            {% if field.field.widget|klass == 'Textarea' %}
+            	<div>{{ field.label_tag }}</div>
+				<div>{{ field }}</div>
+            {% else %}
+            	{{ field.label_tag }} {{ field }}
+            {% endif %}
+        </div>
+        <br>
+    	{% endfor %}
+        <input id="formSubmit" type="submit" onclick="return confirm('Are you sure you want to apply these changes?')" class="btn btn-submit col-md-offset-2">
+    </form>
+</div> 
