@@ -144,18 +144,6 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def test_func(self):
         return self.request.user.is_staff
 
-def make_loan_checkin_asset_form(loan):
-    queryset = Asset.objects.filter(loan=loan)
-    class CheckInLoanAssetForm(forms.Form):
-        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
-        class Meta:
-            model = Asset
-            exclude = ('item','loan','disbursement')
-    return CheckInLoanAssetForm
-
-def obj_dict(obj):
-    return obj.__dict__    
-
 class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
     permission_required = 'is_staff'
@@ -193,6 +181,18 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
         return redirect(request.META.get('HTTP_REFERER'))        
+
+def make_loan_checkin_asset_form(loan):
+    queryset = Asset.objects.filter(loan=loan)
+    class CheckInLoanAssetForm(forms.Form):
+        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
+        class Meta:
+            model = Asset
+            exclude = ('item','loan','disbursement')
+    return CheckInLoanAssetForm
+
+def obj_dict(obj):
+    return obj.__dict__    
     
 class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     login_url='/login/'
