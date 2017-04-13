@@ -63,8 +63,17 @@ class EditLoanForm(forms.ModelForm):
         model = Loan
         fields = ('total_quantity','comment')
 
-class AddCommentRequestForm(forms.Form):
+class AddCommentRequestForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+#     TYPES = (
+#         ( 'Dispersal','Dispersal'),
+#         ('Loan','Loan'),
+#     )
+#     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+#     
+    class Meta:
+        model = Request
+        fields = ('comment', 'type')
     
 class AddCommentBackfillForm(forms.Form):
     backfill_notes = forms.CharField(label='Notes from admin (optional)', max_length=200, required=False)
@@ -100,6 +109,32 @@ class BaseAssetsRequestFormSet(BaseFormSet):
                         code='duplicate_assets'
                     )
 
+class BaseAssetCheckInFormset(BaseFormSet):
+    def clean(self):
+        """
+        Adds validation to check that you choose distinct assets
+        """
+        if any(self.errors):
+            return
+#         for i in range(self.total_form_count()):
+#             if not self.forms[i].has_changed():
+#                 raise forms.ValidationError("All assets must be chosen.")
+        assets = []
+        duplicates = False
+        for form in self.forms:
+            if form.cleaned_data:
+                asset = form.cleaned_data['asset_id']
+                if asset:
+                    if asset in assets:
+                        duplicates = True
+                    assets.append(asset)
+                if duplicates:
+                    raise forms.ValidationError(
+                        'Assets must be distinct',
+                        code='duplicate_assets'
+                    )
+
+                    
 class AssetEditForm(forms.Form):
     def __init__(self, custom_fields, custom_values, *args, **kwargs):
         super(AssetEditForm, self).__init__(*args, **kwargs)

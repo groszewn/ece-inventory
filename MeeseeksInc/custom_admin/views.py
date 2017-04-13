@@ -398,7 +398,7 @@ def request_accept_with_assets(request, pk):
     AssetsRequestFormset = formset_factory(AssetsRequestForm, extra=indiv_request.request_quantity, formset=BaseAssetsRequestFormSet)
     if request.method == "POST":
         formset = AssetsRequestFormset(request.POST)
-        commentForm = AddCommentRequestForm(request.POST)
+        commentForm = AddCommentRequestForm(request.POST, instance=indiv_request)
         if all([commentForm.is_valid(), formset.is_valid()]):
             comment = commentForm['comment'].value()
             token, create = Token.objects.get_or_create(user=request.user)
@@ -420,7 +420,7 @@ def request_accept_with_assets(request, pk):
             form_errors = formset.non_form_errors()
             return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name, 'form_errors':form_errors})
     else:
-        commentForm = AddCommentRequestForm()
+        commentForm = AddCommentRequestForm(instance=indiv_request)
         formset = AssetsRequestFormset()
     return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
 
@@ -526,13 +526,14 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
     def add_comment_to_request_accept(request, pk):
         indiv_request = Request.objects.get(request_id=pk)
         if request.method == "POST":
-            form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+            form = AddCommentRequestForm(request.POST, instance=indiv_request) # create request-form with the data from the request
             if form.is_valid():
                 indiv_request = Request.objects.get(request_id=pk)
                 item = Item.objects.get(item_name=indiv_request.item_name)
                 if item.quantity >= indiv_request.request_quantity:
                     comment = form['comment'].value()
-                    indiv_request = Request.objects.get(request_id=pk)
+                    indiv_request.type = form['type'].value()
+                    indiv_request.save()
                     item = Item.objects.get(item_name=indiv_request.item_name)
                     user = request.user
                     token, create = Token.objects.get_or_create(user=user)
@@ -552,7 +553,7 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
                 return redirect(reverse('custom_admin:index'))
             return redirect(request.META.get('HTTP_REFERER'))  
         else:
-            form = AddCommentRequestForm() # blank request form with no data yet
+            form = AddCommentRequestForm(instance=indiv_request) # blank request form with no data yet
         return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
     def test_func(self):
         return self.request.user.is_superuser
