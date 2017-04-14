@@ -1695,10 +1695,18 @@ class APIAssetToItem(APIView):
     
     def get(self, request, pk, format=None):
         # what should happen when an item is converted back to non-per-asset
-        # assets should be deleted, 
-        # NOT DONE YET!!!
+        # assets should be deleted, loans/disbursements with assets should be converted back into item w/ number
         item = Item.objects.get(item_id=pk)
-        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        if Asset.objects.filter(item=pk):
+            item.is_asset = False
+            item.save()
+            for asset in Asset.objects.filter(item=pk):
+                asset.delete()
+        context = {
+            "request": self.request,
+            "pk": pk,
+        }
+        serializer = ItemSerializer(item, context=context)
         return Response(serializer.data)   
 ########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
