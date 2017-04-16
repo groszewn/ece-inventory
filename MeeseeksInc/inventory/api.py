@@ -1750,72 +1750,19 @@ class APIAssetToItem(APIView):
     
     def get(self, request, pk, format=None):
         # what should happen when an item is converted back to non-per-asset
-        # assets should be deleted, 
-        # NOT DONE YET!!!
+        # assets should be deleted, loans/disbursements with assets should be converted back into item w/ number
         item = Item.objects.get(item_id=pk)
-        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
-        return Response(serializer.data)
-    
-class APIAsset(APIView): #log and email
-    permission_classes = (IsAdmin,)
-    serializer_class = AssetWithCustomFieldSerializer
-        
-    def get(self, request, pk, format=None):
-        if (Asset.objects.filter(asset_id=pk).exists()):
-            asset = Asset.objects.get(asset_id=pk)
-            custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-            serializer = AssetWithCustomFieldSerializer(custom_values)
-            return Response(serializer.data)
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        
-    def delete(self,request,pk,format=None):
-        if (Asset.objects.filter(asset_id=pk).exists()):
-            asset = Asset.objects.get(asset_id=pk)
-            item = asset.item
-            asset.delete()
-            item.quantity = item.quantity - 1
+        if Asset.objects.filter(item=pk):
+            item.is_asset = False
             item.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        
-    def put(self, request, pk, format=None):
-        asset = Asset.objects.get(asset_id=pk)
-        custom_fields = Asset_Custom_Field.objects.all()
-        custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-        serializer = AssetWithCustomFieldSerializer(custom_values,data=request.data, partial=True)
-        if serializer.is_valid():
-            data = serializer.data
-            fields = Asset_Custom_Field.objects.all()
-            for field in fields:
-                if field.field_name in data:
-                    value = data[field.field_name]  
-                    if value is not None:
-                        if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
-                            custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
-                        else:
-                            custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
-                        if field.field_type == 'Short' and len(value)<=400 or \
-                            field.field_type == 'Long' and len(value)<=1000:
-                            custom_val.value = value
-                        if field.field_type == 'Int':
-                            try:
-                                int(value)
-                                custom_val.value = value
-                            except ValueError:
-                                return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
-                        if field.field_type == 'Float':
-                            try:
-                                float(value)
-                                custom_val.value = value
-                            except ValueError:
-                                return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
-                        custom_val.save()          
-            return self.get(request, pk)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-       
+            for asset in Asset.objects.filter(item=pk):
+                asset.delete()
+        context = {
+            "request": self.request,
+            "pk": pk,
+        }
+        serializer = ItemSerializer(item, context=context)
+        return Response(serializer.data)   
 ########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """
