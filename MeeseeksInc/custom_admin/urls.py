@@ -73,6 +73,7 @@ urlpatterns = [
     url(r'^backfill/complete/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_complete, name='add_comment_to_backfill_complete'),
     url(r'^backfill/complete/addcomment/asset/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_asset_complete, name='add_comment_to_backfill_complete_asset'),
     url(r'^backfill/fail/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_fail, name='add_comment_to_backfill_fail'),
+    url(r'^backfill/add/notes/(?P<pk>[\w\-\ ]+)/$', views.add_notes_to_backfill, name='add_notes_to_backfill'),
 ]
 
 

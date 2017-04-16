@@ -77,7 +77,7 @@
 {% endif %}  
 
 {% block  editLoan %}
-	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-warning">Edit Loan</a>	
 {% endblock editLoan %}
 {% endif %}
 {% if user.get_username == loan.user_name %}
@@ -130,7 +130,6 @@
 		            <tr>
 		            <th>Backfill Status:</th>
 					<th>Backfill Quantity</th>
-					<th>Backfill Notes:</th>
 					<th>Proof Of Purchase:</th>
 					<th>Time Requested:</th>
 					{% if user.is_staff %}
@@ -144,7 +143,6 @@
 		        		<tr>
 		        			<td>{{loan.backfill_status}}</td>
 							<td>{{loan.backfill_quantity}}</td>
-							<td>{{loan.backfill_notes}}</td>
 							<td><a href={{loan.backfill_pdf.url}} target="_blank">{{file_name}}</a></td>
 							<td>{{loan.backfill_time_requested}}</td>
 							{% if user.is_staff %}
@@ -178,6 +176,15 @@
 						</tr>
 		        </tbody>
 		    </table>
+		    
+		    
+	{% if user.is_staff %}
+		{% block backfill_add_notes %}
+	    	<a id = "backfill-add-notes" loan-id="{{ loan.loan_id }}" class="backfill-add-notes btn btn-success">Add Notes</a>
+	    {% endblock backfill_add_notes %}
+		<h3>Notes about this backfill:</h3>
+		<div>{{loan.backfill_notes}}</div>
+	{% endif %}
 {% endif %}
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
@@ -514,6 +521,38 @@
     });
 </script>
 {% endblock js-fail-backfill %}
+
+{############################# BACKFILL NOTES MODAL LOGIC ##############################}
+<div id="form-modal-backfill-add-notes" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Backfill Notes</h4>
+            </div>
+            <div id="form-modal-body-backfill-add-notes" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-backfill-add-notes %}
+<script>
+    $('.backfill-add-notes').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-backfill-add-notes').load(('../../../customadmin/backfill/add/notes/'+loan_id), function () {
+        	$('#formID-comment-backfill-add-notes').attr("loan-comment", loan_id);
+            $('#form-modal-backfill-add-notes').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-backfill-add-notes %}
 
 
 {% endblock %}

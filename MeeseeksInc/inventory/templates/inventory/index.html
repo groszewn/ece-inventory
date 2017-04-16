@@ -3,6 +3,20 @@
 {% load static %}
 {% load index %}
 {% block content %}
+
+<div id="tabbed" class="container">	
+<ul class="nav nav-tabs">
+	  <li><a href="#all-items" data-toggle="tab" data-target="#all-items">Items</a></li>
+	  <li class="active"><a href=#all-requests" data-toggle="tab" data-target="#all-requests">Requests</a></li>
+	  <li><a href="#all-loans" data-toggle="tab" data-target="#all-loans">Loans</a></li>
+	  <li><a href="#all-disbursements" data-toggle="tab" data-target="#all-disbursements">Disbursements</a></li>
+	  <li><a href="#all-backfills" data-toggle="tab" data-target="#all-backfills">Backfill</a></li>
+</ul>
+
+<div class="tab-content "> {# all content #}
+
+
+<div class="tab-pane" id="all-items">
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
 <form id="search-form">
@@ -42,6 +56,11 @@
 <tbody>
 </tbody>
 </table>
+
+</div> {# end item div #}
+
+<div class="tab-pane active" id="all-requests">
+
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
 	<h2>Requests</h2>
@@ -236,6 +255,13 @@
 <a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
 <a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
 {% endif %}
+
+</div> {# end requests div #}
+
+
+
+<div class="tab-pane" id="all-loans">
+
 {########################## LOANS #####################}	
 {% if loan_list %}
 		<h2>Loans</h2>
@@ -410,6 +436,11 @@
 		    </div>
 	</div>
 	{% endif %}
+	
+</div> {# end loans div #}
+
+
+<div class="tab-pane" id="all-disbursements">
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -444,6 +475,12 @@
     </tbody>
 </table>
 {% endif %}
+
+
+</div> {# end disbursements div #}
+
+<div class="tab-pane" id="all-backfills">
+
 {########################## ALL BACKFILLS #####################}
 {% if backfill_list %}
 <h2>Backfills</h2>
@@ -629,6 +666,17 @@
     </div>
 </div>
 {% endif %}
+
+</div> {# end backfill div #}
+
+
+</div> {# ending tabcontent #}
+</div> {# ending container #}
+
+
+
+
+
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">

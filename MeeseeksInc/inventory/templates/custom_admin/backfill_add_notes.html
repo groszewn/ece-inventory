@@ -1,0 +1,24 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+ {% load template_filters %}
+ 
+<h3>Notes concerning this backfill</h3>
+
+
+<div class="row">
+    <form id="formID-comment-backfill-add-notes" request-comment="" action="{% url 'custom_admin:add_notes_to_backfill' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{% for field in form %}
+        <div class="fieldWrapper">
+            {{ field.errors }}
+            {% if field.field.widget|klass == 'Textarea' %}
+            	<div style="margin-left:30px">{{ field.label_tag }}</div>
+				<div style="margin-left:45px">{{ field }}</div>
+            {% endif %}
+        </div>
+        <br>
+    {% endfor %}
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+    </form>
+</div>
+

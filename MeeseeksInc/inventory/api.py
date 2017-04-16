@@ -1397,6 +1397,33 @@ class APILoanBackfillPost(ListCreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+class APIBackfillNotes(APIView):
+    """
+    Approve a backfill with optional notes.
+    """
+    
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = BackfillAcceptDenySerializer
+    
+    def get(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id = pk)
+        serializer = FullLoanSerializer(loan)
+        return Response(serializer.data, status=status.HTTP_200_OK)  
+    
+    def get_object(self, pk):
+        try:
+            return Loan.objects.get(loan_id=pk)
+        except Loan.DoesNotExist:
+            raise Http404
+        
+    def put(self, request, pk, format=None):
+        loan = self.get_object(pk)
+        serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 class APIApproveBackfill(APIView):
     """
     Approve a backfill with optional notes.
