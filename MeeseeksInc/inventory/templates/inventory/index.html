@@ -10,7 +10,7 @@
 	  <li class="active"><a href=#all-requests" data-toggle="tab" data-target="#all-requests">Requests</a></li>
 	  <li><a href="#all-loans" data-toggle="tab" data-target="#all-loans">Loans</a></li>
 	  <li><a href="#all-disbursements" data-toggle="tab" data-target="#all-disbursements">Disbursements</a></li>
-	  <li><a href="#all-backfills" data-toggle="tab" data-target="#all-backfills">Backfill</a></li>
+	  <li><a href="#all-backfills" data-toggle="tab" data-target="#all-backfills">Backfills</a></li>
 </ul>
 
 <div class="tab-content "> {# all content #}
@@ -486,23 +486,21 @@
 {% if backfill_list %}
 <h2>Backfills</h2>
 <ul class="nav nav-tabs">
-    <li><a href="#all-backfills" data-toggle="tab">All Backfills</a></li>
+    <li><a href="#backfills-all" data-toggle="tab">All Backfills</a></li>
     <li><a href="#completed-backfills" data-toggle="tab">Completed</a></li>
     <li><a href="#in-transit-backfills" data-toggle="tab">In Transit</a></li>
     <li class="active"><a href="#requested-backfills" data-toggle="tab">Requested</a></li>
     <li><a href="#denied-backfills" data-toggle="tab">Denied</a></li>
 </ul>
 <div class="tab-content">
-    <div class="tab-pane" id="all-backfills">
+    <div class="tab-pane" id="backfills-all">
+    	HEY
         <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>
                     <th>Backfill for</th>
                     <th>Status</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -513,9 +511,6 @@
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_status}}</td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td>{{ loan.backfill_time_requested}}</td>
                 </tr>
@@ -529,9 +524,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                     {% if user.is_staff %}
@@ -544,9 +536,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -613,9 +602,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -625,9 +611,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -642,9 +625,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -654,9 +634,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -1182,19 +1159,19 @@
         "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-approved').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-pending').dataTable({
         "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-denied').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-completed').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
     });
     $('#included-tags').select2(); // making multiple select
