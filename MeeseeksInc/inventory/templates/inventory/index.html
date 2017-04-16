@@ -210,6 +210,11 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
+	    {% if user.is_staff %}
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+		{% endif %}
+	    
         </div>
         <div class="tab-pane" id="denied">
 			<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -251,10 +256,6 @@
 	</div>
 	{% endif %}
 
-{% if user.is_staff %}
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
-{% endif %}
 
 </div> {# end requests div #}
 
