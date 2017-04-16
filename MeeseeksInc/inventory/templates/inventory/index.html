@@ -127,7 +127,7 @@
 	        <tbody>
 	        	{% for request in approved_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request. }}</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
@@ -461,7 +461,7 @@
     <tbody>
         {% for disbursed in disbursed_list %}
         <tr>
-            <td>{{ disbursed.item_name }}</td>
+            <td><a href="{% url 'inventory:detail' disbursed.item_name.item_id %}">{{ disbursed.item_name }}</a></td>
             <td>{{ disbursed.total_quantity }}</td>
             <td>{{ disbursed.user_name }}</td>
             <td>{{ disbursed.admin_name }}</td>
