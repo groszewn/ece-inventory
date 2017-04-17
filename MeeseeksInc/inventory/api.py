@@ -1493,6 +1493,7 @@ class APICompleteBackfill(APIView):
         
     def put(self, request, pk, format=None):
         loan = self.get_object(pk)
+        item = Item.objects.get(item_id = loan.item_name.item_id)
         if not loan.backfill_status=='In Transit':
             return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
@@ -1500,8 +1501,11 @@ class APICompleteBackfill(APIView):
             loan.total_quantity = loan.total_quantity - loan.backfill_quantity
             if loan.total_quantity == 0:
                 loan.status = "Backfilled"
+            loan.save()
             disbursement = Disbursement(admin_name=request.user.username, user_name=loan.user_name, orig_request=loan.orig_request, item_name=loan.item_name, comment="Backfilled Disburse", total_quantity=loan.backfill_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
+            item.quantity = item.quantity + loan.backfill_quantity
+            item.save()
             serializer.save(backfill_status="Completed", backfill_time_requested=timezone.localtime(timezone.now()))
             Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Backfilled", 
                        affected_user=loan.user_name, change_occurred="Backfill completed")
