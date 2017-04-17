@@ -1329,13 +1329,36 @@ class APILoanConvertWithAssets(APIView): #CONVERT LOAN
             return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-class APILoanBackfillPost(ListCreateAPIView):
+class BackfillFilter(FilterSet):
+    class Meta:
+        model = Loan
+        fields = ['loan_id','admin_name', 'user_name','item_name','orig_request','total_quantity','comment','time_loaned','status', 'backfill_status', 'backfill_quantity', 'backfill_notes']
+
+class APIBackfillList(ListAPIView): #FILTER LOANS
+    permission_classes = (IsAdminOrUser,)
+    serializer_class = FullLoanSerializer
+    filter_class = BackfillFilter
+    model = Loan
+    queryset = Loan.objects.all().exclude(backfill_status="None")
+    
+    def get(self, request, format=None):
+        loans = [];
+        if User.objects.get(username=request.user.username).is_staff:
+            loans = self.filter_queryset(Loan.objects.all())
+        else:
+            loans = self.filter_queryset(Loan.objects.filter(user_id=request.user.username))
+        serializer = FullLoanSerializer(loans, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+    
+    
+class APILoanBackfillPost(APIView):
     '''
     Create a backfill request
     '''
     permission_classes = (IsAtLeastUser,)
     model = Loan
-    queryset = Loan.objects.all().exclude(backfill_status="None")
+    #queryset = Loan.objects.all().exclude(backfill_status="None")
     serializer_class = LoanBackfillPostSerializer
     
     def post(self, request, pk,  format=None):
@@ -1623,7 +1646,9 @@ class APICompleteBackfillWithAssets(APIView):
             message=render_to_string('inventory/backfill_completed_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)       
+    
+     
 
 ########################################## Subscription ###########################################    
 

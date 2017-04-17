@@ -61,6 +61,7 @@ urlpatterns = [
     url(r'^api/loan/email/body/$', inventory.api.APILoanEmailBody.as_view(), name='email_body'),
     url(r'^api/loan/email/dates/configure/$', inventory.api.APILoanEmailConfigureDates.as_view(), name='email_send_dates'),
     url(r'^api/loan/email/dates/delete/$', inventory.api.APILoanEmailClearDates.as_view(), name='loan_email_delete_dates'),
+    url(r'^api/loan/backfill/$', inventory.api.APIBackfillList.as_view(), name='api_backfill_list'),
     url(r'^api/loan/backfill/create/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanBackfillPost.as_view(), name='backfill_create'),
     url(r'^api/loan/backfill/approve/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIApproveBackfill.as_view(), name='backfill_approve'),
     url(r'^api/loan/backfill/deny/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIDenyBackfill.as_view(), name='backfill_deny'),
