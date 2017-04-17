@@ -64,7 +64,6 @@
 <div class="tab-pane active" id="all-requests">
 
 {########################## ALL REQUESTS #####################}
-{% if request_list %}
 	<h2>Requests</h2>
 	<ul class="nav nav-tabs">
 	  <li><a href="#all" data-toggle="tab">All Requests</a></li>
@@ -256,7 +255,6 @@
 	    </table>
         </div>
 	</div>
-	{% endif %}
 
 
 </div> {# end requests div #}
@@ -266,7 +264,6 @@
 <div class="tab-pane" id="all-loans">
 
 {########################## LOANS #####################}	
-{% if loan_list %}
 		<h2>Loans</h2>
 			<ul class="nav nav-tabs">
 	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
@@ -438,7 +435,6 @@
 		    </table>
 		    </div>
 	</div>
-	{% endif %}
 	
 </div> {# end loans div #}
 
@@ -446,7 +442,6 @@
 <div class="tab-pane" id="all-disbursements">
 
 {########################## DISBURSEMENTS #####################}
-{% if disbursed_list %}
 <h2>Disbursements</h2>
 <table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
@@ -477,7 +472,6 @@
         {% endfor %}
     </tbody>
 </table>
-{% endif %}
 
 
 </div> {# end disbursements div #}
@@ -485,7 +479,6 @@
 <div class="tab-pane" id="all-backfills">
 
 {########################## ALL BACKFILLS #####################}
-{% if backfill_list %}
 <h2>Backfills</h2>
 <ul class="nav nav-tabs">
     <li><a href="#backfills-all" data-toggle="tab">All Backfills</a></li>
@@ -645,7 +638,6 @@
         </table>
     </div>
 </div>
-{% endif %}
 
 </div> {# end backfill div #}
 
