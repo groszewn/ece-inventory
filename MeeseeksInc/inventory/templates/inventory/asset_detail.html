@@ -27,7 +27,9 @@
 					<td default = "">
 						{% for value in asset_custom_vals%}
 							{% if value.asset == asset and value.field == field %}
-								{{value.value}}
+								{% if value.value != None %}
+											{{value.value}}
+								{% endif %}
 							{% endif %}
 						{% endfor %}
 					</td>

@@ -222,7 +222,9 @@ function clickEvent(){
 								<td default = "">
 									{% for value in asset_custom_vals%}
 										{% if value.asset == asset and value.field == field %}
+											{% if value.value != None %}
 											{{value.value}}
+											{% endif %}
 										{% endif %}
 									{% endfor %}
 								</td>

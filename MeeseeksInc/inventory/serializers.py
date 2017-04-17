@@ -375,30 +375,29 @@ class AssetSerializer(serializers.ModelSerializer):
 class AssetWithCustomFieldSerializer(serializers.Serializer):
     def __init__(self, custom_values=None, asset_tag=None, *args, **kwargs):
         super(AssetWithCustomFieldSerializer, self).__init__(*args, **kwargs)
-        self.fields['asset_tag'] = serializers.CharField(required=False)
+        self.fields['asset_tag'] = serializers.CharField(required=False,allow_blank=True)
         if asset_tag is not None:
-            self.fields['asset_tag'] = serializers.CharField(initial = asset_tag, required=False)
+            self.fields['asset_tag'] = serializers.CharField(initial = asset_tag, required=False,allow_blank=True)
         for field in Custom_Field.objects.filter(field_kind='Asset'):
             if field.field_type == 'Short':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False)                    
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True)                    
             if field.field_type == 'Long':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False,widget=forms.Textarea) 
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True) 
             if field.field_type == 'Int':
-                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False) 
+                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False,allow_null=True) 
             if field.field_type == 'Float':
-                self.fields["%s" % field.field_name] = serializers.FloatField(required=False)
+                self.fields["%s" % field.field_name] = serializers.FloatField(required=False,allow_null=True)
             if custom_values is not None:
                 for val in custom_values:
                     if val.field == field:
                         if field.field_type == 'Short':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False)                    
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True)                    
                         if field.field_type == 'Long':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True) 
                         if field.field_type == 'Int':
-                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False,allow_null=True) 
                         if field.field_type == 'Float':
-                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False)
-    
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_null=True)
         
 class MultipleAssetCustomFieldSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(
