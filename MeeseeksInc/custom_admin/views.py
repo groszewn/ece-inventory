@@ -839,6 +839,7 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
                   "Accept": "application/json", "Content-type":"application/json"}
         requests.delete(url, headers = header)#, data = json.dumps(payload))
         return redirect(reverse('custom_admin:index'))
+    
     def create_new_item(request):
         tags = Tag.objects.all()
         custom_fields = Custom_Field.objects.filter(field_kind='Item')

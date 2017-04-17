@@ -298,9 +298,10 @@ class CreateItemForm(forms.ModelForm):
     quantity = forms.IntegerField(min_value=0)
     threshold_quantity = forms.IntegerField(required = False, min_value = 0)
     threshold_enabled = forms.BooleanField(required = False)
+    is_asset = forms.BooleanField(label="Asset item enabled",required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
+        fields = ('item_name', 'quantity', 'model_number','description','threshold_quantity','threshold_enabled','is_asset','new_tags')
 
 class CustomFieldForm(forms.ModelForm):  
     CHOICES = (
