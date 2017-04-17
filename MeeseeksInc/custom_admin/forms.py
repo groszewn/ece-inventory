@@ -101,8 +101,9 @@ class BaseAssetsRequestFormSet(BaseFormSet):
                     )
 
 class AssetEditForm(forms.Form):
-    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, custom_fields, custom_values, asset_tag, *args, **kwargs):
         super(AssetEditForm, self).__init__(*args, **kwargs)
+        self.fields['asset_tag'] = forms.CharField(initial = asset_tag,required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -122,7 +123,7 @@ class AssetEditForm(forms.Form):
                         self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
-                      
+         
 class BaseAssetCheckInFormset(BaseFormSet):
     def clean(self):
         """
@@ -248,6 +249,7 @@ class AddTagForm(forms.Form):
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
             self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")  
+            self.fields["%s" % tag.tag + 'Checkbox'] = forms.BooleanField(label = 'Delete tag?',required=False)
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags',)
          

@@ -86,7 +86,8 @@ class Loan(models.Model):
         return self.loan_id
 
 class Asset(models.Model):
-    asset_id = models.CharField(primary_key=True, unique=True, default=uuid.uuid4, max_length=200)
+    asset_id = models.CharField(primary_key=True, unique=True, max_length=200)
+    asset_tag = models.CharField(unique=True, default=uuid.uuid4, max_length=200)
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
     loan = models.ForeignKey(Loan, null=True)
     disbursement = models.ForeignKey(Disbursement, null=True)

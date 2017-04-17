@@ -192,7 +192,7 @@ function clickEvent(){
 		        <tbody>
 		        	{% for asset in asset_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_tag }}</a></td>
 							{% if asset.loan %}
 								<td><a href="{% url 'inventory:loan_detail' asset.loan.loan_id %}">Loaned out</a></td>
 							{% elif asset.disbursement %}

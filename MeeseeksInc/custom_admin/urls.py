@@ -42,9 +42,6 @@ urlpatterns = [
     url(r'^asset/delete/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset, name='delete_asset'),
     
     url(r'^edit/tags/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags_module, name='tags_module'),
-    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_tag, name='edit_tag'),
-    url(r'^edit/specific/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_specific_tag, name='edit_specific_tag'),
-    url(r'^add/tag/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags, name='add_tags'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.delete_tag, name='delete_tag'),
     
     url(r'^add_custom_field/$', views.CustomFieldView.as_view(), name='add_custom_field'),

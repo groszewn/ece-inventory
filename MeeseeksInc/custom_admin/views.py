@@ -150,26 +150,36 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     
     def edit_asset(request, pk):
         asset = Asset.objects.get(asset_id=pk)
+        orig_tag = asset.asset_tag
         asset_custom_fields = Asset_Custom_Field.objects.all()
         asset_custom_vals = Asset_Custom_Field_Value.objects.filter(asset=asset)
         if request.method == "POST":
-            form = AssetEditForm(asset_custom_fields, asset_custom_vals, request.POST)
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, asset.asset_tag, request.POST)
             if form.is_valid():
+                asset = Asset.objects.get(asset_id=pk)
                 url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
                 payload = {}
                 for field in asset_custom_fields:
                     if form[field.field_name].value():
-                        payload[field.field_name] = form[field.field_name].value() 
+                        payload[field.field_name] = form[field.field_name].value()
+                    else:
+                        payload[field.field_name] = ''
+                if form['asset_tag'].value():
+                    payload['asset_tag'] = form['asset_tag'].value() 
                 header = get_header(request)
+                if Asset.objects.filter(asset_tag=form['asset_tag'].value()).exists() and form['asset_tag'].value() != orig_tag:
+                        messages.error(request, ('An asset with that asset tag already exists. That change could not be saved.'))
+                if form['asset_tag'].value() is '':
+                        messages.error(request, ('Asset tags cannot be blank. That change could not be saved.'))
                 response = requests.put(url, headers = header, data=json.dumps(payload))
                 if response.status_code == 200:
-                    messages.success(request, ('Successfully edit asset (' + asset.asset_id + ')'))
+                    messages.success(request, ('Successfully edited asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ').')) 
                 else:
-                    messages.error(request, ('Failed to edit asset (' + asset.asset_id + ')'))
-                return redirect(request.META.get('HTTP_REFERER')) 
+                    messages.error(request, ('Failed to edit asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ')'))
+                return redirect(request.META.get('HTTP_REFERER'))
         else:
-            form = AssetEditForm(asset_custom_fields, asset_custom_vals) 
-        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_id':asset.asset_id, 'item_name':asset.item.item_name})
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, asset.asset_tag) 
+        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_tag':asset.asset_tag, 'item_name':asset.item.item_name})
             
     def delete_asset(request, pk):
         asset = Asset.objects.get(asset_id=pk)
@@ -180,7 +190,7 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             messages.success(request, ('Successfully deleted asset: ' + pk ))
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
-        return redirect(request.META.get('HTTP_REFERER'))        
+        return redirect('/item/' + asset.item.item_id)        
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -729,70 +739,13 @@ def toggleAsset(request, pk):
 
 class TagView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'
+    
     def delete_tag(request, pk, item):
         item = Item.objects.get(item_id=item)
         tag = Tag.objects.get(id=pk)
         tag.delete()
         return redirect('/item/' + item.item_id)
-    def add_tags(request, pk):
-        if request.method == "POST":
-            item = Item.objects.get(item_id = pk)
-            tags = Tag.objects.all()
-            item_tags = item.tags.all()
-            form = AddTagForm(tags, item_tags, request.POST or None)
-            if form.is_valid():
-                pickedTags = form.cleaned_data.get('tag_field')
-                createdTags = form['create_new_tags'].value()
-                item = Item.objects.get(item_id=pk)
-                if pickedTags:
-                    for oneTag in pickedTags:
-                        if not item.tags.filter(tag=oneTag).exists():
-                            t = Tag(tag=oneTag) 
-                            t.save(force_insert=True)
-                            item.tags.add(t)
-                            item.save()
-                if createdTags is not "":
-                    tag_list = [x.strip() for x in createdTags.split(',')]
-                    for oneTag in tag_list:
-                        if not item.tags.filter(tag=oneTag).exists():
-                            t = Tag(tag=oneTag)
-                            t.save(force_insert=True)
-                            item.tags.add(t)
-                            item.save()
-                for ittag in item_tags:
-                    ittag.tag = form[ittag.tag].value()
-                    ittag.save()
-                return redirect('/item/' + pk)
-        else:
-            item = Item.objects.get(item_id = pk)
-            tags = Tag.objects.all()
-            item_tags = item.tags.all()
-            form = AddTagForm(tags, item_tags)
-        return render(request, 'inventory/add_tags.html', {'form': form})
 
-
-    def edit_tag(request, pk, item):
-        tag = Tag.objects.get(id=pk)
-        item = Item.objects.get(item_id=item)
-        if request.method == "POST":
-            form = EditTagForm(request.POST or None, instance=tag)
-            if form.is_valid():
-                form.save()
-                return redirect('/item/' + item.item_id)
-        else:
-            form = EditTagForm(instance=tag)
-        return render(request, 'inventory/tag_edit.html', {'form': form})
-    def edit_specific_tag(request, pk, item):
-        tag = Tag.objects.get(id=pk)
-        item = Item.objects.get(item_id=item)
-        if request.method == "POST":
-            form = EditTagForm(request.POST or None, instance=tag)
-            if form.is_valid():
-                form.save()
-                return redirect('/item/' + item.item_id)
-        else:
-            form = EditTagForm(instance=tag)
-        return render(request, 'custom_admin/edit_tag_module_inner.html', {'form': form,'pk':pk,'item':item.item_id})
     def add_tags_module(request, pk):
         if request.method == "POST":
             item = Item.objects.get(item_id = pk)
@@ -824,13 +777,17 @@ class TagView(LoginRequiredMixin, UserPassesTestMixin):
                     else:
                         ittag.tag = form[ittag.tag].value().strip()
                         ittag.save()
+                    print(form[ittag.tag+"Checkbox"])
+                    print(form[ittag.tag+"Checkbox"].value())
+                    if form[ittag.tag+"Checkbox"].value() == True:
+                        ittag.delete()
                 return redirect('/item/' + pk)
         else:
             item = Item.objects.get(item_id = pk)
             tags = Tag.objects.all()
             item_tags = item.tags.all()
             form = AddTagForm(tags, item_tags)
-        return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk})
+        return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk, 'item_tags':item_tags})
 
     def test_func(self):
         return self.request.user.is_staff 

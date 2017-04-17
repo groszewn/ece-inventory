@@ -888,7 +888,7 @@ class APICustomField(APIView):
             data=serializer.data
             field=data['field_name']
             Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user='', change_occurred='Added custom field ' + str(field))
+                               affected_user='', change_occurred='Added item custom field ' + str(field))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -951,7 +951,7 @@ class APICustomFieldModify(APIView):
 
 class APIAssetCustomFieldModify(APIView):
     """
-    Delete specific custom field
+    Delete specific asset custom field
     """
     permission_classes = (IsAdminOrUser,)
     
@@ -1705,24 +1705,6 @@ class APILoanEmailClearDates(APIView):
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# ########################################## Backfill Requests ###########################################   
-# class APIBackfillRequest(ListCreateAPIView):
-#     """
-#     creation of backfill requests
-#     """
-#     permission_classes = (IsAtLeastUser,)
-#     queryset = BackfillRequest.objects.all()
-#     serializer_class = BackfillRequestSerializer
-#     
-#     def post(self, request, format=None):
-#         data = request.data.copy()
-#         serializer = BackfillRequestSerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#             
-
 ########################################## Asset-tracking ###########################################   
 class APIItemToAsset(APIView):
     """
@@ -1740,6 +1722,8 @@ class APIItemToAsset(APIView):
                 asset = Asset(item=item)
                 asset.save()
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Changed " + item.item_name + " to track by asset.")
         return Response(serializer.data)
     
 class APIAssetToItem(APIView):
@@ -1754,17 +1738,20 @@ class APIAssetToItem(APIView):
         # NOT DONE YET!!!
         item = Item.objects.get(item_id=pk)
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Changed " + item.item_name + " to no longer track by asset.")
         return Response(serializer.data)
     
-class APIAsset(APIView): #log and email
+class APIAsset(APIView):
     permission_classes = (IsAdmin,)
-    serializer_class = AssetWithCustomFieldSerializer
-        
+    serializer_class = AssetWithCustomFieldSerializer 
+    
     def get(self, request, pk, format=None):
         if (Asset.objects.filter(asset_id=pk).exists()):
             asset = Asset.objects.get(asset_id=pk)
             custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-            serializer = AssetWithCustomFieldSerializer(custom_values)
+            serializer = AssetWithCustomFieldSerializer(custom_values,asset)
+            print(serializer.data)
             return Response(serializer.data)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -1772,10 +1759,13 @@ class APIAsset(APIView): #log and email
     def delete(self,request,pk,format=None):
         if (Asset.objects.filter(asset_id=pk).exists()):
             asset = Asset.objects.get(asset_id=pk)
+            asset_id = asset.asset_id
             item = asset.item
             asset.delete()
             item.quantity = item.quantity - 1
             item.save()
+            Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset.asset_id+ ").")
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -1784,9 +1774,16 @@ class APIAsset(APIView): #log and email
         asset = Asset.objects.get(asset_id=pk)
         custom_fields = Asset_Custom_Field.objects.all()
         custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-        serializer = AssetWithCustomFieldSerializer(custom_values,data=request.data, partial=True)
+        serializer = AssetWithCustomFieldSerializer(custom_values,asset,data=request.data, partial=True)
         if serializer.is_valid():
             data = serializer.data
+
+            if 'asset_tag' in data:
+                new_tag = data['asset_tag']
+                if new_tag is not '' and not Asset.objects.filter(asset_tag=new_tag).exists():
+                    asset.asset_tag = new_tag
+                    asset.save()
+            
             fields = Asset_Custom_Field.objects.all()
             for field in fields:
                 if field.field_name in data:
@@ -1811,8 +1808,10 @@ class APIAsset(APIView): #log and email
                                 custom_val.value = value
                             except ValueError:
                                 return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
-                        custom_val.save()          
-            return self.get(request, pk)
+                        custom_val.save()
+            Log.objects.create(request_id='', item_id= asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Edited asset with (new) tag " + asset.asset_tag + " from the " + asset.item.item_name + " item (asset id: " +asset.asset_id+ ").")          
+            return self.get(request, asset.asset_id)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
        

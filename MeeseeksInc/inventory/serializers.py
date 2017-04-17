@@ -366,31 +366,34 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('asset_id','item')
+        fields = ('asset_id','asset_tag','item')
       
-class AssetWithCustomFieldSerializer(serializers.Serializer):
+class AssetWithCustomFieldSerializer(serializers.ModelSerializer):
     def __init__(self, custom_values=None, *args, **kwargs):
         super(AssetWithCustomFieldSerializer, self).__init__(*args, **kwargs)
         for field in Asset_Custom_Field.objects.all():
             if field.field_type == 'Short':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False)                    
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True)                    
             if field.field_type == 'Long':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False,widget=forms.Textarea) 
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,widget=forms.Textarea,allow_blank=True) 
             if field.field_type == 'Int':
-                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False) 
+                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False,allow_blank=True) 
             if field.field_type == 'Float':
-                self.fields["%s" % field.field_name] = serializers.FloatField(required=False)
+                self.fields["%s" % field.field_name] = serializers.FloatField(required=False,allow_blank=True)
             if custom_values is not None:
                 for val in custom_values:
                     if val.field == field:
                         if field.field_type == 'Short':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False)                    
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True)                    
                         if field.field_type == 'Long':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,widget=forms.Textarea,required=False,allow_blank=True) 
                         if field.field_type == 'Int':
-                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False,allow_blank=True) 
                         if field.field_type == 'Float':
-                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False)
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_blank=True)
+    class Meta:
+        model = Asset
+        fields = ('asset_tag',)
             
 class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
