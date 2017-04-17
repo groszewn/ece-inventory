@@ -988,7 +988,12 @@ class ItemUpload(APIView):
                 createdItem.delete()
         messages.error(request._request, message)
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
-        
+    
+    
+    ## CHECK asset status. if N then just item, if F then first in asset 
+    ## if no F but has assets, check if item already exists. if not then throw error
+    ## if F check is OK and Y is there, then this is an asset - only item name & asset tag & per-asset custom fields can be filled
+    ## if something else is filled in this situation, throw error
     def post(self, request, *args, **kwargs):
         csvData = request.POST.getlist('data[]')
         headerMap = {}
