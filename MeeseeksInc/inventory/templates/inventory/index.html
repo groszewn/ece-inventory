@@ -1406,12 +1406,12 @@
  			return false;
  		}
  		return true;
-    }
-	);
+    });
     $('#inventory-search').on( 'click', 'tbody td', function () {
     	//table.cell( this ).edit( 'bubble' );
     	//console.log('this:', table.cell(this));
     	//console.log('index:', table.cell(this).index().column);
+    	console.log("clicked")
     	if (table.cell(this).index().column == 1) {
     		window.location = "/item" + "/" + table.row(this).data().item_id;
     	}
@@ -1427,6 +1427,7 @@
     	return index;
     }
     var minstock_filter_enabled = false;
+    var table = $('#inventory-search').DataTable();
     $(document).ready(function(){
     	var table = $('#inventory-search').DataTable();
     	// Event listener
