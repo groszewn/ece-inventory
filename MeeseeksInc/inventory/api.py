@@ -1773,42 +1773,43 @@ class APIAsset(APIView):
         asset = Asset.objects.get(asset_id=pk)
         custom_fields = Custom_Field.objects.filter(field_kind='Asset')
         custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+        for field in custom_fields:
+            if request.data[field.field_name] is '' and (field.field_type == 'Int' or field.field_type == 'Float'):
+                request.data[field.field_name] = None
         serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag,data=request.data, partial=True)
         if serializer.is_valid():
             data = serializer.data
-            print(data)
-
             if 'asset_tag' in data:
                 new_tag = data['asset_tag']
                 if new_tag is not '' and not Asset.objects.filter(asset_tag=new_tag).exists():
                     asset.asset_tag = new_tag
                     asset.save()
-            
             fields = Custom_Field.objects.filter(field_kind='Asset')
             for field in fields:
                 if field.field_name in data:
                     value = data[field.field_name]  
-                    if value is not None:
-                        if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
-                            custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
-                        else:
-                            custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
-                        if field.field_type == 'Short' and len(value)<=400 or \
-                            field.field_type == 'Long' and len(value)<=1000:
-                            custom_val.value = value
-                        if field.field_type == 'Int':
-                            try:
+                    if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
+                        custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
+                    else:
+                        custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
+                    if field.field_type == 'Short' and len(value)<=400 or \
+                        field.field_type == 'Long' and len(value)<=1000:
+                        custom_val.value = value
+                    if field.field_type == 'Int':
+                        try:
+                            if value is not None:
                                 int(value)
-                                custom_val.value = value
-                            except ValueError:
-                                return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
-                        if field.field_type == 'Float':
-                            try:
+                            custom_val.value = value
+                        except ValueError:
+                            return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
+                    if field.field_type == 'Float':
+                        try:
+                            if value is not None:
                                 float(value)
-                                custom_val.value = value
-                            except ValueError:
-                                return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
-                        custom_val.save()
+                            custom_val.value = value
+                        except ValueError:
+                            return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
+                    custom_val.save()
             Log.objects.create(request_id='', item_id= asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Edit", 
                        affected_user='', change_occurred="Edited asset with (new) tag " + asset.asset_tag + " from the " + asset.item.item_name + " item (asset id: " +asset.asset_id+ ").")          
             return self.get(request, asset.asset_id)

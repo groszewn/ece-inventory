@@ -323,10 +323,13 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
         context['loan'] = self.get_object()
         context['assets'] = Asset.objects.filter(loan=self.get_object())
         context['file_name'] = str(self.get_object().backfill_pdf).split('/')[-1]
+        context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.all()
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset')
         else:
             context['my_template'] = 'inventory/base.html'
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset',is_private=False)
         return context
     
     def test_func(self):

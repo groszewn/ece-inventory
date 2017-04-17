@@ -45,14 +45,37 @@
         <thead>
             <tr>
             <th>Asset Tag:</th>
-			<th>Actions:</th>
+            {% for field in asset_custom_fields%}
+				<th>{{field.field_name}}</th>
+			{% endfor %}
+            {% if user.is_staff %}
+					<th>Actions</th>
+			{% endif %}
 			</tr>
         </thead>
         <tbody>
         	{% for asset in assets %}
         		<tr>
-        			<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
-					<td> hi </td>
+        			<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_tag }}</a></td>
+					{% for field in asset_custom_fields%}
+								<td default = "">
+									{% for value in asset_custom_vals%}
+										{% if value.asset == asset and value.field == field %}
+											{% if value.value != None %}
+											{{value.value}}
+											{% endif %}
+										{% endif %}
+									{% endfor %}
+								</td>
+							{% endfor %}
+					{% if user.is_staff %}
+							<td>
+								{% block assetEdit %}
+										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
+								{% endblock assetEdit %}
+								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
+							</td>
+					{% endif %}
 				</tr>
 			{% endfor %}
         </tbody>
@@ -74,21 +97,25 @@
 	{% block convert %}
 	<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
 	{% endblock convert %}
-{% endif %}  
+{% endif %} 
+{% endif %} 
 
-{% block  editLoan %}
-	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-warning">Edit Loan</a>	
-{% endblock editLoan %}
-{% endif %}
 {% if user.get_username == loan.user_name %}
 	{% if loan.backfill_status != 'Completed'%}
 		{% if loan.backfill_status != 'In Transit'%}
 			{% block backfillRequest %}
-				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
+				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-info">Backfill Loan</a>
 			{% endblock backfillRequest %}
 		{% endif %}
 	{% endif %}
 {% endif %}
+
+{% if user.is_staff %}
+{% block  editLoan %}
+	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+{% endblock editLoan %}
+{% endif %}
+
 
 <h3> Original Request Information </h3>
 				<table id="inventory-request" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -553,6 +580,34 @@
     });
 </script>
 {% endblock js-backfill-add-notes %}
+
+{############################# ASSET EDIT MODAL LOGIC ##############################}
+<div id="form-modal-assetEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Asset Edit</h4>
+            </div>
+            <div id="form-modal-body-assetEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-assetEdit %}
+<script>
+    $('.assetEdit').click(function() {
+    	asset_id = $(this).attr("asset-id");
+        $('#form-modal-body-assetEdit').load(('../../../customadmin/asset/edit/'+asset_id), function () {
+            $('#form-modal-assetEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-assetEdit %}
 
 
 {% endblock %}
