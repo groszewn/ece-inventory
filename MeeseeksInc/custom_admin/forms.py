@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.forms.formsets import BaseFormSet
 
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
-    Asset, Asset_Custom_Field
+    Asset
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.all())
@@ -117,8 +117,9 @@ class BaseAssetsRequestFormSet(BaseFormSet):
 
 
 class AssetEditForm(forms.Form):
-    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, custom_fields, custom_values, asset_tag, *args, **kwargs):
         super(AssetEditForm, self).__init__(*args, **kwargs)
+        self.fields['asset_tag'] = forms.CharField(initial = asset_tag,required=False)
         for field in custom_fields:
             if field.field_type == 'Short':
                 self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
@@ -138,7 +139,7 @@ class AssetEditForm(forms.Form):
                         self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
                     if field.field_type == 'Float':
                         self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
-                      
+         
 class BaseAssetCheckInFormset(BaseFormSet):
     def clean(self):
         """
@@ -264,6 +265,7 @@ class AddTagForm(forms.Form):
         self.fields['tag_field'] = forms.MultipleChoiceField(choices, required=False, widget=forms.SelectMultiple(), label='Add new tags...')
         for tag in item_tags:
             self.fields["%s" % tag.tag] = forms.CharField(required=False, initial = tag.tag, label = "Edit existing tag")  
+            self.fields["%s" % tag.tag + 'Checkbox'] = forms.BooleanField(label = 'Delete tag?',required=False)
     create_new_tags = forms.CharField(required=False)
     fields = ('tag_field','create_new_tags',)
          
@@ -300,21 +302,23 @@ class CreateItemForm(forms.ModelForm):
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
 
-class CustomFieldForm(forms.Form):  
-    field_name = forms.CharField(required=True)
-    is_private = forms.BooleanField(required=False)
+class CustomFieldForm(forms.ModelForm):  
     CHOICES = (
         ('Short','Short-Form Text'),
         ('Long','Long-Form Text'),
         ('Int','Integer'),
         ('Float','Floating-Point Number'),
     )
-    field_type = forms.ChoiceField(choices=CHOICES, required=True, widget=forms.Select)
+    field_type = forms.ChoiceField(label='Field data type',choices=CHOICES)
     TYPES = (
-        ('Item Field','Item Field'),
-        ('Asset Field','Asset Field'),
+        ('Item','Item'),
+        ('Asset','Asset'),
     )
-    type = forms.ChoiceField(label='Select Type Of Custom Field', choices=TYPES)
+    field_kind = forms.ChoiceField(label='Select the kind of custom field',choices=TYPES)
+    class Meta:
+        model = Custom_Field
+        fields = ('field_name','is_private','field_type','field_kind')
+            
         
 class DeleteFieldForm(forms.Form):
     def __init__(self, fields,asset_fields, *args, **kwargs):

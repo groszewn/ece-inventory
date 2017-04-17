@@ -1,0 +1,88 @@
+{% extends 'custom_admin/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+<link href="/static/css/custom.css" rel="stylesheet">
+
+{% block content %}
+<h2>Modify Custom Fields</h2>
+
+{% if not fields and not asset_fields %}
+	<h3>No Custom Fields to Modify.</h3>
+{% endif %}
+
+{% if fields %}
+<h3>Item Fields:</h3> 
+	{% for it_field in fields %}
+		{% block fieldEdit %}
+			<p><a id = "fieldEdit" field-id="{{ it_field.id }}" class="fieldEdit btn btn-primary">Modify: {{it_field.field_name}}</a></p>	
+		{% endblock fieldEdit %}
+	{% endfor %}
+{% endif %}
+
+{% if asset_fields %}
+<h3>Asset Fields:</h3>
+	{% for a_field in asset_fields %}
+		{% block AfieldEdit %}
+			<p><a id = "AfieldEdit" field-id="{{ a_field.id }}" class="AfieldEdit btn btn-primary">Modify: {{a_field.field_name}}</a></p>	
+		{% endblock AfieldEdit %}
+	{% endfor %}
+{% endif %}
+
+{############################# EDIT LOAN MODAL LOGIC ##############################}
+<div id="form-modal-fieldEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Field</h4>
+            </div>
+            <div id="form-modal-body-fieldEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-fieldEdit %}
+<script>
+    $('.fieldEdit').click(function() {
+    	field_id = $(this).attr("field-id"); 
+        $('#form-modal-body-fieldEdit').load(('../../customadmin/modify_custom_field/'+field_id), function () {
+            $('#form-modal-fieldEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-fieldEdit %}
+
+<div id="form-modal-AfieldEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Edit Field</h4>
+            </div>
+            <div id="form-modal-body-AfieldEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-AfieldEdit %}
+<script>
+    $('.AfieldEdit').click(function() {
+    	field_id = $(this).attr("field-id"); 
+        $('#form-modal-body-AfieldEdit').load(('../../customadmin/modify_custom_field/'+field_id), function () {
+            $('#form-modal-AfieldEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-AfieldEdit %}
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+{% endblock %}

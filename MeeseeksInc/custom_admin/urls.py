@@ -32,7 +32,6 @@ urlpatterns = [
     url(r'^approve/request/all$', views.RequestsView.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.deny_request, name='deny_request'),
     url(r'^approve/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.approve_request, name='approve_request'),
-    url(r'^edit/item/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item, name='edit_item'),
     url(r'^edit/item/module/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item_module, name='edit_item_module'),
     url(r'^create/item$', views.ItemView.create_new_item, name='create_new_item'),
     url(r'^delete/(?P<pk>[\w\-\ ]+)/$', views.ItemView.delete_item, name='delete_item'),
@@ -42,13 +41,12 @@ urlpatterns = [
     url(r'^asset/delete/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset, name='delete_asset'),
     
     url(r'^edit/tags/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags_module, name='tags_module'),
-    url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_tag, name='edit_tag'),
-    url(r'^edit/specific/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_specific_tag, name='edit_specific_tag'),
-    url(r'^add/tag/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags, name='add_tags'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.delete_tag, name='delete_tag'),
     
     url(r'^add_custom_field/$', views.CustomFieldView.as_view(), name='add_custom_field'),
     url(r'^delete_custom_field/$', views.CustomFieldView.delete_custom_field, name='delete_custom_field'),
+    url(r'^modify_custom_field/$', views.CustomFieldView.modify_custom_field, name='modify_custom_field'),
+    url(r'^modify_custom_field/(?P<pk>[\w\-\ ]+)/$', views.CustomFieldView.modify_custom_field_modal, name='modify_custom_field_modal'),
     
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^log_item$', views.LogView.log_item, name='log_item'),
