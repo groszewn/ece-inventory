@@ -34,10 +34,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer
+    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
 
 
 def get_host(request):
@@ -126,7 +126,7 @@ class APIItemList(ListCreateAPIView):
             custom_field_values = request.data.get('values_custom_field')
             
             if custom_field_values is not None:
-                for field in Custom_Field.objects.all():
+                for field in Custom_Field.objects.filter(field_kind='Item'):
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         custom_val = Custom_Field_Value(item=item, field=field)
@@ -211,7 +211,7 @@ class APIItemDetail(APIView):
             custom_field_values = request.data.get('values_custom_field')
             print(request.data)
             if custom_field_values is not None:
-                for field in Custom_Field.objects.all():
+                for field in Custom_Field.objects.filter(field_kind='Item'):
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
                     if value is not None:
                         if Custom_Field_Value.objects.filter(item = item, field = field).exists():
@@ -873,20 +873,20 @@ class APICustomField(APIView):
     List custom fields (w/ private fields for admin/manager) and create custom fields (admin)
     """
     permission_classes = (IsAdmin,)
-    serializer_class = CustomFieldSerializer
+    serializer_class = FullCustomFieldSerializer
     
     def get(self, request, format=None):
         if self.request.user.is_staff:
             fields = Custom_Field.objects.all()
-            serializer = CustomFieldSerializer(fields, many=True)
+            serializer = FullCustomFieldSerializer(fields, many=True)
             return Response(serializer.data)
         else:
             fields = Custom_Field.objects.filter(is_private = False)
-            serializer = CustomFieldSerializer(fields, many=True)
+            serializer = FullCustomFieldSerializer(fields, many=True)
             return Response(serializer.data)   
         
     def post(self, request, format=None):
-        serializer = CustomFieldSerializer(data=request.data)
+        serializer = FullCustomFieldSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -896,37 +896,12 @@ class APICustomField(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class APIAssetCustomField(APIView):
-
-    permission_classes = (IsAdmin,)
-    serializer_class = AssetCustomFieldSerializer
-    
-    def get(self, request, format=None):
-        if self.request.user.is_staff:
-            fields = Asset_Custom_Field.objects.all()
-            serializer = AssetCustomFieldSerializer(fields, many=True)
-            return Response(serializer.data)
-        else:
-            fields = Asset_Custom_Field.objects.filter(is_private = False)
-            serializer = AssetCustomFieldSerializer(fields, many=True)
-            return Response(serializer.data)   
-        
-    def post(self, request, format=None):
-        serializer = AssetCustomFieldSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            data=serializer.data
-            field=data['field_name']
-            Log.objects.create(request_id=None, item_id=None, item_name="-", initiating_user = request.user, nature_of_event="Create", 
-                               affected_user='', change_occurred='Added asset custom field ' + str(field))
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class APICustomFieldModify(APIView):
     """
     Delete specific custom field
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = FullCustomFieldSerializer
     
     def get_object(self, pk):
         try:
@@ -937,52 +912,42 @@ class APICustomFieldModify(APIView):
     def get(self, request, pk, format=None):
         if self.request.user.is_staff:
             field = self.get_object(pk)
-            serializer = CustomFieldSerializer(field)
+            serializer = FullCustomFieldSerializer(field)
             return Response(serializer.data)
         else:
             field = self.get_object(pk)
             if not field.is_private:
-                serializer = CustomFieldSerializer(field, many=True)
+                serializer = FullCustomFieldSerializer(field, many=True)
                 return Response(serializer.data)   
             return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
         
     def delete(self, request, pk, format=None):
         field = Custom_Field.objects.get(id = pk)
         Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user='', change_occurred='Deleted item custom field ' + str(field.field_name))
+                                       affected_user='', change_occurred='Deleted ' + field.field_kind + ' Custom Field ' + str(field.field_name))
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class APIAssetCustomFieldModify(APIView):
-    """
-    Delete specific custom field
-    """
-    permission_classes = (IsAdminOrUser,)
-    
-    def get_object(self, pk):
-        try:
-            return Asset_Custom_Field.objects.get(id=pk)
-        except Asset_Custom_Field.DoesNotExist:
-            raise Http404
-        
-    def get(self, request, pk, format=None):
+    def put(self, request, pk, format=None):            
         if self.request.user.is_staff:
             field = self.get_object(pk)
-            serializer = AssetCustomFieldSerializer(field)
-            return Response(serializer.data)
+            orig_type = field.field_type
+            serializer = FullCustomFieldSerializer(field,data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                if orig_type != serializer.data['field_type']:
+                    field = self.get_object(pk)
+                    for value in Asset_Custom_Field_Value.objects.filter(field=field):
+                        value.delete()
+                    for value in Custom_Field_Value.objects.filter(field=field):
+                        value.delete()    
+                Log.objects.create(request_id=None, item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Edit", 
+                                       affected_user='', change_occurred='Edited ' + field.field_kind + ' Custom Field ' + str(field.field_name))
+                return Response(serializer.data)
+            else:
+                return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST)
         else:
-            field = self.get_object(pk)
-            if not field.is_private:
-                serializer = AssetCustomFieldSerializer(field, many=True)
-                return Response(serializer.data)   
-            return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
-        
-    def delete(self, request, pk, format=None):
-        field = Asset_Custom_Field.objects.get(id = pk)
-        Log.objects.create(request_id=None,item_id=None,  item_name="-", initiating_user = request.user, nature_of_event="Delete", 
-                                       affected_user='', change_occurred='Deleted asset custom field ' + str(field.field_name))
-        field.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 ########################################## Bulk Upload ########################################### 
 class ItemUpload(APIView):
@@ -1007,7 +972,7 @@ class ItemUpload(APIView):
         headerMap = {}
         customFieldMap = {}
         headers = csvData[0].split(',')
-        custom_fields = Custom_Field.objects.all()
+        custom_fields = Custom_Field.objects.filter(field_kind='Item')
         for i, header in enumerate(headers):
             if not (header.lower() == "item name" or header.lower() == "quantity" or header.lower() == "model number" or header.lower() =="description" or header.lower() == "tags"):
                 # ERROR CHECK, make sure the custom field names are correct 
@@ -1843,24 +1808,6 @@ class APILoanEmailClearDates(APIView):
         LoanSendDates.objects.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# ########################################## Backfill Requests ###########################################   
-# class APIBackfillRequest(ListCreateAPIView):
-#     """
-#     creation of backfill requests
-#     """
-#     permission_classes = (IsAtLeastUser,)
-#     queryset = BackfillRequest.objects.all()
-#     serializer_class = BackfillRequestSerializer
-#     
-#     def post(self, request, format=None):
-#         data = request.data.copy()
-#         serializer = BackfillRequestSerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#             
-
 ########################################## Asset-tracking ###########################################   
 class APIItemToAsset(APIView):
     """
@@ -1878,6 +1825,8 @@ class APIItemToAsset(APIView):
                 asset = Asset(item=item)
                 asset.save()
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Changed " + item.item_name + " to track by asset.")
         return Response(serializer.data)
     
 class APIAssetToItem(APIView):
@@ -1900,7 +1849,84 @@ class APIAssetToItem(APIView):
             "pk": pk,
         }
         serializer = ItemSerializer(item, context=context)
-        return Response(serializer.data)   
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Changed " + item.item_name + " to no longer track by asset.")
+        return Response(serializer.data)
+    
+class APIAsset(APIView):
+    permission_classes = (IsAdmin,)
+    serializer_class = AssetWithCustomFieldSerializer 
+    
+    def get(self, request, pk, format=None):
+        if (Asset.objects.filter(asset_id=pk).exists()):
+            asset = Asset.objects.get(asset_id=pk)
+            custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+            serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag)
+            return Response(serializer.data)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,pk,format=None):
+        if (Asset.objects.filter(asset_id=pk).exists()):
+            asset = Asset.objects.get(asset_id=pk)
+            asset_id = asset.asset_id
+            item = asset.item
+            asset.delete()
+            item.quantity = item.quantity - 1
+            item.save()
+            Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset.asset_id+ ").")
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def put(self, request, pk, format=None):
+        asset = Asset.objects.get(asset_id=pk)
+        custom_fields = Custom_Field.objects.filter(field_kind='Asset')
+        custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+        for field in custom_fields:
+            if request.data[field.field_name] is '' and (field.field_type == 'Int' or field.field_type == 'Float'):
+                request.data[field.field_name] = None
+        serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag,data=request.data, partial=True)
+        if serializer.is_valid():
+            data = serializer.data
+            if 'asset_tag' in data:
+                new_tag = data['asset_tag']
+                if new_tag is not '' and not Asset.objects.filter(asset_tag=new_tag).exists():
+                    asset.asset_tag = new_tag
+                    asset.save()
+            fields = Custom_Field.objects.filter(field_kind='Asset')
+            for field in fields:
+                if field.field_name in data:
+                    value = data[field.field_name]  
+                    if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
+                        custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
+                    else:
+                        custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
+                    if field.field_type == 'Short' and len(value)<=400 or \
+                        field.field_type == 'Long' and len(value)<=1000:
+                        custom_val.value = value
+                    if field.field_type == 'Int':
+                        try:
+                            if value is not None:
+                                int(value)
+                            custom_val.value = value
+                        except ValueError:
+                            return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
+                    if field.field_type == 'Float':
+                        try:
+                            if value is not None:
+                                float(value)
+                            custom_val.value = value
+                        except ValueError:
+                            return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
+                    custom_val.save()
+            Log.objects.create(request_id='', item_id= asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred="Edited asset with (new) tag " + asset.asset_tag + " from the " + asset.item.item_name + " item (asset id: " +asset.asset_id+ ").")          
+            return self.get(request, asset.asset_id)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+       
 ########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """

@@ -24,7 +24,7 @@ from inventory.permissions import IsAdminOrUser, IsOwnerOrAdmin, IsAtLeastUser, 
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from .forms import RequestForm, RequestSpecificForm, AddToCartForm, RequestEditForm
 from .models import Asset, Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, ShoppingCartInstance, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
 from django.core.exceptions import ObjectDoesNotExist
 from MeeseeksInc.celery import app
 
@@ -43,7 +43,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         if self.request.user.is_staff or self.request.user.is_superuser:
-            context['custom_fields'] = Custom_Field.objects.filter() 
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item') 
             context['request_list'] = Request.objects.all()
             context['approved_request_list'] = Request.objects.filter(status="Approved")
             context['pending_request_list'] = Request.objects.filter(status="Pending")
@@ -60,7 +60,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['loans_backfilled'] = Loan.objects.filter(status="Backfilled")
             context['my_template'] = 'custom_admin/base.html'
         else:
-            context['custom_fields'] = Custom_Field.objects.filter(is_private=False) 
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item',is_private=False) 
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username)
             context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
             context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
@@ -98,15 +98,15 @@ class DetailView(FormMixin, LoginRequiredMixin, UserPassesTestMixin, generic.Det
             context['tag_list'] = tags
         user = User.objects.get(username=self.request.user.username)
         if(not user.is_staff): # if not admin or manager
-            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
-            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(is_private=False)
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item',is_private=False)
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset',is_private=False)
             context['request_list'] = Request.objects.filter(user_id=self.request.user.username, item_name=self.get_object().item_id , status = "Pending")
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id , status = "Checked Out")
             context['disbursed_list'] = Disbursement.objects.filter(user_name=self.request.user.username, item_name=self.get_object().item_id)
             context['my_template'] = 'inventory/base.html'
         else: # if admin/manager
-            context['custom_fields'] = Custom_Field.objects.all()
-            context['asset_custom_fields'] = Asset_Custom_Field.objects.all()
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item')
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset')
             context['request_list'] = Request.objects.filter(item_name=self.get_object().item_id , status = "Pending")  
             context['loan_list'] = Loan.objects.filter(item_name=self.get_object().item_id , status = "Checked Out")
             context['disbursed_list'] = Disbursement.objects.filter(item_name=self.get_object().item_id)
@@ -323,10 +323,13 @@ class LoanDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView
         context['loan'] = self.get_object()
         context['assets'] = Asset.objects.filter(loan=self.get_object())
         context['file_name'] = str(self.get_object().backfill_pdf).split('/')[-1]
+        context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.all()
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset')
         else:
             context['my_template'] = 'inventory/base.html'
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset',is_private=False)
         return context
     
     def test_func(self):
@@ -342,10 +345,10 @@ class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailVie
         context['asset'] = self.get_object()
         if self.request.user.is_staff:
             context['my_template'] = 'custom_admin/base.html'
-            context['asset_custom_fields'] = Asset_Custom_Field.objects.all()
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset')
         else:
             context['my_template'] = 'inventory/base.html'
-            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(is_private=False)
+            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(field_kind='Asset',is_private=False)
         context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.filter(asset=self.get_object())
         return context
     

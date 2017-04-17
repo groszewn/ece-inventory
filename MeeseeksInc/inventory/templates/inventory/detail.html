@@ -124,7 +124,7 @@ function clickEvent(){
 	
 {% if user.is_superuser %}
 {% if item.is_asset %}
-<button type="button" onclick="changeToItem();" class="btn btn-primary">Change Item to back to non-asset</button>
+<button type="button" onclick="changeToItem();" class="btn btn-primary">Change Item To Non-Asset</button>
 {% else %}
 <button type="button" onclick="changeToAsset();" class="btn btn-primary">Change Item to Asset</button>
 {% endif %}
@@ -210,7 +210,7 @@ function clickEvent(){
 		        <tbody>
 		        	{% for asset in asset_list %}
 		        		<tr>
-							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_id }}</a></td>
+							<td><a href="{% url 'inventory:asset_detail' asset.asset_id %}">{{ asset.asset_tag }}</a></td>
 							{% if asset.loan %}
 								<td><a href="{% url 'inventory:loan_detail' asset.loan.loan_id %}">Loaned out</a></td>
 							{% elif asset.disbursement %}
@@ -222,7 +222,9 @@ function clickEvent(){
 								<td default = "">
 									{% for value in asset_custom_vals%}
 										{% if value.asset == asset and value.field == field %}
+											{% if value.value != None %}
 											{{value.value}}
+											{% endif %}
 										{% endif %}
 									{% endfor %}
 								</td>

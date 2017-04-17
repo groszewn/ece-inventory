@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Item, Tag, Request, Disbursement, Custom_Field, Custom_Field_Value, \
-    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset, Asset_Custom_Field
+    Log, Loan, SubscribedUsers, LoanReminderEmailBody, LoanSendDates, Asset
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -119,9 +119,14 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         
 class AssetCustomFieldSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Asset_Custom_Field
+        model = Custom_Field
         fields = ('id','field_name','is_private','field_type')
         
+class FullCustomFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Custom_Field
+        fields = ('id','field_name','is_private','field_type','field_kind')
+
 class CustomValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Custom_Field_Value
@@ -139,7 +144,6 @@ class CustomValueSerializerNoItem(serializers.ModelSerializer):
         model = Custom_Field_Value
         fields = ('id','field_name', 'is_private', 'field_type', 'value')      
         depth = 1
-
 
 class LogSerializer(serializers.ModelSerializer):
     class Meta:
@@ -201,6 +205,7 @@ class MultipleRequestPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Request
         fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'type', 'reason', 'request_id')    
+    
     def validate_request_quantity(self, value):
         """
         Check that the request is positive
@@ -209,7 +214,6 @@ class MultipleRequestPostSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Request quantity needs to be greater than 0")
         return value
 
-    
 class RequestUpdateSerializer(serializers.ModelSerializer):
     time_requested = serializers.HiddenField(
         default=serializers.CreateOnlyDefault(timezone.localtime(timezone.now()))
@@ -366,31 +370,49 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('asset_id','item')
+        fields = ('asset_id','asset_tag','item')
       
 class AssetWithCustomFieldSerializer(serializers.Serializer):
-    def __init__(self, custom_values=None, *args, **kwargs):
+    def __init__(self, custom_values=None, asset_tag=None, *args, **kwargs):
         super(AssetWithCustomFieldSerializer, self).__init__(*args, **kwargs)
-        for field in Asset_Custom_Field.objects.all():
+        self.fields['asset_tag'] = serializers.CharField(required=False,allow_blank=True)
+        if asset_tag is not None:
+            self.fields['asset_tag'] = serializers.CharField(initial = asset_tag, required=False,allow_blank=True)
+        for field in Custom_Field.objects.filter(field_kind='Asset'):
             if field.field_type == 'Short':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False)                    
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True)                    
             if field.field_type == 'Long':
-                self.fields["%s" % field.field_name] = serializers.CharField(required=False,widget=forms.Textarea) 
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True) 
             if field.field_type == 'Int':
-                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False) 
+                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False,allow_null=True) 
             if field.field_type == 'Float':
-                self.fields["%s" % field.field_name] = serializers.FloatField(required=False)
+                self.fields["%s" % field.field_name] = serializers.FloatField(required=False,allow_null=True)
             if custom_values is not None:
                 for val in custom_values:
                     if val.field == field:
                         if field.field_type == 'Short':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False)                    
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True)                    
                         if field.field_type == 'Long':
-                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True) 
                         if field.field_type == 'Int':
-                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False) 
+                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False,allow_null=True) 
                         if field.field_type == 'Float':
-                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False)
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_null=True)
+        
+class MultipleAssetCustomFieldSerializer(serializers.ModelSerializer):
+    time_requested = serializers.DateTimeField(
+        default=timezone.localtime(timezone.now()),
+        read_only=True
+    )
+    user_id = serializers.CharField(
+        default=serializers.CurrentUserDefault(), 
+        read_only=True
+    )
+
+    class Meta:
+        model = Request
+        fields = ('user_id', 'time_requested', 'item_name', 'request_quantity', 'type', 'reason', 'request_id')    
+    
             
 class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)

@@ -30,7 +30,7 @@ from rest_framework.authtoken.models import Token
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
     BaseAssetCheckInFormset, AssetEditForm
 from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -64,9 +64,9 @@ class AdminIndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         context['current_user'] = self.request.user.username
         context['tags'] = Tag.objects.distinct('tag')
         if self.request.user.is_staff or self.request.user.is_superuser:
-            context['custom_fields'] = Custom_Field.objects.filter() 
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item') 
         else:
-            context['custom_fields'] = Custom_Field.objects.filter(is_private=False)
+            context['custom_fields'] = Custom_Field.objects.filter(field_kind='Item',is_private=False)
         context['tags'] = Tag.objects.distinct('tag')
         return context
     
@@ -150,26 +150,36 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     
     def edit_asset(request, pk):
         asset = Asset.objects.get(asset_id=pk)
-        asset_custom_fields = Asset_Custom_Field.objects.all()
+        orig_tag = asset.asset_tag
+        asset_custom_fields = Custom_Field.objects.filter(field_kind='Asset')
         asset_custom_vals = Asset_Custom_Field_Value.objects.filter(asset=asset)
         if request.method == "POST":
-            form = AssetEditForm(asset_custom_fields, asset_custom_vals, request.POST)
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, asset.asset_tag, request.POST)
             if form.is_valid():
+                asset = Asset.objects.get(asset_id=pk)
                 url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
                 payload = {}
                 for field in asset_custom_fields:
                     if form[field.field_name].value():
-                        payload[field.field_name] = form[field.field_name].value() 
+                        payload[field.field_name] = form[field.field_name].value()
+                    else:
+                        payload[field.field_name] = ''
+                if form['asset_tag'].value():
+                    payload['asset_tag'] = form['asset_tag'].value() 
                 header = get_header(request)
+                if Asset.objects.filter(asset_tag=form['asset_tag'].value()).exists() and form['asset_tag'].value() != orig_tag:
+                        messages.error(request, ('An asset with that asset tag already exists. That change could not be saved.'))
+                if form['asset_tag'].value() is '':
+                        messages.error(request, ('Asset tags cannot be blank. That change could not be saved.'))
                 response = requests.put(url, headers = header, data=json.dumps(payload))
                 if response.status_code == 200:
-                    messages.success(request, ('Successfully edit asset (' + asset.asset_id + ')'))
+                    messages.success(request, ('Successfully edited asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ').')) 
                 else:
-                    messages.error(request, ('Failed to edit asset (' + asset.asset_id + ')'))
-                return redirect(request.META.get('HTTP_REFERER')) 
+                    messages.error(request, ('Failed to edit asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ')'))
+                return redirect(request.META.get('HTTP_REFERER'))
         else:
-            form = AssetEditForm(asset_custom_fields, asset_custom_vals) 
-        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_id':asset.asset_id, 'item_name':asset.item.item_name})
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, asset.asset_tag) 
+        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_tag':asset.asset_tag, 'item_name':asset.item.item_name})
             
     def delete_asset(request, pk):
         asset = Asset.objects.get(asset_id=pk)
@@ -180,7 +190,7 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             messages.success(request, ('Successfully deleted asset: ' + pk ))
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
-        return redirect(request.META.get('HTTP_REFERER'))        
+        return redirect('/item/' + asset.item.item_id)        
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -569,20 +579,18 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         field_name = form['field_name'].value()
         field_type = form['field_type'].value()
         is_private = form['is_private'].value()
-        field_for = form['type'].value()
-        if field_for == "Asset Field" and Asset_Custom_Field.objects.filter(field_name=field_name).exists():
+        field_for = form['field_kind'].value()
+        if field_for == "Asset" and Custom_Field.objects.filter(field_kind='Asset',field_name=field_name).exists():
             messages.error(self.request,"This custom asset field name is already taken.")
             return redirect(self.request.META.get('HTTP_REFERER'))
-        if field_for == "Item Field" and Custom_Field.objects.filter(field_name=field_name).exists():
+        if field_for == "Item" and Custom_Field.objects.filter(field_kind='Item',field_name=field_name).exists():
             messages.error(self.request,"This custom item field name is already taken.")
             return redirect(self.request.META.get('HTTP_REFERER'))
         user = self.request.user
         token, create = Token.objects.get_or_create(user=user)
         http_host = get_host(self.request)
         url=http_host+'/api/custom/field/'
-        if field_for == "Asset Field":
-            url=http_host+'/api/asset/custom/field/'
-        payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private}
+        payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private, 'field_kind':field_for}
         header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
         requests.post(url, headers = header, data=json.dumps(payload))
@@ -591,16 +599,17 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     def test_func(self):
         return self.request.user.is_superuser
     
+    
     def delete_custom_field(request):
-        fields = Custom_Field.objects.all()
-        asset_fields = Asset_Custom_Field.objects.all()
+        fields = Custom_Field.objects.filter(field_kind='Item')
+        asset_fields = Custom_Field.objects.filter(field_kind='Asset')
         if request.method == 'POST':
             form = DeleteFieldForm(fields,asset_fields,request.POST)
             if form.is_valid():
                 pickedFields = form.cleaned_data.get('fields')
                 if pickedFields:
                     for field in pickedFields:
-                        delField = Custom_Field.objects.get(field_name=field)
+                        delField = Custom_Field.objects.get(field_kind='Item',field_name=field)
                         user = request.user
                         token, create = Token.objects.get_or_create(user=user)
                         http_host = get_host(request)
@@ -611,11 +620,11 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
                 pickedAssetFields = form.cleaned_data.get('asset_fields')
                 if pickedAssetFields:
                     for a_field in pickedAssetFields:
-                        delField = Asset_Custom_Field.objects.get(field_name=a_field)
+                        delField = Custom_Field.objects.get(field_kind='Asset',field_name=a_field)
                         user = request.user
                         token, create = Token.objects.get_or_create(user=user)
                         http_host = get_host(request)
-                        url=http_host+'/api/asset/custom/field/modify/'+ str(delField.id)+ '/'
+                        url=http_host+'/api/custom/field/modify/'+ str(delField.id)+ '/'
                         header = {'Authorization': 'Token '+ str(token), 
                               "Accept": "application/json", "Content-type":"application/json"}
                         requests.delete(url, headers = header)  
@@ -623,6 +632,40 @@ class CustomFieldView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         else:
             form = DeleteFieldForm(fields,asset_fields)
         return render(request, 'custom_admin/delete_custom_field.html', {'form': form})
+    
+    def modify_custom_field(request):
+        fields = Custom_Field.objects.filter(field_kind='Item')
+        asset_fields = Custom_Field.objects.filter(field_kind='Asset')
+        return render(request, 'custom_admin/modify_custom_field.html', {'fields':fields,'asset_fields':asset_fields})
+    
+    def modify_custom_field_modal(request,pk):
+        field = Custom_Field.objects.get(id=pk)
+        orig_type = field.field_type
+        orig_kind = field.field_kind
+        if request.method == "POST":
+            form = CustomFieldForm(request.POST or None, instance=field)
+            if form.is_valid():
+                field_name = form['field_name'].value()
+                field_type = form['field_type'].value()
+                is_private = form['is_private'].value()
+                field_for = form['field_kind'].value()
+                user = request.user
+                token, create = Token.objects.get_or_create(user=user)
+                http_host = get_host(request)
+                url=http_host+'/api/custom/field/modify/' + str(field.id) + '/'
+                payload = {'field_name': field_name,'field_type':field_type, 'is_private':is_private, 'field_kind':field_for}
+                header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+                requests.put(url, headers = header, data=json.dumps(payload))
+                messages.success(request, ("Edited the " + field.field_name + " custom field."))
+                if orig_kind != field_for:
+                    messages.info(request, "You have changed the kind of the custom field. Your previous field value data will return if you switch the kind back while keeping the same data type." )
+                if orig_type != field_type:
+                     messages.info(request, "You have changed the data type of the custom field. We have reset all old values in order to apply this change." )
+                return redirect(reverse('custom_admin:modify_custom_field'))
+        else:
+            form = CustomFieldForm(instance=field)
+        return render(request, 'custom_admin/custom_field_modify_inner.html', {'form': form, 'pk':pk}) 
 
 class RegistrationView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     login_url='/login/'
@@ -730,70 +773,13 @@ def toggleAsset(request, pk):
 
 class TagView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'
+    
     def delete_tag(request, pk, item):
         item = Item.objects.get(item_id=item)
         tag = Tag.objects.get(id=pk)
         tag.delete()
         return redirect('/item/' + item.item_id)
-    def add_tags(request, pk):
-        if request.method == "POST":
-            item = Item.objects.get(item_id = pk)
-            tags = Tag.objects.all()
-            item_tags = item.tags.all()
-            form = AddTagForm(tags, item_tags, request.POST or None)
-            if form.is_valid():
-                pickedTags = form.cleaned_data.get('tag_field')
-                createdTags = form['create_new_tags'].value()
-                item = Item.objects.get(item_id=pk)
-                if pickedTags:
-                    for oneTag in pickedTags:
-                        if not item.tags.filter(tag=oneTag).exists():
-                            t = Tag(tag=oneTag) 
-                            t.save(force_insert=True)
-                            item.tags.add(t)
-                            item.save()
-                if createdTags is not "":
-                    tag_list = [x.strip() for x in createdTags.split(',')]
-                    for oneTag in tag_list:
-                        if not item.tags.filter(tag=oneTag).exists():
-                            t = Tag(tag=oneTag)
-                            t.save(force_insert=True)
-                            item.tags.add(t)
-                            item.save()
-                for ittag in item_tags:
-                    ittag.tag = form[ittag.tag].value()
-                    ittag.save()
-                return redirect('/item/' + pk)
-        else:
-            item = Item.objects.get(item_id = pk)
-            tags = Tag.objects.all()
-            item_tags = item.tags.all()
-            form = AddTagForm(tags, item_tags)
-        return render(request, 'inventory/add_tags.html', {'form': form})
 
-
-    def edit_tag(request, pk, item):
-        tag = Tag.objects.get(id=pk)
-        item = Item.objects.get(item_id=item)
-        if request.method == "POST":
-            form = EditTagForm(request.POST or None, instance=tag)
-            if form.is_valid():
-                form.save()
-                return redirect('/item/' + item.item_id)
-        else:
-            form = EditTagForm(instance=tag)
-        return render(request, 'inventory/tag_edit.html', {'form': form})
-    def edit_specific_tag(request, pk, item):
-        tag = Tag.objects.get(id=pk)
-        item = Item.objects.get(item_id=item)
-        if request.method == "POST":
-            form = EditTagForm(request.POST or None, instance=tag)
-            if form.is_valid():
-                form.save()
-                return redirect('/item/' + item.item_id)
-        else:
-            form = EditTagForm(instance=tag)
-        return render(request, 'custom_admin/edit_tag_module_inner.html', {'form': form,'pk':pk,'item':item.item_id})
     def add_tags_module(request, pk):
         if request.method == "POST":
             item = Item.objects.get(item_id = pk)
@@ -825,13 +811,17 @@ class TagView(LoginRequiredMixin, UserPassesTestMixin):
                     else:
                         ittag.tag = form[ittag.tag].value().strip()
                         ittag.save()
+                    print(form[ittag.tag+"Checkbox"])
+                    print(form[ittag.tag+"Checkbox"].value())
+                    if form[ittag.tag+"Checkbox"].value() == True:
+                        ittag.delete()
                 return redirect('/item/' + pk)
         else:
             item = Item.objects.get(item_id = pk)
             tags = Tag.objects.all()
             item_tags = item.tags.all()
             form = AddTagForm(tags, item_tags)
-        return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk})
+        return render(request, 'custom_admin/add_tags_module_inner.html', {'form': form,'pk':pk, 'item_tags':item_tags})
 
     def test_func(self):
         return self.request.user.is_staff 
@@ -851,7 +841,7 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
         return redirect(reverse('custom_admin:index'))
     def create_new_item(request):
         tags = Tag.objects.all()
-        custom_fields = Custom_Field.objects.all()
+        custom_fields = Custom_Field.objects.filter(field_kind='Item')
         if request.method== 'POST':
             form = CreateItemForm(tags, custom_fields, request.POST or None)
             if form.is_valid():
@@ -887,35 +877,10 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
         else:
             form = CreateItemForm(tags, custom_fields)
         return render(request, 'custom_admin/item_create.html', {'form':form,'tags':tags})
-    def edit_item(request, pk):
-        item = Item.objects.get(item_id=pk)
-        custom_fields = Custom_Field.objects.all()
-        custom_vals = Custom_Field_Value.objects.filter(item = item)
-        original_quantity = item.quantity
-        if request.method == "POST":
-            form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
-            if form.is_valid():
-                if int(form['quantity'].value())!=original_quantity:    
-                    Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
-                                             affected_user='', change_occurred="Change quantity from " + str(original_quantity) + ' to ' + str(form['quantity'].value()))
-                else:
-                    Log.objects.create(request_id = None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
-                                             affected_user='', change_occurred="Edited " + str(form['item_name'].value()))
-                form.save()
-                for field in custom_fields:
-                    field_value = form[field.field_name].value()
-                    custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
-                    custom_val.save() 
-                return redirect('/item/' + pk)
-        else:
-            form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
-        return render(request, 'inventory/item_edit.html', {'form': form})
-
-
 
     def edit_item_module(request, pk):
         item = Item.objects.get(item_id=pk)
-        custom_fields = Custom_Field.objects.all()
+        custom_fields = Custom_Field.objects.filter(field_kind='Item')
         custom_vals = Custom_Field_Value.objects.filter(item = item)
         original_quantity = item.quantity
         if request.method == "POST":
