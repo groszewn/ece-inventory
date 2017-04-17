@@ -77,13 +77,17 @@
 {% endif %}  
 
 {% block  editLoan %}
-	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-warning">Edit Loan</a>	
 {% endblock editLoan %}
 {% endif %}
 {% if user.get_username == loan.user_name %}
-{% block backfillRequest %}
-	<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
-{% endblock backfillRequest %}
+	{% if loan.backfill_status != 'Completed'%}
+		{% if loan.backfill_status != 'In Transit'%}
+			{% block backfillRequest %}
+				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-primary">Backfill Request</a>
+			{% endblock backfillRequest %}
+		{% endif %}
+	{% endif %}
 {% endif %}
 
 <h3> Original Request Information </h3>
@@ -126,21 +130,61 @@
 		            <tr>
 		            <th>Backfill Status:</th>
 					<th>Backfill Quantity</th>
-					<th>Backfill Notes:</th>
 					<th>Proof Of Purchase:</th>
 					<th>Time Requested:</th>
+					{% if user.is_staff %}
+						{% if loan.backfill_status == "Requested" or loan.backfill_status == "In Transit" %}
+							<th>Actions:</th>
+						{% endif %}
+					{% endif %}
 					</tr>
 		        </thead>
 		        <tbody>
 		        		<tr>
 		        			<td>{{loan.backfill_status}}</td>
 							<td>{{loan.backfill_quantity}}</td>
-							<td>{{loan.backfill_notes}}</td>
 							<td><a href={{loan.backfill_pdf.url}} target="_blank">{{file_name}}</a></td>
 							<td>{{loan.backfill_time_requested}}</td>
+							{% if user.is_staff %}
+								{% if loan.backfill_status == "Requested"%}
+									<td>
+										{% block comment_accept_backfill %}
+				                        	<a id = "accept-backfill" loan-id="{{ loan.loan_id }}" class="accept-backfill btn btn-success">Approve</a>
+				                        {% endblock comment_accept_backfill %}
+				                        {% block comment_deny_backfill %}
+				                        	<a id = "deny-backfill" loan-id="{{ loan.loan_id }}" class="deny-backfill btn btn-warning">Deny</a>
+				                        {% endblock comment_deny_backfill %}
+									</td>
+								{% endif %}
+								{% if loan.backfill_status == "In Transit" %}
+									<td>
+				                    	{% if loan.item_name.is_asset %}
+					                    	{% block comment_complete_backfill_asset %}
+					                        	<a id = "complete-backfill-asset" loan-id="{{ loan.loan_id }}" class="complete-backfill-asset btn btn-success">Approve</a>
+					                        {% endblock comment_complete_backfill_asset %}
+					                    {% else %}
+					                    	{% block comment_complete_backfill %}
+					                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
+					                        {% endblock comment_complete_backfill %}
+					                    {% endif %}
+				                        {% block comment_fail_backfill %}
+				                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Fail</a>
+				                        {% endblock comment_fail_backfill %}
+                    				</td>
+								{% endif %}
+							{% endif %}
 						</tr>
 		        </tbody>
 		    </table>
+		    
+		    
+	{% if user.is_staff %}
+		{% block backfill_add_notes %}
+	    	<a id = "backfill-add-notes" loan-id="{{ loan.loan_id }}" class="backfill-add-notes btn btn-success">Add Notes</a>
+	    {% endblock backfill_add_notes %}
+		<h3>Notes about this backfill:</h3>
+		<div>{{loan.backfill_notes}}</div>
+	{% endif %}
 {% endif %}
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
@@ -317,5 +361,198 @@
     });
 </script>
 {% endblock js-backfillRequest %}
+
+{############################# BACKFILL ACCEPT + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-accept-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Accept</h4>
+            </div>
+            <div id="form-modal-body-accept-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-approve-backfill %}
+<script>
+    $('.accept-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-accept-backfill').load(('../../../customadmin/backfill/accept/addcomment/'+loan_id), function () {
+        	$('#formID-comment-accept-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-accept-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-approve-backfill %}
+
+{############################# BACKFILL DENY + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-deny-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Deny</h4>
+            </div>
+            <div id="form-modal-body-deny-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-deny-backfill %}
+<script>
+    $('.deny-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-deny-backfill').load(('../../../customadmin/backfill/deny/addcomment/'+loan_id), function () {
+        	$('#formID-comment-deny-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-deny-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-deny-backfill %}
+
+{############################# BACKFILL COMPLETE WITH ASSET + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill-asset %}
+<script>
+    $('.complete-backfill-asset').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill-asset').load(('../../../customadmin/backfill/complete/addcomment/asset/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill-asset').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill-asset %}
+
+{############################# BACKFILL COMPLETE + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill %}
+<script>
+    $('.complete-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill').load(('../../../customadmin/backfill/complete/addcomment/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill %}
+
+{############################# BACKFILL FAIL + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-fail-backfill" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Failure</h4>
+            </div>
+            <div id="form-modal-body-fail-backfill" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-fail-backfill %}
+<script>
+    $('.fail-backfill').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-fail-backfill').load(('../../../customadmin/backfill/fail/addcomment/'+loan_id), function () {
+        	$('#formID-comment-fail-backfill').attr("loan-comment", loan_id);
+            $('#form-modal-fail-backfill').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-fail-backfill %}
+
+{############################# BACKFILL NOTES MODAL LOGIC ##############################}
+<div id="form-modal-backfill-add-notes" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Backfill Notes</h4>
+            </div>
+            <div id="form-modal-body-backfill-add-notes" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-backfill-add-notes %}
+<script>
+    $('.backfill-add-notes').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-backfill-add-notes').load(('../../../customadmin/backfill/add/notes/'+loan_id), function () {
+        	$('#formID-comment-backfill-add-notes').attr("loan-comment", loan_id);
+            $('#form-modal-backfill-add-notes').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-backfill-add-notes %}
+
 
 {% endblock %}

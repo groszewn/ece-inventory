@@ -367,7 +367,31 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('asset_id','item')
-        
+      
+class AssetWithCustomFieldSerializer(serializers.Serializer):
+    def __init__(self, custom_values=None, *args, **kwargs):
+        super(AssetWithCustomFieldSerializer, self).__init__(*args, **kwargs)
+        for field in Asset_Custom_Field.objects.all():
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,widget=forms.Textarea) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = serializers.FloatField(required=False)
+            if custom_values is not None:
+                for val in custom_values:
+                    if val.field == field:
+                        if field.field_type == 'Short':
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False)                    
+                        if field.field_type == 'Long':
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                        if field.field_type == 'Int':
+                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False) 
+                        if field.field_type == 'Float':
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False)
+            
 class LoanBackfillPostSerializer(serializers.ModelSerializer):
     backfill_pdf = serializers.FileField(max_length=200, use_url=True)
     backfill_quantity = serializers.IntegerField(required=True)

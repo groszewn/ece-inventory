@@ -3,6 +3,20 @@
 {% load static %}
 {% load index %}
 {% block content %}
+
+<div id="tabbed" class="container">	
+<ul class="nav nav-tabs">
+	  <li><a href="#all-items" data-toggle="tab" data-target="#all-items">Items</a></li>
+	  <li class="active"><a href=#all-requests" data-toggle="tab" data-target="#all-requests">Requests</a></li>
+	  <li><a href="#all-loans" data-toggle="tab" data-target="#all-loans">Loans</a></li>
+	  <li><a href="#all-disbursements" data-toggle="tab" data-target="#all-disbursements">Disbursements</a></li>
+	  <li><a href="#all-backfills" data-toggle="tab" data-target="#all-backfills">Backfills</a></li>
+</ul>
+
+<div class="tab-content "> {# all content #}
+
+
+<div class="tab-pane" id="all-items">
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
 <form id="search-form">
@@ -18,16 +32,23 @@
         <option value={{ tag.id }}>{{ tag.tag }}</option>
         {% endfor %}
     </select>
-    <input type="submit"/>
+    <input type="submit" name = "filter_tag" class="btn btn-primary">
+    <button type="button" id = "filter_minstock" class="btn btn-primary">Show Below Minimum Stock</button>
+    <button type="button" id = "clear_filter_minstock" class="btn btn-primary">Clear Minstock Filtering</button>
 </form>
+
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
+	<th></th>
 	<th>Item Name</th>
 	<th>Quantity</th>
 	<th>Item Model Number</th>
 	<th>Item Description</th>
-	<th>Minimum Stock Amount</th>
+	{% if user.is_staff %}
+	<th>Item Minimum Stock Info</th>
+	<th>Item Minimum Stock Enabled</th>
+	{% endif %}
 	{% for field in custom_fields%}
 		<th>{{field.field_name}}</th>
 	{% endfor %}
@@ -36,6 +57,11 @@
 <tbody>
 </tbody>
 </table>
+
+</div> {# end item div #}
+
+<div class="tab-pane active" id="all-requests">
+
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
 	<h2>Requests</h2>
@@ -185,6 +211,11 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
+	    {% if user.is_staff %}
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+		{% endif %}
+	    
         </div>
         <div class="tab-pane" id="denied">
 			<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -224,14 +255,15 @@
 	    </table>
         </div>
 	</div>
-	{% else %}
-		<p class="lead" style="padding: 15px 15px">No Requests To Display.</p>
 	{% endif %}
 
-{% if user.is_staff %}
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
-{% endif %}
+
+</div> {# end requests div #}
+
+
+
+<div class="tab-pane" id="all-loans">
+
 {########################## LOANS #####################}	
 {% if loan_list %}
 		<h2>Loans</h2>
@@ -405,9 +437,12 @@
 		    </table>
 		    </div>
 	</div>
-	{% else %}
-		<p class="lead" style="padding: 15px 15px">No Loans To Display.</p
 	{% endif %}
+	
+</div> {# end loans div #}
+
+
+<div class="tab-pane" id="all-disbursements">
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -427,7 +462,7 @@
     <tbody>
         {% for disbursed in disbursed_list %}
         <tr>
-            <td>{{ disbursed.item_name }}</td>
+            <td><a href="{% url 'inventory:detail' disbursed.item_name.item_id %}">{{ disbursed.item_name }}</a></td>
             <td>{{ disbursed.total_quantity }}</td>
             <td>{{ disbursed.user_name }}</td>
             <td>{{ disbursed.admin_name }}</td>
@@ -441,30 +476,32 @@
         {% endfor %}
     </tbody>
 </table>
-{#% else %#}
-{#<p class="lead" style="padding: 15px 15px">No disbursements.</p>#}
 {% endif %}
+
+
+</div> {# end disbursements div #}
+
+<div class="tab-pane" id="all-backfills">
+
 {########################## ALL BACKFILLS #####################}
 {% if backfill_list %}
 <h2>Backfills</h2>
 <ul class="nav nav-tabs">
-    <li><a href="#all-backfills" data-toggle="tab">All Backfills</a></li>
+    <li><a href="#backfills-all" data-toggle="tab">All Backfills</a></li>
     <li><a href="#completed-backfills" data-toggle="tab">Completed</a></li>
     <li><a href="#in-transit-backfills" data-toggle="tab">In Transit</a></li>
     <li class="active"><a href="#requested-backfills" data-toggle="tab">Requested</a></li>
     <li><a href="#denied-backfills" data-toggle="tab">Denied</a></li>
 </ul>
 <div class="tab-content">
-    <div class="tab-pane" id="all-backfills">
+    <div class="tab-pane" id="backfills-all">
+    	HEY
         <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>
                     <th>Backfill for</th>
                     <th>Status</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -475,9 +512,6 @@
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_status}}</td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td>{{ loan.backfill_time_requested}}</td>
                 </tr>
@@ -491,9 +525,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                     {% if user.is_staff %}
@@ -506,19 +537,22 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
                     {% if user.is_staff %}
                     <td>
-                    	{% block comment_complete_backfill %}
-                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
-                        {% endblock comment_complete_backfill %}
+                    	{% if loan.item_name.is_asset %}
+	                    	{% block comment_complete_backfill_asset %}
+	                        	<a id = "complete-backfill-asset" loan-id="{{ loan.loan_id }}" class="complete-backfill-asset btn btn-success">Approve</a>
+	                        {% endblock comment_complete_backfill_asset %}
+	                    {% else %}
+	                    	{% block comment_complete_backfill %}
+	                        	<a id = "complete-backfill" loan-id="{{ loan.loan_id }}" class="complete-backfill btn btn-success">Approve</a>
+	                        {% endblock comment_complete_backfill %}
+	                    {% endif %}
                         {% block comment_fail_backfill %}
-                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Deny</a>
+                        	<a id = "fail-backfill" loan-id="{{ loan.loan_id }}" class="fail-backfill btn btn-warning">Fail</a>
                         {% endblock comment_fail_backfill %}
                     </td>
                     {% endif %}
@@ -569,9 +603,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -581,9 +612,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -598,9 +626,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -610,9 +635,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -622,9 +644,18 @@
         </table>
     </div>
 </div>
-{% else %}
-<p class="lead" style="padding: 15px 15px">No outstanding Backfills.</p>
 {% endif %}
+
+</div> {# end backfill div #}
+
+
+</div> {# ending tabcontent #}
+</div> {# ending container #}
+
+
+
+
+
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -997,6 +1028,38 @@
 </script>
 {% endblock js-complete-backfill %}
 
+{############################# BACKFILL COMPLETE WITH ASSET + COMMENT MODAL LOGIC ##############################}
+<div id="form-modal-complete-backfill-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Comment for Backfill Completion</h4>
+            </div>
+            <div id="form-modal-body-complete-backfill-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal --> 
+{% block js-complete-backfill-asset %}
+<script>
+    $('.complete-backfill-asset').click(function() {
+    	loan_id = $(this).attr("loan-id"); // should give me request_id to pass into modal / form
+        $('#form-modal-body-complete-backfill-asset').load(('backfill/complete/addcomment/asset/'+loan_id), function () {
+        	$('#formID-comment-complete-backfill-asset').attr("loan-comment", loan_id);
+            $('#form-modal-complete-backfill-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-complete-backfill-asset %}
+
 
 {############################# BACKFILL FAIL + COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-fail-backfill" class="modal fade">
@@ -1064,6 +1127,7 @@
     var csrftoken = $.cookie('csrftoken');
     $(document).ready(function(){
     	//var inventory_item_table = $('#inventory-item').DataTable();
+    	
         $('#inventory-request-all').dataTable({
             "order": [[ 6, "desc" ]]
         });
@@ -1096,19 +1160,19 @@
         "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-approved').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-pending').dataTable({
         "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-denied').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-completed').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
     });
     $('#included-tags').select2(); // making multiple select
@@ -1117,42 +1181,9 @@
     var table;
     editor = new $.fn.dataTable.Editor( {
     		ajax: function ( method, url, d, successCallback, errorCallback ) {
-    			if(d.action === 'create') {
-    				for(id in d.data) {
-    			    	var output = { data: [] };
-    			    	var pushToData = d.data[id];
-    			    	pushToData['values_custom_field'] = [];
-    			    	for(changedColumn in d.data[id]) {
-    			    		{% for fields in custom_fields %}
-    							if("{{fields.field_name}}" == changedColumn) {
-    								pushToData['values_custom_field'].push({'field_name':changedColumn, 'value':d.data[id][changedColumn]});
-    				    		}
-    						{% endfor %}
-    			    	}
-    			    	var data = JSON.stringify(pushToData);
-    			    	$.ajax({
-    			    		beforeSend: function(xhr, settings) {
-    					    	xhr.setRequestHeader("X-CSRFToken", csrftoken);
-    					    	alert("Are you sure you want to edit this?");
-    					    },
-    						type:"POST",
-    						url: '{% url 'inventory:api_item_list' %}',
-    						contentType: 'application/json',
-    						dataType: 'json',
-    				        data: data,
-    				        success: function(json) {
-    				        	pushToData.id = json.item_id;
-    				        	pushToData['item_name'] = "<a href=\"" + "/item"+"/"+json.item_id+"\">"+json.item_name+"</a></td>";
-    				        	output.data.push(pushToData);
-    				        	console.log(output);
-    				        	successCallback(output);
-    				        },
-    				        error: function(error) {
-    				        	errorCallback();
-    				        }
-    					});
-    			    }
-    			} else if(d.action==='edit') {
+    			if(d.action === 'set_threshold_quantity') {
+    				
+    			} else if(d.action === 'edit') {
     				for(id in d.data) {
     			    	d.data[id].id = id;
     			    	var pushToData = d.data[id];
@@ -1214,13 +1245,18 @@
     	    },
     	    table: "#inventory-search",
     	    idSrc:  'item_id',
-    	    fields: [ { label: "Item Name", name: "item_name" },
+    	    fields: [ 
+    	    	{ label: "Item Name", name: "item_name" },
     	    	{% if user.is_superuser %}
-    	        	{ label: "Quantity", name: "quantity" },
+    	        { label: "Quantity", name: "quantity" },
     	        {% endif %}
     	        { label: "Model Number", name: "model_number" },
     	        { label: "Description", name: "description" },
-    	        { label: "Minimum Stock", name: "threshold_quantity" }
+    	        {% if user.is_staff %}
+	        	{ label: "Minimum Stock Quantity", name: "threshold_quantity" },
+	        	{ label: "Minimum Stock Enabled", name: "threshold_enabled" },	
+	        	{% endif %}
+	        	
     	        ]
     	} ); 
     	// Disable KeyTable while the main editing form is open
@@ -1238,19 +1274,30 @@
     //    this.error(JSON.parse(xhr.responseText).error);
     //    return true;
     //});
+    
     get_search_data(true); // initialize item data
     $('#search-form').on('submit', function(event){
         event.preventDefault();
-        console.log("form submitted!")  // sanity check
+        console.log("form submitted!");  // sanity check
         get_search_data(false);
     });
+    
+    $('#clear_filter_minstock').on('click', function(event){
+     	minstock_filter_enable = false;
+     	event.preventDefault();
+        get_search_data(false);
+    });
+    
     function get_search_data(first) {
+    	minstock_filter_enable = false;
+    	var table = $('#inventory-search').DataTable();
+    	table.draw();
     	var data = '';
     	var included_tags = $('#included-tags').select2('val');
-    	var excluded_tags = $('#excluded-tags').select2('val')
+    	var excluded_tags = $('#excluded-tags').select2('val');
     	if(included_tags) {
     		for(i in included_tags) {
-    			data += 'included_tags=' + included_tags[i]+'&';
+    			data += 'included_tags=' + included_tags[i] + '&';
     		}
     	}
     	if(excluded_tags) { 
@@ -1258,11 +1305,17 @@
     			data += 'excluded_tags=' + excluded_tags[i] + '&';
     		}
     	}
-    	columns = [{ data: "item_name" },
+    	columns = [
+				{"defaultContent": ""},
+    			{ data: "item_name" },
     	        { data: "quantity" },
     	        { data: "model_number" },
     	        { data: "description" },
-    	        { data: "threshold_quantity" }];
+    	        {% if user.is_staff %}
+	        	{ data: "threshold_quantity" },
+	        	{ data: "threshold_enabled" },
+	        	{% endif %}
+	        	];
     	var djangoCustomFieldNameList = [];
     	{% for field in custom_fields %} 
     		djangoCustomFieldNameList.push("{{ field.field_name }}");
@@ -1274,6 +1327,7 @@
     		}
     		columns.push({ data: "{{ field.field_name }}" });
     	{% endfor %}
+    	
     	table = $('#inventory-search').DataTable({
     		destroy: true,
     		dom: "Bfrtip",
@@ -1284,7 +1338,7 @@
     		      $('#item_name').val(''); // remove the value from the input
     	        	var numCustomFields = {{ custom_fields|length }}
     	         	for(i in json) {
-    	         		json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
+    	         		//json[i].item_name = "<a href=\"" + "/item"+"/"+json[i].item_id+"\">"+json[i].item_name+"</a></td>";
     	         		for(p = 0; p<djangoCustomFieldNameList.length; p++) {
     	         			json[i][djangoCustomFieldNameList[p]] = "";
     	         		}
@@ -1308,27 +1362,62 @@
     		    }
     		  },
     		columns: columns,
-    		{% if user.is_staff %}
+    		 	columnDefs: [ {
+            		orderable: false,
+            		className: 'select-checkbox',
+            		targets:   0
+        		} ],
     			keys: {
     		        columns: ':not(:nth-child(1))',
     		        editor:  editor
     		    },
     		    select: {
     		        style:    'os',
-    		        //selector: 'td:first-child',
+    		        selector: 'td:first-child',
     		        blurable: true
     		    },
     		    {% if user.is_superuser %}
     		    buttons: [
     		       // { extend: "create", editor: editor },
+    		       //	{ extend: "set_threshold_quantity",   editor: editor },
     		        { extend: "edit",   editor: editor },
     		        { extend: "remove", editor: editor }
     		    ]
     		    {% endif %}
-    	    {% endif %}
     	});
     };
-    function getIndexOfFieldName(list, name) {
+    $.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        var threshold_enabled = (data[6] == 'true');
+ 		var threshold_quantity = parseInt(data[5]);
+ 		var quantity = parseInt(data[2]);
+ 		if ( !minstock_filter_enabled ) {
+ 			return true;
+ 		}
+ 		else if ( !threshold_enabled && minstock_filter_enabled) {
+ 			return false;
+ 		}
+ 		else if ( threshold_enabled && minstock_filter_enabled ) {
+ 			//console.log(data[1] + " " + "threshold enabled: " + threshold_enabled + " minstock enabled: " + minstock_filter_enabled);
+ 			//console.log(data[1] + " " + "quantity: " + quantity + " threshold quantity: " + threshold_quantity);
+ 			if ( quantity < threshold_quantity ) {
+ 				return true;
+ 			}
+ 			return false;
+ 		}
+ 		return true;
+    });
+    $('#inventory-search').on( 'click', 'tbody td', function () {
+    	//table.cell( this ).edit( 'bubble' );
+    	//console.log('this:', table.cell(this));
+    	//console.log('index:', table.cell(this).index().column);
+    	console.log("clicked")
+    	if (table.cell(this).index().column == 1) {
+    		window.location = "/item" + "/" + table.row(this).data().item_id;
+    	}
+    });
+    
+    function getIndexOfFieldName(list, name) {tr
     	var index = -1;
     	for(i in list) {
     		if(list[i].field_name == name) {
@@ -1337,7 +1426,17 @@
     	}
     	return index;
     }
+    var minstock_filter_enabled = false;
+    var table = $('#inventory-search').DataTable();
     $(document).ready(function(){
+    	var table = $('#inventory-search').DataTable();
+    	// Event listener
+    	$('#filter_minstock').on('click', function(event){
+     		minstock_filter_enabled = true;
+     		console.log("filtering!");  // sanity check
+     		table.draw();
+     		minstock_filter_enabled = false;
+    	});
     	 // The event listener for the file upload
         document.getElementById('txtFileUpload').addEventListener('change', upload, false);
         // Method that checks that the browser supports the HTML5 File API
@@ -1348,7 +1447,6 @@
             }
             return isCompatible;
         }
-        
     	var csrftoken = $.cookie('csrftoken');
     	
         // Method that reads and processes the selected file
@@ -1426,6 +1524,8 @@
         });
         return false;
     });
+   
+
     	
     	
 </script>

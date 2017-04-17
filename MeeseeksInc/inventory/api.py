@@ -34,11 +34,10 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer
-
+    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
-    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
+    LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
 
 
 def get_host(request):
@@ -110,6 +109,7 @@ class APIItemList(ListCreateAPIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
+#         print('post of api item list')
         context = {
             "request": self.request,
         }
@@ -184,6 +184,7 @@ class APIItemDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
+        print('item detail put')
         item = self.get_object(pk)
         starting_quantity = item.quantity
         context = {
@@ -472,6 +473,7 @@ class APIApproveRequest(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
             if (item.threshold_enabled and item.threshold_quantity > item.quantity):
                 #send email
@@ -479,13 +481,15 @@ class APIApproveRequest(APIView):
                     prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
-                subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username=recipient).email]
+                subject = prepend + 'Below Minimum Stock'
+                to = []
+                for user in SubscribedUsers.objects.all():
+                    to.append(user.email)
                 from_email='noreply@duke.edu'
                 ctx = {
-                    'user':recipient,
+                    'user':'user',
                     'item':item.item_name,
-                    'quantity':item.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                    'quantity':item.quantity, 
                 }
                 message=render_to_string('inventory/belowthreshold_email.txt', ctx)
                 EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
@@ -676,6 +680,7 @@ class APIDirectDisbursement(APIView):
                 # decrement quantity in item
                 item_to_disburse.quantity = item_to_disburse.quantity-int(request.data.get('total_quantity'))
                 item_to_disburse.save()
+                item_to_disburse = self.get_object(pk)
                 # check if stock less than minimum stock 
                 if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
                     #send email
@@ -683,11 +688,13 @@ class APIDirectDisbursement(APIView):
                         prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
                     except (ObjectDoesNotExist, IndexError) as e:
                         prepend = ''
-                    subject = prepend + 'Direct Dispersal'
-                    to = [User.objects.get(username = recipient).email]
+                    subject = prepend + 'Below Minimum Stock'
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                            to.append(user.email)
                     from_email='noreply@duke.edu'
                     ctx = {
-                        'user':recipient,
+                        'user':'user',
                         'item':item_to_disburse.item_name,
                         'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
                     }
@@ -709,7 +716,7 @@ class APIDirectDisbursement(APIView):
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
                 subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username=recipient).email]
+                to = [User.objects.get(username = recipient).email]
                 from_email='noreply@duke.edu'
                 ctx = {
                     'user':recipient,
@@ -1399,6 +1406,33 @@ class APILoanBackfillPost(ListCreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+class APIBackfillNotes(APIView):
+    """
+    Approve a backfill with optional notes.
+    """
+    
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = BackfillAcceptDenySerializer
+    
+    def get(self, request, pk, format=None):
+        loan = Loan.objects.get(loan_id = pk)
+        serializer = FullLoanSerializer(loan)
+        return Response(serializer.data, status=status.HTTP_200_OK)  
+    
+    def get_object(self, pk):
+        try:
+            return Loan.objects.get(loan_id=pk)
+        except Loan.DoesNotExist:
+            raise Http404
+        
+    def put(self, request, pk, format=None):
+        loan = self.get_object(pk)
+        serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 class APIApproveBackfill(APIView):
     """
     Approve a backfill with optional notes.
@@ -1574,7 +1608,59 @@ class APIFailBackfill(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class APICompleteBackfillWithAssets(APIView):
+    """
+    Complete a backfill and disburse the appropriate number of assets
+    """
+    permission_classes = (IsAdminOrManager,)
+    serializer_class = BackfillAcceptDenySerializer
+    
+    def get_object(self, pk):
+        try:
+            return Loan.objects.get(loan_id=pk)
+        except Loan.DoesNotExist:
+            raise Http404
         
+    def put(self, request, pk, format=None):
+        loan = self.get_object(pk)
+        assets = Asset.objects.filter(loan=loan.loan_id)
+        if not loan.backfill_status=='In Transit':
+            return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
+        serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
+        if serializer.is_valid():
+            loan.total_quantity = loan.total_quantity - loan.backfill_quantity
+            if loan.total_quantity == 0:
+                loan.status = "Backfilled"
+            disbursement = Disbursement(admin_name=request.user.username, user_name=loan.user_name, orig_request=loan.orig_request, item_name=loan.item_name, comment="Backfilled Disburse", total_quantity=loan.backfill_quantity, time_disbursed=timezone.localtime(timezone.now()))
+            disbursement.save()
+            for asset in assets[:loan.backfill_quantity]:
+                asset.disbursement = disbursement
+                asset.save()
+                Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Disburse", 
+                       affected_user=loan.user_name, change_occurred="Disbursed " + str(asset.asset_id) + " due to backfill")
+            serializer.save(backfill_status="Completed", backfill_time_requested=timezone.localtime(timezone.now()))
+            Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Backfilled", 
+                       affected_user=loan.user_name, change_occurred="Backfill completed")
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Backfill Completed'
+            to = [User.objects.get(username=loan.user_name).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':loan.user_name,
+                'item_name':loan.item_name.item_name,
+                'backfill_quantity':loan.backfill_quantity,
+                'loan_quantity':loan.total_quantity, 
+            }
+            for user in SubscribedUsers.objects.all():
+                to.append(user.email)
+            message=render_to_string('inventory/backfill_completed_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
+
 ########################################## Subscription ###########################################    
 
 class APISubscriptionDetail(APIView):
@@ -1653,7 +1739,7 @@ class APILoanEmailClearDates(APIView):
     def delete(self, request, format=None):
         celery_app.control.purge()
         LoanSendDates.objects.all().delete()
-        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 # ########################################## Backfill Requests ###########################################   
 # class APIBackfillRequest(ListCreateAPIView):

@@ -38,6 +38,8 @@ urlpatterns = [
     url(r'^delete/(?P<pk>[\w\-\ ]+)/$', views.ItemView.delete_item, name='delete_item'),
     url(r'^$', inventory.views.IndexView.as_view(), name='index'),
     
+    url(r'^asset/edit/(?P<pk>[\w\-\ ]+)/$', views.AssetView.edit_asset, name='edit_asset'),
+    url(r'^asset/delete/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset, name='delete_asset'),
     
     url(r'^edit/tags/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags_module, name='tags_module'),
     url(r'^edit/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.edit_tag, name='edit_tag'),
@@ -69,7 +71,9 @@ urlpatterns = [
     url(r'^backfill/accept/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_accept, name='add_comment_to_backfill_accept'),
     url(r'^backfill/deny/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_deny, name='add_comment_to_backfill_deny'),
     url(r'^backfill/complete/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_complete, name='add_comment_to_backfill_complete'),
+    url(r'^backfill/complete/addcomment/asset/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_asset_complete, name='add_comment_to_backfill_complete_asset'),
     url(r'^backfill/fail/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_fail, name='add_comment_to_backfill_fail'),
+    url(r'^backfill/add/notes/(?P<pk>[\w\-\ ]+)/$', views.add_notes_to_backfill, name='add_notes_to_backfill'),
 ]
 
 

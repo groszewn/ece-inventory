@@ -1,0 +1,5 @@
+table.inventory-search td:nth-child(1) { 
+	 cursor:pointer;
+     color:blue;
+     text-decoration:underline;
+};

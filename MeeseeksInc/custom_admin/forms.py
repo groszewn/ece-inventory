@@ -12,7 +12,6 @@ from django.forms.formsets import BaseFormSet
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
     Asset, Asset_Custom_Field
 
-
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.all())
     item_field = forms.ModelChoiceField(queryset=Item.objects.all())
@@ -64,11 +63,26 @@ class EditLoanForm(forms.ModelForm):
         model = Loan
         fields = ('total_quantity','comment')
 
-class AddCommentRequestForm(forms.Form):
+class AddCommentRequestForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+#     TYPES = (
+#         ( 'Dispersal','Dispersal'),
+#         ('Loan','Loan'),
+#     )
+#     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+#     
+    class Meta:
+        model = Request
+        fields = ('comment', 'type')
     
 class AddCommentBackfillForm(forms.Form):
     backfill_notes = forms.CharField(label='Notes from admin (optional)', max_length=200, required=False)
+
+class AddNotesBackfillForm(forms.ModelForm):
+    backfill_notes = forms.CharField(widget=forms.Textarea)
+    class Meta:
+        model = Loan
+        fields = ('backfill_notes',)
 
 class AssetsRequestForm(forms.ModelForm):
     asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
@@ -101,6 +115,30 @@ class BaseAssetsRequestFormSet(BaseFormSet):
                         code='duplicate_assets'
                     )
 
+
+class AssetEditForm(forms.Form):
+    def __init__(self, custom_fields, custom_values, *args, **kwargs):
+        super(AssetEditForm, self).__init__(*args, **kwargs)
+        for field in custom_fields:
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = forms.CharField(required=False,widget=forms.Textarea) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = forms.IntegerField(required=False) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = forms.FloatField(required=False)
+            for val in custom_values:
+                if val.field == field:
+                    if field.field_type == 'Short':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,required=False)                    
+                    if field.field_type == 'Long':
+                        self.fields["%s" % field.field_name] = forms.CharField(initial = val.value,widget=forms.Textarea,required=False) 
+                    if field.field_type == 'Int':
+                        self.fields["%s" % field.field_name] = forms.IntegerField(initial = val.value,required=False) 
+                    if field.field_type == 'Float':
+                        self.fields["%s" % field.field_name] = forms.FloatField(initial = val.value,required=False)
+                      
 class BaseAssetCheckInFormset(BaseFormSet):
     def clean(self):
         """
@@ -126,7 +164,6 @@ class BaseAssetCheckInFormset(BaseFormSet):
                         code='duplicate_assets'
                     )
 
-                    
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
@@ -188,9 +225,11 @@ class ItemEditForm(forms.ModelForm):
     quantity = forms.IntegerField(min_value=0)
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
+    threshold_quantity = forms.IntegerField(required=False, min_value = 0)
+    threshold_enabled = forms.BooleanField(required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description')
+        fields = ('item_name', 'quantity', 'model_number', 'description', 'threshold_quantity', 'threshold_enabled')
         
 class UserPermissionEditForm(forms.ModelForm):
     email = forms.EmailField(label='Email', required = True)
@@ -255,9 +294,11 @@ class CreateItemForm(forms.ModelForm):
     model_number = forms.CharField(required=False)
     description = forms.CharField(required=False,widget=forms.Textarea)
     quantity = forms.IntegerField(min_value=0)
+    threshold_quantity = forms.IntegerField(required = False, min_value = 0)
+    threshold_enabled = forms.BooleanField(required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags',)
+        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
 
 class CustomFieldForm(forms.Form):  
     field_name = forms.CharField(required=True)

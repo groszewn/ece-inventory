@@ -28,10 +28,10 @@ import requests, json
 from rest_framework.authtoken.models import Token
 
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
-    BaseAssetCheckInFormset
+    BaseAssetCheckInFormset, AssetEditForm
 from custom_admin.tasks import loan_reminder_email as task_email
-from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm
+from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field, Asset_Custom_Field_Value
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -143,6 +143,44 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         return render(request, 'inventory/log_item.html', {'form': form})
     def test_func(self):
         return self.request.user.is_staff
+
+class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
+    login_url='/login/'
+    permission_required = 'is_staff'
+    
+    def edit_asset(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        asset_custom_fields = Asset_Custom_Field.objects.all()
+        asset_custom_vals = Asset_Custom_Field_Value.objects.filter(asset=asset)
+        if request.method == "POST":
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals, request.POST)
+            if form.is_valid():
+                url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
+                payload = {}
+                for field in asset_custom_fields:
+                    if form[field.field_name].value():
+                        payload[field.field_name] = form[field.field_name].value() 
+                header = get_header(request)
+                response = requests.put(url, headers = header, data=json.dumps(payload))
+                if response.status_code == 200:
+                    messages.success(request, ('Successfully edit asset (' + asset.asset_id + ')'))
+                else:
+                    messages.error(request, ('Failed to edit asset (' + asset.asset_id + ')'))
+                return redirect(request.META.get('HTTP_REFERER')) 
+        else:
+            form = AssetEditForm(asset_custom_fields, asset_custom_vals) 
+        return render(request, 'custom_admin/edit_asset_inner.html', {'form': form, 'pk':pk, 'asset_id':asset.asset_id, 'item_name':asset.item.item_name})
+            
+    def delete_asset(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        url = get_host(request) + '/api/asset/' + asset.asset_id + '/'
+        header = get_header(request)
+        response = requests.delete(url, headers = header)
+        if response.status_code == 204:
+            messages.success(request, ('Successfully deleted asset: ' + pk ))
+        else:
+            messages.error(request, ('Failed to delete asset: ' + pk ))
+        return redirect(request.META.get('HTTP_REFERER'))        
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -360,7 +398,7 @@ def request_accept_with_assets(request, pk):
     AssetsRequestFormset = formset_factory(AssetsRequestForm, extra=indiv_request.request_quantity, formset=BaseAssetsRequestFormSet)
     if request.method == "POST":
         formset = AssetsRequestFormset(request.POST)
-        commentForm = AddCommentRequestForm(request.POST)
+        commentForm = AddCommentRequestForm(request.POST, instance=indiv_request)
         if all([commentForm.is_valid(), formset.is_valid()]):
             comment = commentForm['comment'].value()
             token, create = Token.objects.get_or_create(user=request.user)
@@ -382,7 +420,7 @@ def request_accept_with_assets(request, pk):
             form_errors = formset.non_form_errors()
             return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name, 'form_errors':form_errors})
     else:
-        commentForm = AddCommentRequestForm()
+        commentForm = AddCommentRequestForm(instance=indiv_request)
         formset = AssetsRequestFormset()
     return render(request, 'custom_admin/request_accept_with_asset_inner.html', {'commentForm': commentForm, 'formset': formset, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
 
@@ -445,6 +483,7 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
             requests.put(url, headers = header, data = json.dumps(payload))
         messages.success(request, ('Denied all pending requests.'))
         return redirect(reverse('custom_admin:index'))
+    
     def approve_request(request, pk):
         indiv_request = Request.objects.get(request_id=pk)
         item = Item.objects.get(item_id=indiv_request.item_name_id)
@@ -487,13 +526,14 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
     def add_comment_to_request_accept(request, pk):
         indiv_request = Request.objects.get(request_id=pk)
         if request.method == "POST":
-            form = AddCommentRequestForm(request.POST) # create request-form with the data from the request
+            form = AddCommentRequestForm(request.POST, instance=indiv_request) # create request-form with the data from the request
             if form.is_valid():
                 indiv_request = Request.objects.get(request_id=pk)
                 item = Item.objects.get(item_name=indiv_request.item_name)
                 if item.quantity >= indiv_request.request_quantity:
                     comment = form['comment'].value()
-                    indiv_request = Request.objects.get(request_id=pk)
+                    indiv_request.type = form['type'].value()
+                    indiv_request.save()
                     item = Item.objects.get(item_name=indiv_request.item_name)
                     user = request.user
                     token, create = Token.objects.get_or_create(user=user)
@@ -513,7 +553,7 @@ class RequestsView(LoginRequiredMixin, UserPassesTestMixin):
                 return redirect(reverse('custom_admin:index'))
             return redirect(request.META.get('HTTP_REFERER'))  
         else:
-            form = AddCommentRequestForm() # blank request form with no data yet
+            form = AddCommentRequestForm(instance=indiv_request) # blank request form with no data yet
         return render(request, 'custom_admin/request_accept_comment_inner.html', {'form': form, 'pk':pk, 'num_requested':indiv_request.request_quantity, 'num_available':Item.objects.get(item_name=indiv_request.item_name).quantity, 'item_name':indiv_request.item_name.item_name})
     def test_func(self):
         return self.request.user.is_superuser
@@ -929,6 +969,27 @@ def create_backfill_from_loan(request, pk):
         form = BackfillRequestForm()
     return render(request, 'custom_admin/backfill_from_loan.html', {'form': form, 'pk':pk})
         
+         
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_notes_to_backfill(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddNotesBackfillForm(request.POST, instance=loan) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/notes/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddNotesBackfillForm(instance=loan) # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_add_notes.html', {'form': form, 'pk':pk})         
+         
             
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -990,6 +1051,28 @@ def add_comment_to_backfill_complete(request, pk):
     else:
         form = AddCommentBackfillForm() # blank request form with no data yet
     return render(request, 'custom_admin/backfill_complete_comment.html', {'form': form, 'pk':pk})
+
+
+@login_required(login_url='/login/')
+@user_passes_test(staff_check, login_url='/login/')
+def add_comment_to_backfill_asset_complete(request, pk):
+    loan = Loan.objects.get(loan_id=pk)
+    if request.method == "POST":
+        form = AddCommentBackfillForm(request.POST) # create request-form with the data from the request
+        if form.is_valid():
+            user = request.user
+            token, create = Token.objects.get_or_create(user=user)
+            http_host = get_host(request)
+            url=http_host+'/api/loan/backfill/complete/asset/'+pk+'/'
+            payload = {'backfill_notes':form['backfill_notes'].value()}
+            header = {'Authorization': 'Token '+ str(token), 
+                      "Accept": "application/json", "Content-type":"application/json"}
+            requests.put(url, headers = header, data = json.dumps(payload))
+            return redirect(request.META.get('HTTP_REFERER'))  
+    else:
+        form = AddCommentBackfillForm() # blank request form with no data yet
+    return render(request, 'custom_admin/backfill_complete_comment_asset.html', {'form': form, 'pk':pk})
+
 
 @login_required(login_url='/login/')
 @user_passes_test(staff_check, login_url='/login/')
@@ -1186,6 +1269,13 @@ class UserAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(name__istartswith=self.q)
 
         return qs  
+#     
+# class TagAutocomplete(autocomplete.Select2QuerySetView):
+#     def get_queryset(self):
+#         qs = Tag.objects.all()
+#         if self.q:
+#             qs = qs.filter(name__istartswith-self.q)
+#         return qs
 ################################################################
 
 @login_required(login_url='/login/')    

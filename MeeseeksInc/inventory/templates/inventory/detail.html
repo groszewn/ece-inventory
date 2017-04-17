@@ -66,12 +66,11 @@ $(function() {
 <table id="set_up" cellspacing="0" width="100%">
 <thead>
 	<tr>
-	<td>  
-
-	 </td>
+	<td>  </td>
 	<td>  </td>
 	</tr>
 </thead>
+
 <tbody>
 <tr>
 <td>
@@ -138,8 +137,13 @@ function clickEvent(){
 
 <br>
 
+
 {% block request_specific_item %}
-<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Request Item</a>									
+	{% if user.is_staff %}
+		<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Request Item</a>									
+	{% else %}
+		<a id = "request" item-id = "{{ item.item_id }}" class="request btn btn-info">Click Here To Request This Item</a>
+	{% endif %}
 {% endblock request_specific_item %}
 
 {% if user.is_staff %}
@@ -158,6 +162,7 @@ function clickEvent(){
     <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2" value="Add Item To Cart">
 	</form>
 </td>
+
 </tr>
 </tbody>
 </table>
@@ -197,7 +202,9 @@ function clickEvent(){
 		            {% for field in asset_custom_fields%}
 					<th>{{field.field_name}}</th>
 					{% endfor %}
+					{% if user.is_staff %}
 					<th>Actions</th>
+					{% endif %}
 				</tr>
 		        </thead>
 		        <tbody>
@@ -212,15 +219,24 @@ function clickEvent(){
 								<td></td>
 							{% endif %}
 							{% for field in asset_custom_fields%}
-							<td default = "">
-							{% for value in asset_custom_vals%}
-							{% if value.asset == asset and value.field == field %}
-								{{value.value}}
-							{% endif %}
+								<td default = "">
+									{% for value in asset_custom_vals%}
+										{% if value.asset == asset and value.field == field %}
+											{{value.value}}
+										{% endif %}
+									{% endfor %}
+								</td>
 							{% endfor %}
+							
+							{% if user.is_staff %}
+							<td>
+								{% block assetEdit %}
+										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
+								{% endblock assetEdit %}
+								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 							</td>
-							{% endfor %}
-							<td>hi</td>
+							{% endif %}
+							
 						</tr>
 					{% endfor %}
 		        </tbody>
@@ -823,11 +839,35 @@ $(function(){
 </script> 
 {% endblock js-convert %}
 
+{############################# ASSET EDIT MODAL LOGIC ##############################}
+<div id="form-modal-assetEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Asset Edit</h4>
+            </div>
+            <div id="form-modal-body-assetEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-assetEdit %}
+<script>
+    $('.assetEdit').click(function() {
+    	asset_id = $(this).attr("asset-id");
+        $('#form-modal-body-assetEdit').load(('../../customadmin/asset/edit/'+asset_id), function () {
+            $('#form-modal-assetEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-assetEdit %}
+
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-
-
-
-
     
 {########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
