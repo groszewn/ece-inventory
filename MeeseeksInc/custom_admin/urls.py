@@ -32,7 +32,6 @@ urlpatterns = [
     url(r'^approve/request/all$', views.RequestsView.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.deny_request, name='deny_request'),
     url(r'^approve/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.approve_request, name='approve_request'),
-    url(r'^edit/item/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item, name='edit_item'),
     url(r'^edit/item/module/(?P<pk>[\w\-\ ]+)/$', views.ItemView.edit_item_module, name='edit_item_module'),
     url(r'^create/item$', views.ItemView.create_new_item, name='create_new_item'),
     url(r'^delete/(?P<pk>[\w\-\ ]+)/$', views.ItemView.delete_item, name='delete_item'),
@@ -46,6 +45,8 @@ urlpatterns = [
     
     url(r'^add_custom_field/$', views.CustomFieldView.as_view(), name='add_custom_field'),
     url(r'^delete_custom_field/$', views.CustomFieldView.delete_custom_field, name='delete_custom_field'),
+    url(r'^modify_custom_field/$', views.CustomFieldView.modify_custom_field, name='modify_custom_field'),
+    url(r'^modify_custom_field/(?P<pk>[\w\-\ ]+)/$', views.CustomFieldView.modify_custom_field_modal, name='modify_custom_field_modal'),
     
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^log_item$', views.LogView.log_item, name='log_item'),
@@ -70,6 +71,7 @@ urlpatterns = [
     url(r'^backfill/complete/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_complete, name='add_comment_to_backfill_complete'),
     url(r'^backfill/complete/addcomment/asset/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_asset_complete, name='add_comment_to_backfill_complete_asset'),
     url(r'^backfill/fail/addcomment/(?P<pk>[\w\-\ ]+)/$', views.add_comment_to_backfill_fail, name='add_comment_to_backfill_fail'),
+    url(r'^backfill/add/notes/(?P<pk>[\w\-\ ]+)/$', views.add_notes_to_backfill, name='add_notes_to_backfill'),
 ]
 
 

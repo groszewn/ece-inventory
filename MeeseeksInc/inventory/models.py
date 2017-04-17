@@ -86,7 +86,7 @@ class Loan(models.Model):
         return self.loan_id
 
 class Asset(models.Model):
-    asset_id = models.CharField(primary_key=True, unique=True, max_length=200)
+    asset_id = models.CharField(primary_key=True, unique=True, default=uuid.uuid4, max_length=200)
     asset_tag = models.CharField(unique=True, default=uuid.uuid4, max_length=200)
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
     loan = models.ForeignKey(Loan, null=True)
@@ -112,7 +112,7 @@ class Item_Log(models.Model):
     item_amount = models.SmallIntegerField(null=False)
     
 class Custom_Field(models.Model):
-    field_name = models.CharField(max_length=400, null=False, unique=True)
+    field_name = models.CharField(max_length=400, null=False)
     is_private = models.BooleanField(default = False)
     CHOICES = (
         ('Short','Short-Form Text'),
@@ -121,6 +121,13 @@ class Custom_Field(models.Model):
         ('Float','Floating-Point Number'),
     )
     field_type = models.CharField(max_length=200, null=False, choices=CHOICES, default='Short') 
+    KIND = (
+        ('Item','Item'),
+        ('Asset','Asset'),
+        )
+    field_kind = models.CharField(max_length=200, null=False, choices=KIND, default='Item')
+    class Meta:
+        unique_together = (("field_name", "field_kind"),)
     
 class Custom_Field_Value(models.Model):
     item = models.ForeignKey(Item, null=False, on_delete=models.CASCADE)
@@ -129,20 +136,9 @@ class Custom_Field_Value(models.Model):
     class Meta:
         unique_together = (("item", "field"),)
     
-class Asset_Custom_Field(models.Model):
-    field_name = models.CharField(max_length=400, null=False, unique=True)
-    is_private = models.BooleanField(default = False)
-    CHOICES = (
-        ('Short','Short-Form Text'),
-        ('Long','Long-Form Text'),
-        ('Int','Integer'),
-        ('Float','Floating-Point Number'),
-    )
-    field_type = models.CharField(max_length=200, null=False, choices=CHOICES, default='Short') 
-
 class Asset_Custom_Field_Value(models.Model):
     asset = models.ForeignKey(Asset, null=False, on_delete=models.CASCADE)
-    field = models.ForeignKey(Asset_Custom_Field, null=False, on_delete=models.CASCADE)
+    field = models.ForeignKey(Custom_Field, null=False, on_delete=models.CASCADE)
     value = models.TextField(null=True, blank=True)
     class Meta:
         unique_together = (("asset", "field"),)

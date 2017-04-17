@@ -1,0 +1,12 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+ <h3>Modify Field</h3>
+
+<div class="row">
+    <form id="formID-fieldEdit" request-comment="" action="{% url 'custom_admin:modify_custom_field_modal' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" onclick="return confirm('Are you sure you want to apply these changes?               *Please note that changing the custom field data type will result in the deletion of old values.')" type="submit" class="btn btn-submit col-md-offset-2">    
+    </form>
+</div>

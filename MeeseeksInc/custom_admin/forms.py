@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.forms.formsets import BaseFormSet
 
 from inventory.models import Item, Disbursement, Item_Log, Custom_Field, Loan, Request, Tag, SubscribedUsers, \
-    Asset, Asset_Custom_Field
+    Asset
 
 class DisburseForm(forms.ModelForm):
     user_field = forms.ModelChoiceField(queryset=User.objects.all())
@@ -63,11 +63,26 @@ class EditLoanForm(forms.ModelForm):
         model = Loan
         fields = ('total_quantity','comment')
 
-class AddCommentRequestForm(forms.Form):
+class AddCommentRequestForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
+#     TYPES = (
+#         ( 'Dispersal','Dispersal'),
+#         ('Loan','Loan'),
+#     )
+#     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+#     
+    class Meta:
+        model = Request
+        fields = ('comment', 'type')
     
 class AddCommentBackfillForm(forms.Form):
     backfill_notes = forms.CharField(label='Notes from admin (optional)', max_length=200, required=False)
+
+class AddNotesBackfillForm(forms.ModelForm):
+    backfill_notes = forms.CharField(widget=forms.Textarea)
+    class Meta:
+        model = Loan
+        fields = ('backfill_notes',)
 
 class AssetsRequestForm(forms.ModelForm):
     asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
@@ -99,6 +114,7 @@ class BaseAssetsRequestFormSet(BaseFormSet):
                         'Assets must be distinct',
                         code='duplicate_assets'
                     )
+
 
 class AssetEditForm(forms.Form):
     def __init__(self, custom_fields, custom_values, asset_tag, *args, **kwargs):
@@ -286,21 +302,23 @@ class CreateItemForm(forms.ModelForm):
         model = Item
         fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
 
-class CustomFieldForm(forms.Form):  
-    field_name = forms.CharField(required=True)
-    is_private = forms.BooleanField(required=False)
+class CustomFieldForm(forms.ModelForm):  
     CHOICES = (
         ('Short','Short-Form Text'),
         ('Long','Long-Form Text'),
         ('Int','Integer'),
         ('Float','Floating-Point Number'),
     )
-    field_type = forms.ChoiceField(choices=CHOICES, required=True, widget=forms.Select)
+    field_type = forms.ChoiceField(label='Field data type',choices=CHOICES)
     TYPES = (
-        ('Item Field','Item Field'),
-        ('Asset Field','Asset Field'),
+        ('Item','Item'),
+        ('Asset','Asset'),
     )
-    type = forms.ChoiceField(label='Select Type Of Custom Field', choices=TYPES)
+    field_kind = forms.ChoiceField(label='Select the kind of custom field',choices=TYPES)
+    class Meta:
+        model = Custom_Field
+        fields = ('field_name','is_private','field_type','field_kind')
+            
         
 class DeleteFieldForm(forms.Form):
     def __init__(self, fields,asset_fields, *args, **kwargs):

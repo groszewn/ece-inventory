@@ -4,7 +4,6 @@
  <h3>Create, Add, and Edit Tags</h3>
  <div class="row">
 	 <form id="formID-add-tags" request-comment ="" action="{% url 'custom_admin:tags_module' pk %}" method="POST" class="form-horizontal">
-{#        {% crispy form %}#}
 	 {% csrf_token %}
 	 		{{form.create_new_tags.label}}:{{form.create_new_tags}}
 	 		<br/>

@@ -3,6 +3,20 @@
 {% load static %}
 {% load index %}
 {% block content %}
+
+<div id="tabbed" class="container">	
+<ul class="nav nav-tabs">
+	  <li><a href="#all-items" data-toggle="tab" data-target="#all-items">Items</a></li>
+	  <li class="active"><a href=#all-requests" data-toggle="tab" data-target="#all-requests">Requests</a></li>
+	  <li><a href="#all-loans" data-toggle="tab" data-target="#all-loans">Loans</a></li>
+	  <li><a href="#all-disbursements" data-toggle="tab" data-target="#all-disbursements">Disbursements</a></li>
+	  <li><a href="#all-backfills" data-toggle="tab" data-target="#all-backfills">Backfills</a></li>
+</ul>
+
+<div class="tab-content "> {# all content #}
+
+
+<div class="tab-pane" id="all-items">
 {########################## ALL ITEMS #####################}
 <h2>All Inventory Items</h2>
 <form id="search-form">
@@ -18,7 +32,8 @@
         <option value={{ tag.id }}>{{ tag.tag }}</option>
         {% endfor %}
     </select>
-    <input type="submit"/>
+    <input type="submit" name = "filter_tag" class="btn btn-primary">
+    <button type="button" id = "filter_minstock" class="btn btn-primary">Filter Items Below Minimum Stock</button>
 </form>
 
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -41,6 +56,11 @@
 <tbody>
 </tbody>
 </table>
+
+</div> {# end item div #}
+
+<div class="tab-pane active" id="all-requests">
+
 {########################## ALL REQUESTS #####################}
 {% if request_list %}
 	<h2>Requests</h2>
@@ -107,7 +127,7 @@
 	        <tbody>
 	        	{% for request in approved_request_list %}
 	        		<tr>
-						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request. }}</a></td>
+						<td><a href="{% url 'inventory:request_detail' request.request_id %}">{{ request.item_name }}</a></td>
 						<td>{{ request.request_quantity }}</td>
 						<td>{{ request.type }}</td>
 						<td>{{ request.status }}</td>
@@ -190,6 +210,11 @@
 				{% endfor %}
 	        </tbody>
 	    </table>
+	    {% if user.is_staff %}
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
+		<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
+		{% endif %}
+	    
         </div>
         <div class="tab-pane" id="denied">
 			<table id="inventory-request-denied" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -231,10 +256,13 @@
 	</div>
 	{% endif %}
 
-{% if user.is_staff %}
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to approve ALL requests?')" href="{% url 'custom_admin:approve_all_requests' %}" role="button">Approve all requests</a>
-<a class="btn btn-primary" onclick="return confirm('Are you sure you want to deny ALL requests?')" href="{% url 'custom_admin:deny_all_requests' %}" role="button">Deny all requests</a>
-{% endif %}
+
+</div> {# end requests div #}
+
+
+
+<div class="tab-pane" id="all-loans">
+
 {########################## LOANS #####################}	
 {% if loan_list %}
 		<h2>Loans</h2>
@@ -409,6 +437,11 @@
 		    </div>
 	</div>
 	{% endif %}
+	
+</div> {# end loans div #}
+
+
+<div class="tab-pane" id="all-disbursements">
 
 {########################## DISBURSEMENTS #####################}
 {% if disbursed_list %}
@@ -428,7 +461,7 @@
     <tbody>
         {% for disbursed in disbursed_list %}
         <tr>
-            <td>{{ disbursed.item_name }}</td>
+            <td><a href="{% url 'inventory:detail' disbursed.item_name.item_id %}">{{ disbursed.item_name }}</a></td>
             <td>{{ disbursed.total_quantity }}</td>
             <td>{{ disbursed.user_name }}</td>
             <td>{{ disbursed.admin_name }}</td>
@@ -443,27 +476,31 @@
     </tbody>
 </table>
 {% endif %}
+
+
+</div> {# end disbursements div #}
+
+<div class="tab-pane" id="all-backfills">
+
 {########################## ALL BACKFILLS #####################}
 {% if backfill_list %}
 <h2>Backfills</h2>
 <ul class="nav nav-tabs">
-    <li><a href="#all-backfills" data-toggle="tab">All Backfills</a></li>
+    <li><a href="#backfills-all" data-toggle="tab">All Backfills</a></li>
     <li><a href="#completed-backfills" data-toggle="tab">Completed</a></li>
     <li><a href="#in-transit-backfills" data-toggle="tab">In Transit</a></li>
     <li class="active"><a href="#requested-backfills" data-toggle="tab">Requested</a></li>
     <li><a href="#denied-backfills" data-toggle="tab">Denied</a></li>
 </ul>
 <div class="tab-content">
-    <div class="tab-pane" id="all-backfills">
+    <div class="tab-pane" id="backfills-all">
+    	HEY
         <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>
                     <th>Backfill for</th>
                     <th>Status</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -474,9 +511,6 @@
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_status}}</td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td>{{ loan.backfill_time_requested}}</td>
                 </tr>
@@ -490,9 +524,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                     {% if user.is_staff %}
@@ -505,9 +536,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -574,9 +602,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -586,9 +611,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -603,9 +625,6 @@
                 <tr>
                     <th>Request for</th>
                     <th>Quantity</th>
-                    {% if user.is_staff %}
-                    	<th>Notes</th>
-                    {% endif %}
                     <th>Proof of Purchase</th>
                     <th>Time Requested</th>
                 </tr>
@@ -615,9 +634,6 @@
                 <tr>
                     <td><a href="{% url 'inventory:loan_detail' loan.loan_id %}">{{ loan.item_name }}</a></td>
                     <td>{{ loan.backfill_quantity }}</td>
-                    {% if user.is_staff %}
-                    	<td>{{ loan.backfill_notes }}</td>
-                    {% endif %}
                     <td><a href={{loan.backfill_pdf.url}} target="_blank">{{loan.backfill_pdf|filename}}</a></td>
                     <td><span style="display: none;">{{ loan.backfill_time_requested|date:"c" }}</span>
 								  {{ loan.backfill_time_requested }}</td>
@@ -628,6 +644,17 @@
     </div>
 </div>
 {% endif %}
+
+</div> {# end backfill div #}
+
+
+</div> {# ending tabcontent #}
+</div> {# ending container #}
+
+
+
+
+
 {############################# REQUEST DENIAL COMMENT MODAL LOGIC ##############################}
 <div id="form-modal-deny" class="modal fade">
     <div class="modal-dialog">
@@ -1132,19 +1159,19 @@
         "order": [[ 5, "desc" ]]
         });
         $('#inventory-backfill-all').dataTable({
-        "order": [[ 5, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-approved').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-pending').dataTable({
         "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-denied').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
         $('#inventory-backfill-completed').dataTable({
-        "order": [[ 4, "desc" ]]
+        "order": [[ 3, "desc" ]]
         });
     });
     $('#included-tags').select2(); // making multiple select
@@ -1246,19 +1273,24 @@
     //    this.error(JSON.parse(xhr.responseText).error);
     //    return true;
     //});
+    
     get_search_data(true); // initialize item data
     $('#search-form').on('submit', function(event){
         event.preventDefault();
-        console.log("form submitted!")  // sanity check
+        console.log("form submitted!");  // sanity check
         get_search_data(false);
     });
+    
     function get_search_data(first) {
+    	button_click = false;
+    	var table = $('#inventory-search').DataTable();
+    	table.draw();
     	var data = '';
     	var included_tags = $('#included-tags').select2('val');
-    	var excluded_tags = $('#excluded-tags').select2('val')
+    	var excluded_tags = $('#excluded-tags').select2('val');
     	if(included_tags) {
     		for(i in included_tags) {
-    			data += 'included_tags=' + included_tags[i]+'&';
+    			data += 'included_tags=' + included_tags[i] + '&';
     		}
     	}
     	if(excluded_tags) { 
@@ -1347,12 +1379,24 @@
     		    {% endif %}
     	});
     };
+    $.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        var threshold_enabled = data[6];
+ 		var threshold_quantity = parseInt(data[5]);
+ 		var quantity = parseInt(data[2]);
+        if ( threshold_enabled  && (threshold_quantity < quantity) && button_click)
+        {
+            return false;
+        }
+        return true;
+    }
+	);
     $('#inventory-search').on( 'click', 'tbody td', function () {
     	//table.cell( this ).edit( 'bubble' );
     	//console.log('this:', table.cell(this));
     	//console.log('index:', table.cell(this).index().column);
     	if (table.cell(this).index().column == 1) {
-    		window.location = "/item" + "/" + table.cell(this).row().data().item_id;
+    		window.location = "/item" + "/" + table.row(this).data().item_id;
     	}
     });
     
@@ -1366,6 +1410,12 @@
     	return index;
     }
     $(document).ready(function(){
+    	var table = $('#inventory-search').DataTable();
+    	// Event listener
+    	$('#filter_minstock').on('click', function(event){
+     		console.log("button click!");  // sanity check
+     		table.draw();
+    	});
     	 // The event listener for the file upload
         document.getElementById('txtFileUpload').addEventListener('change', upload, false);
         // Method that checks that the browser supports the HTML5 File API
@@ -1452,6 +1502,14 @@
            processData: false
         });
         return false;
+    });
+    var table = $('#inventory-search').DataTable();
+    var button_click = false;
+    // Event listener
+    $('#filter_minstock').on('click', function(event){
+     	console.log("button click!");  // sanity check
+     	button_click = true;
+     	table.draw();
     });
     	
     	
