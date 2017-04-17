@@ -1377,6 +1377,7 @@
     		        selector: 'td:first-child',
     		        blurable: true
     		    },
+    		    order: [[ 1, 'asc' ]],
     		    {% if user.is_superuser %}
     		    buttons: [
     		       // { extend: "create", editor: editor },
@@ -1386,6 +1387,7 @@
     		    ]
     		    {% endif %}
     	});
+    	
     };
     $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
@@ -1395,10 +1397,10 @@
  		if ( !minstock_filter_enabled ) {
  			return true;
  		}
- 		else if ( !threshold_enabled && minstock_filter_enabled) {
+ 		else if ( !threshold_enabled) {
  			return false;
  		}
- 		else if ( threshold_enabled && minstock_filter_enabled ) {
+ 		else if ( threshold_enabled ) {
  			//console.log(data[1] + " " + "threshold enabled: " + threshold_enabled + " minstock enabled: " + minstock_filter_enabled);
  			//console.log(data[1] + " " + "quantity: " + quantity + " threshold quantity: " + threshold_quantity);
  			if ( quantity < threshold_quantity ) {
@@ -1412,7 +1414,7 @@
     	//table.cell( this ).edit( 'bubble' );
     	//console.log('this:', table.cell(this));
     	//console.log('index:', table.cell(this).index().column);
-    	console.log("clicked")
+    	var table = $('#inventory-search').DataTable();
     	if (table.cell(this).index().column == 1) {
     		window.location = "/item" + "/" + table.row(this).data().item_id;
     	}

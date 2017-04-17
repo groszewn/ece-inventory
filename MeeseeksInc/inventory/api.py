@@ -1350,8 +1350,7 @@ class APIBackfillList(ListAPIView): #FILTER LOANS
         serializer = FullLoanSerializer(loans, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
         
-    
-    
+ 
 class APILoanBackfillPost(APIView):
     '''
     Create a backfill request
