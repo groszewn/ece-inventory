@@ -482,7 +482,9 @@ class APIApproveRequest(APIView):
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
                 subject = prepend + 'Below Minimum Stock'
-                to = [User.objects.get(username = 'owenchung').email]
+                to = []
+                for user in SubscribedUsers.objects.all():
+                    to.append(user.email)
                 from_email='noreply@duke.edu'
                 ctx = {
                     'user':'user',
@@ -687,10 +689,12 @@ class APIDirectDisbursement(APIView):
                     except (ObjectDoesNotExist, IndexError) as e:
                         prepend = ''
                     subject = prepend + 'Below Minimum Stock'
-                    to = [User.objects.get(username = 'owenchung').email]
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                            to.append(user.email)
                     from_email='noreply@duke.edu'
                     ctx = {
-                        'user':'Owen Chung',
+                        'user':'user',
                         'item':item_to_disburse.item_name,
                         'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
                     }
@@ -712,7 +716,7 @@ class APIDirectDisbursement(APIView):
                 except (ObjectDoesNotExist, IndexError) as e:
                     prepend = ''
                 subject = prepend + 'Direct Dispersal'
-                to = [User.objects.get(username = 'recipient').email]
+                to = [User.objects.get(username = recipient).email]
                 from_email='noreply@duke.edu'
                 ctx = {
                     'user':recipient,
