@@ -31,7 +31,7 @@ from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
     BaseAssetCheckInFormset, AssetEditForm
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
-from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm
+from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm, LogAssetDestruction
 from django.core.exceptions import ObjectDoesNotExist
 
 def staff_check(user):
@@ -141,6 +141,28 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             else:
                 messages.error(request, ('Please enter a valid value in order to submit this form.'))
         return render(request, 'inventory/log_item.html', {'form': form})
+    
+    def log_asset(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        item = Item.objects.get(item_id=asset.item.item_id)
+        if request.method == "POST":
+            form = LogAssetDestruction(request.POST or None)
+            if form.is_valid():
+                change_type = form['item_change_status'].value()
+                if change_type == 'Broken':
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Broken", 
+                                           affected_user='', change_occurred="Broke " + str(1))
+                elif change_type == 'Lost':
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event="Lost", 
+                                           affected_user='', change_occurred="Lost " + str(1))
+                item.quantity -= 1
+                item.save()
+                asset.delete()
+                messages.success(request, ('Successfully logged ' + item.item_name + ' (removed ' + str(1)))
+                return redirect(request.META.get('HTTP_REFERER'))
+        else:
+            form = LogAssetDestruction()
+        return render(request, 'custom_admin/asset_destroy.html', {'form':form, 'pk':pk})
     def test_func(self):
         return self.request.user.is_staff
 

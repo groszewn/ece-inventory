@@ -1,0 +1,14 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+ 
+<h3>Log Destruction of Asset</h3>
+
+
+<div class="row">
+    <form id="formID-comment-accept" request-comment="" action="{% url 'custom_admin:destroy_asset' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+    </form>
+</div>
+

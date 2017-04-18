@@ -55,7 +55,33 @@ class CheckInLoanAssetForm(forms.Form):
         model = Asset
         exclude = ('item','loan','disbursement')
         
+class LogAssetDestruction(forms.ModelForm):
+    item_change_options = [
+        ('Lost', 'Lost'),
+        ('Broken', 'Broken'), 
+        ]
+    item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
+    class Meta:
+        model = Asset
+        fields = ('item_change_status', )
+        
+class LogForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(LogForm, self).__init__(*args, **kwargs)
+        self.fields['item_amount'] = forms.IntegerField(required=True, min_value=1)
+    item_name = forms.ModelChoiceField(queryset=Item.objects.filter(is_asset=False))
+    item_change_options = [
+        ('Lost', 'Lost'),
+        ('Broken', 'Broken'), 
+        ('Acquired', 'Acquired')
+        ]
+    item_change_status = forms.ChoiceField(choices=item_change_options, required=True, widget=forms.Select)
+    item_amount = forms.IntegerField(min_value=1)
+    class Meta:
+        model = Item_Log
+        fields = ('item_name', 'item_change_status', 'item_amount')   
    
+
 class EditLoanForm(forms.ModelForm):
     total_quantity = forms.IntegerField(min_value=1)
     comment = forms.CharField(required=False)
