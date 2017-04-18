@@ -365,7 +365,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
                 response = requests.put(url, headers = header, data=json.dumps(payload))
-                if response.status_code == 304:
+                if response.status_code == 400:
                     messages.error(request, ('You cannot loan more items than the quantity available.'))
                     return redirect(request.META.get('HTTP_REFERER'))
                 messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
