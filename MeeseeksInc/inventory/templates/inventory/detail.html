@@ -241,15 +241,15 @@ function clickEvent(){
 								</td>
 							{% endfor %}
 							
-							{% if user.is_staff %}
+							{% if user.is_staff and not asset.disbursement %}
 							<td>
 								{% block assetEdit %}
 										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
 								{% endblock assetEdit %}
-								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 								{% block assetLog %}
-										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-warning">Log</a>	
+										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-info">Log</a>	
 								{% endblock assetLog %}
+								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 							</td>
 							{% endif %}
 							
