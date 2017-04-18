@@ -410,6 +410,6 @@ class TypeAndUserForAssetDisbursalForm(forms.Form):
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
-    
+    comment = forms.CharField(required=False)
 
     

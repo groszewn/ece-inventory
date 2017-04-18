@@ -464,7 +464,7 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
                 asset_ids = []
                 for form in formset:
                     asset_ids.append(form['asset_id'].value())
-                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value(), 'username':User.objects.get(id = typeForm['user_name'].value()).username}
+                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value(), 'username':User.objects.get(id = typeForm['user_name'].value()).username, 'comment':typeForm['comment'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
