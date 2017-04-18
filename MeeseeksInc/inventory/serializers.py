@@ -297,14 +297,19 @@ class LoanUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')
-        
+
+class AssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ('asset_id','asset_tag','item')
+      
+       
 class LoanCheckInSerializer(serializers.Serializer):
     check_in = serializers.IntegerField(required=True)
     
 class LoanCheckInWithAssetSerializer(serializers.Serializer):
-    class Meta:
-        model = Asset
-        fields = ('asset_id')
+    assets = AssetSerializer(many=True)
+
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
@@ -366,11 +371,6 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanSendDates
         fields = ('date',)
-        
-class AssetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Asset
-        fields = ('asset_id','asset_tag','item')
         
 class AddAssetsSerializer(serializers.Serializer):
     num_assets = serializers.IntegerField(required=True)
