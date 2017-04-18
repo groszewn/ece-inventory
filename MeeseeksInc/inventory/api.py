@@ -1438,7 +1438,11 @@ class APILoanCheckIn(APIView): #CHECK IN LOAN
             raise Http404
     
     def post(self, request, pk, format=None):
-        loan = Loan.objects.get(loan_id=pk)
+        loan = []
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+        except Loan.DoesNotExist:
+            raise Http404
         serializer = LoanCheckInSerializer(data=request.data) 
         if serializer.is_valid():
             requested_checkin_quant = int(request.data['check_in'])   
@@ -1487,7 +1491,11 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
     
     def post(self, request, pk, format=None):
         serializer = LoanCheckInWithAssetSerializer(data=request.data)
-        loan = Loan.objects.get(loan_id=pk)
+        loan = []
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+        except Loan.DoesNotExist:
+            raise Http404
         original_quantity = loan.total_quantity
         if serializer.is_valid():
             checked_in_assets = [x for x in request.data['asset_ids'] if x]
@@ -1546,7 +1554,11 @@ class APILoanConvert(APIView): #CONVERT LOAN
         
   
     def post(self, request, pk, format=None): 
-        loan = Loan.objects.get(loan_id=pk)
+        loan = []
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+        except Loan.DoesNotExist:
+            raise Http404
         admin_name = request.user.username
         user_name = loan.user_name
         item = loan.item_name
@@ -1600,7 +1612,11 @@ class APILoanConvertWithAssets(APIView): #CONVERT LOAN
     
     def post(self, request, pk, format=None): 
         serializer = LoanCheckInWithAssetSerializer(data=request.data)
-        loan = Loan.objects.get(loan_id=pk)
+        loan = []
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+        except Loan.DoesNotExist:
+            raise Http404
         admin_name = request.user.username
         user_name = loan.user_name
         item = loan.item_name
