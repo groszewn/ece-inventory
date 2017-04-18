@@ -1791,12 +1791,16 @@ class APIAsset(APIView):
         if (Asset.objects.filter(asset_id=pk).exists()):
             asset = Asset.objects.get(asset_id=pk)
             asset_id = asset.asset_id
+            asset_tag = asset.asset_tag
+            if asset.loan != None:
+                asset.loan.total_quantity = asset.loan.total_quantity - 1;
+                asset.loan.save()
             item = asset.item
             asset.delete()
             item.quantity = item.quantity - 1
             item.save()
             Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset.asset_id+ ").")
+                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset_id+ ").")
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
