@@ -8,11 +8,12 @@
 
 <h2>Upload File</h2>
 {% if user.is_superuser %}
-	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
-	<input type="file" name="File Upload" id="assetFileUpload" accept=".csv" />
+	<h3>Item Upload:</h3><input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template.csv' %}">Download item template</a><div>
+	<h3>Asset Upload:</h3><input type="file" name="File Upload" id="assetFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template_asset.csv' %}">Download asset template</a><div>
 {% endif %}
 
-<div><a href="{% static 'csv_template.csv' %}">Download a template</a><div>
 <h2>Rules:</h2>
 <ul>
 	<li>The document MUST be in a .csv format</li>
