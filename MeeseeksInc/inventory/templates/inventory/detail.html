@@ -246,10 +246,10 @@ function clickEvent(){
 								{% block assetEdit %}
 										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
 								{% endblock assetEdit %}
-								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 								{% block assetLog %}
-										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-warning">Log</a>	
+										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-info">Log</a>	
 								{% endblock assetLog %}
+								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 							</td>
 							{% endif %}
 							
@@ -376,7 +376,7 @@ function clickEvent(){
 							<td>{{ loan.admin_name }}</td>
 							<td>{{ loan.total_quantity }}</td>
 							<td>{{ loan.comment }}</td>
-							{% if user.is_staff %}
+							{% if user.is_staff and loan.status not 'Disbursed Out'%}
 							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	

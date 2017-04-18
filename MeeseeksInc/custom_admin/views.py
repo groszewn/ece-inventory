@@ -195,9 +195,9 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                         messages.error(request, ('Asset tags cannot be blank. That change could not be saved.'))
                 response = requests.put(url, headers = header, data=json.dumps(payload))
                 if response.status_code == 200:
-                    messages.success(request, ('Successfully edited asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ').')) 
+                    messages.success(request, ('Successfully edited asset with tag: ' + asset.asset_tag + ' (asset id: ' + asset.asset_id + ').')) 
                 else:
-                    messages.error(request, ('Failed to edit asset with tag: ' + asset.asset_tag + ' (' + asset.asset_id + ')'))
+                    messages.error(request, ('Failed to edit asset with tag: ' + asset.asset_tag + ' (asset id: ' + asset.asset_id + ')'))
                 return redirect(request.META.get('HTTP_REFERER'))
         else:
             form = AssetEditForm(asset_custom_fields, asset_custom_vals, asset.asset_tag) 
