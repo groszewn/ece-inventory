@@ -473,10 +473,11 @@ class APIApproveRequest(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            # need to get the item agian after saving
             item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
             if item.threshold_quantity:
-                if (item.threshold_enabled and item.threshold_quantity > item.quantity):
+                if (item.threshold_enabled and (item.threshold_quantity > item.quantity)):
                     #send email
                     try:
                         prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
@@ -596,6 +597,27 @@ class APIApproveRequestWithAssets(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            #NEED TO GET THE ITEM AGAIN BECAUSE IT WAS EDITED
+            item = Item.objects.get(item_name = indiv_request.item_name.item_name)
+            if item.threshold_quantity:
+                if (item.threshold_enabled and (item.threshold_quantity > item.quantity)):
+                    #send email
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Below Minimum Stock'
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                        to.append(user.email)
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':'user',
+                        'item':item.item_name,
+                        'quantity':item.quantity, 
+                    }
+                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
             if indiv_request.type == 'Dispersal':
                 disbursement = Disbursement(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment=comment,
                                             total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
