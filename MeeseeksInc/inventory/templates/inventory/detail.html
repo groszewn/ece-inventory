@@ -248,7 +248,7 @@ function clickEvent(){
 										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
 								{% endblock assetEdit %}
 								{% block assetLog %}
-										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-info">Log</a>	
+										<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-info">Log Loss/Destruction</a>	
 								{% endblock assetLog %}
 								<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete</a>
 								{% endif %}
