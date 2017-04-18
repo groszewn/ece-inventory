@@ -58,7 +58,7 @@ class ItemFilter(FilterSet):
     )
     class Meta:
         model = Item
-        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags']
+        fields = ['item_name', 'model_number', 'quantity', 'description','threshold_quantity','threshold_enabled', 'is_asset', 'included_tags', 'excluded_tags']
         
 
 class APIItemList(ListCreateAPIView):
