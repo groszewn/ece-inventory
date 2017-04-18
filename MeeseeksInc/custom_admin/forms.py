@@ -65,11 +65,11 @@ class EditLoanForm(forms.ModelForm):
 
 class AddCommentRequestForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
-#     TYPES = (
-#         ( 'Dispersal','Dispersal'),
-#         ('Loan','Loan'),
-#     )
-#     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
 #     
     class Meta:
         model = Request

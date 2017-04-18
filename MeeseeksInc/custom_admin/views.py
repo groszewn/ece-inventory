@@ -414,6 +414,8 @@ def request_accept_with_assets(request, pk):
         formset = AssetsRequestFormset(request.POST)
         commentForm = AddCommentRequestForm(request.POST, instance=indiv_request)
         if all([commentForm.is_valid(), formset.is_valid()]):
+            indiv_request.type = commentForm['type'].value()
+            indiv_request.save()
             comment = commentForm['comment'].value()
             token, create = Token.objects.get_or_create(user=request.user)
             http_host = get_host(request)
