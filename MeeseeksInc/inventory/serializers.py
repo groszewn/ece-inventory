@@ -91,7 +91,7 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field' ,'threshold_quantity', 
-    'threshold_enabled' )
+    'threshold_enabled', 'is_asset')
     
     def get_custom_field_values(self, obj):
         item = Item.objects.get(item_name = obj)

@@ -109,11 +109,11 @@ class APIItemList(ListCreateAPIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-#         print('post of api item list')
         context = {
             "request": self.request,
         }
         serializer = ItemSerializer(data=request.data, context=context)
+        
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -148,6 +148,15 @@ class APIItemList(ListCreateAPIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=item_id):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save() 
             
             context = {
             "request": self.request,
@@ -184,8 +193,12 @@ class APIItemDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        print('item detail put')
+
         item = self.get_object(pk)
+        
+        if not "is_asset" in request.data:
+            item.is_asset = False
+        
         starting_quantity = item.quantity
         context = {
             "request": self.request,
@@ -209,7 +222,6 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
-            print(request.data)
             if custom_field_values is not None:
                 for field in Custom_Field.objects.filter(field_kind='Item'):
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
@@ -236,6 +248,20 @@ class APIItemDetail(APIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=pk):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save()
+            else:
+                if Asset.objects.filter(item=pk): 
+                    for asset in Asset.objects.filter(item=pk):
+                        asset.delete()
+            
             context = {
             "request": self.request,
             "pk": pk,
