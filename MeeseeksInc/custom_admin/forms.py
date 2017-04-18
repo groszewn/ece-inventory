@@ -403,12 +403,13 @@ class BackfillRequestForm(forms.Form):
     pdf = forms.FileField(max_length=200)
     
 
-class TypeForAssetDisbursalForm(forms.Form):
+class TypeAndUserForAssetDisbursalForm(forms.Form):
+    user_name = forms.ModelChoiceField(queryset=User.objects.all())
     TYPES = (
         ( 'Dispersal','Dispersal'),
         ('Loan','Loan'),
     )
     type = forms.ChoiceField(label='Select The Dispersal Type', choices=TYPES)
-
+    
 
     

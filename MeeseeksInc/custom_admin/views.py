@@ -31,7 +31,7 @@ from rest_framework.authtoken.models import Token
 
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet, \
     BaseAssetCheckInFormset, AssetEditForm, AddAssetsForm, \
-    TypeForAssetDisbursalForm
+    TypeAndUserForAssetDisbursalForm
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
 
@@ -453,7 +453,7 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
         DisburseAssetFormSet = formset_factory(DisburseAssetForm, extra=1, formset=BaseAssetCheckInFormset)
         if request.method == 'POST':
             formset = DisburseAssetFormSet(request.POST)
-            typeForm = TypeForAssetDisbursalForm(request.POST)
+            typeForm = TypeAndUserForAssetDisbursalForm(request.POST)
             if formset.is_valid() and typeForm.is_valid():
                 token, create = Token.objects.get_or_create(user=request.user)
                 http_host = get_host(request)
@@ -462,14 +462,14 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
                 asset_ids = []
                 for form in formset:
                     asset_ids.append(form['asset_id'].value())
-                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value()}
+                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value(), 'username':typeForm['user_name'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
 #                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
                 return redirect(request.META.get('HTTP_REFERER'))  
         else:
             formset = DisburseAssetFormSet()
-            typeForm = TypeForAssetDisbursalForm()
+            typeForm = TypeAndUserForAssetDisbursalForm()
 #             form = make_disburse_asset_form(Item.objects.get(item_id=pk))
         return render(request, "custom_admin/direct_disbursements_with_assets_inner.html", { 'typeForm': typeForm, 'formset': formset, 'pk':pk})
     
