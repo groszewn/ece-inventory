@@ -260,6 +260,7 @@ class AssetDisbursementSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=TYPES)
     asset_ids = serializers.ListField(
         child=serializers.CharField())
+    comment = serializer.CharField(required=False)
 
         
 class DisbursementPostSerializer(serializers.ModelSerializer):

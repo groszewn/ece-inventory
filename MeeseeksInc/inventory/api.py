@@ -819,14 +819,14 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
             checked_in_assets = [x for x in request.data['asset_ids'] if x]
             if len(checked_in_assets) > 0 and len(checked_in_assets) <= original_quantity:
                 if request.data['type']=='Dispersal':
-                    disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=None, total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
+                    disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=request.data['comment'], total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
                     disbursement.save()
                     item.quantity -= len(checked_in_assets)
                     item.save()
                     Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, nature_of_event="Disburse", 
                                            affected_user=request.data['username'], change_occurred="Disbursed " + str(len(checked_in_assets)))
                 if request.data['type']=='Loan':
-                    loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=None, time_loaned=time_disbursed)
+                    loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=request.data['comment'], time_loaned=time_disbursed)
                     loan.save()
                     item.quantity -= len(checked_in_assets)
                     item.save()
