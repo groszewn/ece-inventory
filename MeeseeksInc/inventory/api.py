@@ -58,8 +58,21 @@ class ItemFilter(FilterSet):
     )
     class Meta:
         model = Item
-        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags']
+        fields = ['item_name', 'model_number', 'quantity', 'description','included_tags', 'excluded_tags','threshold_quantity','threshold_enabled']
         
+class APIBelowStock(APIView):
+    permission_classes = (IsAdminOrManager,)
+    
+    def get(self, request, format=None):
+        set = []
+        context = {
+            "request": self.request,
+        }
+        for item in Item.objects.all():
+            if item.threshold_enabled and (item.quantity < item.threshold_quantity):
+                set.append(item)
+        serializer = ItemSerializer(set, many=True,context=context)
+        return Response(serializer.data)
 
 class APIItemList(ListCreateAPIView):
     """
