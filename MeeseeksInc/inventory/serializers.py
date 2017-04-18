@@ -252,10 +252,21 @@ class DisbursementPostSerializer(serializers.ModelSerializer):
     item_name = ItemSerializer(read_only=True)
     
     comment = serializers.CharField(required=False, allow_blank=True)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = serializers.ChoiceField(choices=TYPES,write_only=True)
     
     class Meta:
         model = Disbursement
-        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_disbursed')    
+        fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_disbursed', 'type')    
+    
+    def create(self, validated_data):
+        disbursement = Disbursement.objects.create(**validated_data)
+        obj.save(foo=validated_data['foo'])
+        return obj
+
     def validate_total_quantity(self, value):
         """
         Check that the request is positive
