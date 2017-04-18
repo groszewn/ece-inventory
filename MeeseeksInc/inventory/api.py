@@ -2045,7 +2045,7 @@ class APILoanEmailConfigureDates(APIView):
     
     def post(self, request, format=None):
         #LoanSendDates.objects.all().delete()
-        serializer = LoanSendDatesSerializer(data=completerequest.data, many=True)
+        serializer = LoanSendDatesSerializer(data=request.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
