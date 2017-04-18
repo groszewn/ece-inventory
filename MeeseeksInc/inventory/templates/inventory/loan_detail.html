@@ -84,19 +84,23 @@
 {% endif %}
 {% if user.is_staff %}	 
 {% if loan.orig_request.item_name.is_asset %}
+{% if loan.status == "Checked Out" %}
 {% block checkIn-with-assets %}
 	<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	
 {% endblock checkIn-with-assets %}
 {% block convert-with-assets %}
 	<a id = "convert-assets" loan-id="{{ loan.loan_id }}" class="convert-assets btn btn-info">Convert Loan</a>	
 {% endblock convert-with-assets %}
+{% endif %}
 {% else %}
+{% if loan.status == "Checked Out" %}
 	{% block checkIn %}
 		<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
 	{% endblock checkIn %}
 	{% block convert %}
 	<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
 	{% endblock convert %}
+{% endif %}
 {% endif %} 
 {% endif %} 
 
