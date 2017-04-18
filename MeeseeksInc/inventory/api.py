@@ -34,7 +34,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    LoanCheckInWithAssetSerializer, AddAssetsSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
+    LoanCheckInWithAssetSerializer, AddAssetsSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer, AssetDisbursementSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
@@ -806,57 +806,63 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
     permission_classes = (IsAdminOrManager,)
 #     serializer_class = LoanCheckInWithAssetSerializer
     
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(item=Item.objects.get(item_id=pk)),many=True)
+        return Response(serializer.data)
     
     def post(self, request, pk, format=None):
-        print(request.data)
+        serializer = AssetDisbursementSerializer(data=request.data)
         item = Item.objects.get(item_id=pk)
-        checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = item.quantity
         time_disbursed = timezone.localtime(timezone.now())
-        if len(checked_in_assets) > 0 and len(checked_in_assets) <= original_quantity:
-            if request.data['type']=='Dispersal':
-                disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=None, total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
-                disbursement.save()
-                item.quantity -= len(checked_in_assets)
-                item.save()
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, nature_of_event="Disburse", 
-                                       affected_user=request.data['username'], change_occurred="Disbursed " + str(len(checked_in_assets)))
-            if request.data['type']=='Loan':
-                loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=None, time_loaned=time_disbursed)
-                loan.save()
-                item.quantity -= len(checked_in_assets)
-                item.save()
-                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user.username, nature_of_event='Loan', 
-                                       affected_user=request.data['username'], change_occurred="Loaned " + str(len(checked_in_assets)))
-
-            for asset_id in checked_in_assets:
-                try:
-                    asset = Asset.objects.get(asset_id=asset_id)
-                except Asset.DoesNotExist:
-                    return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
-                if request.data['type']=='Loan':
-                    asset.loan = loan
+        if serializer.is_valid():
+            checked_in_assets = [x for x in request.data['asset_ids'] if x]
+            if len(checked_in_assets) > 0 and len(checked_in_assets) <= original_quantity:
                 if request.data['type']=='Dispersal':
-                    asset.disbursement = None
-                asset.save()
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Direct Dispersal'
-            to = [User.objects.get(username = request.data['username']).email]
-            from_email='noreply@duke.edu'
-            ctx = {
-                'user':request.data['username'],
-                'item':item.item_name,
-                'quantity':len(checked_in_assets), # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
-                'disburser':request.user.username,
-                'type': 'disbursed',
-            }
-            message=render_to_string('inventory/disbursement_email.txt', ctx)
-            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            return Response(status=status.HTTP_201_CREATED)       
-        return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+                    disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=None, total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
+                    disbursement.save()
+                    item.quantity -= len(checked_in_assets)
+                    item.save()
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, nature_of_event="Disburse", 
+                                           affected_user=request.data['username'], change_occurred="Disbursed " + str(len(checked_in_assets)))
+                if request.data['type']=='Loan':
+                    loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=None, time_loaned=time_disbursed)
+                    loan.save()
+                    item.quantity -= len(checked_in_assets)
+                    item.save()
+                    Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user.username, nature_of_event='Loan', 
+                                           affected_user=request.data['username'], change_occurred="Loaned " + str(len(checked_in_assets)))
+    
+                for asset_id in checked_in_assets:
+                    try:
+                        asset = Asset.objects.get(asset_id=asset_id)
+                    except Asset.DoesNotExist:
+                        return Response("This asset does not exist!", status=status.HTTP_400_BAD_REQUEST)
+                    if request.data['type']=='Loan':
+                        asset.loan = loan
+                    if request.data['type']=='Dispersal':
+                        asset.disbursement = None
+                    asset.save()
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Direct Dispersal'
+                to = [User.objects.get(username = request.data['username']).email]
+                from_email='noreply@duke.edu'
+                ctx = {
+                    'user':request.data['username'],
+                    'item':item.item_name,
+                    'quantity':len(checked_in_assets), # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                    'disburser':request.user.username,
+                    'type': 'disbursed',
+                }
+                message=render_to_string('inventory/disbursement_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+                return Response(status=status.HTTP_201_CREATED)       
+            else:
+                return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
 
 
 ########################################## Users ###########################################
@@ -1449,47 +1455,49 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
         return Response(serializer.data)
     
     def post(self, request, pk, format=None):
+        serializer = LoanCheckInWithAssetSerializer(data=request.data)
         loan = Loan.objects.get(loan_id=pk)
-        checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = loan.total_quantity
-        if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
-            for asset_id in checked_in_assets:
-                try:
-                    asset = Asset.objects.get(asset_id=asset_id, loan=loan)
-                except Asset.DoesNotExist:
-                    return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
-                asset.loan = None
-                asset.save()
-            loan.total_quantity = loan.total_quantity - len(checked_in_assets)
-            item = loan.item_name
-            item.quantity = item.quantity + len(checked_in_assets)
-            item.save()
-            loan.save()
-            Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
-                                   nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
-            try:
-                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-            except (ObjectDoesNotExist, IndexError) as e:
-                prepend = ''
-            subject = prepend + 'Loan checkin'
-            to = [User.objects.get(username=loan.user_name).email]
-            from_email='noreply@duke.edu'
-            checked_in = [(loan.item_name, len(checked_in_assets), original_quantity)]
-            ctx = {
-                'user':request.user,
-                'checked_in':checked_in,
-            }
-            message=render_to_string('inventory/loan_checkin_email.txt', ctx)
-            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-
-            if loan.total_quantity == 0:
-                loan.status = 'Checked In'
+        if serializer.is_valid():
+            checked_in_assets = [x for x in request.data['asset_ids'] if x]
+            if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
+                for asset_id in checked_in_assets:
+                    try:
+                        asset = Asset.objects.get(asset_id=asset_id, loan=loan)
+                    except Asset.DoesNotExist:
+                        return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
+                    asset.loan = None
+                    asset.save()
+                loan.total_quantity = loan.total_quantity - len(checked_in_assets)
+                item = loan.item_name
+                item.quantity = item.quantity + len(checked_in_assets)
+                item.save()
                 loan.save()
-            return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
-        
-        return Response("Asked to check-in too many assets, or didn't enter any ids", status=status.HTTP_400_BAD_REQUEST)
+                Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
+                                       nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
+                try:
+                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                except (ObjectDoesNotExist, IndexError) as e:
+                    prepend = ''
+                subject = prepend + 'Loan checkin'
+                to = [User.objects.get(username=loan.user_name).email]
+                from_email='noreply@duke.edu'
+                checked_in = [(loan.item_name, len(checked_in_assets), original_quantity)]
+                ctx = {
+                    'user':request.user,
+                    'checked_in':checked_in,
+                }
+                message=render_to_string('inventory/loan_checkin_email.txt', ctx)
+                EmailMessage(subject, message, bcc=to, from_email=from_email).send()
     
+                if loan.total_quantity == 0:
+                    loan.status = 'Checked In'
+                    loan.save()
+                return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
+            return Response("Asked to check-in too many assets, or didn't enter any ids", status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
 
+        
 class APILoanConvert(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanConvertSerializer  

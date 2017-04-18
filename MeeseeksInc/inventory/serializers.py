@@ -250,6 +250,17 @@ class DisbursementStartSerializer(serializers.Serializer):
         ('Loan','Loan'),
     )
     type = serializers.ChoiceField(choices=TYPES)
+    
+class AssetDisbursementSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = serializers.ChoiceField(choices=TYPES)
+    asset_ids = serializers.ListField(
+        child=serializers.CharField())
+
         
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
@@ -319,9 +330,8 @@ class LoanCheckInSerializer(serializers.Serializer):
     check_in = serializers.IntegerField(required=True)
     
 class LoanCheckInWithAssetSerializer(serializers.Serializer):
-    class Meta:
-        model = Asset
-        fields = ('asset_id')
+    asset_ids = serializers.ListField(
+        child=serializers.CharField())
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
