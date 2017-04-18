@@ -795,6 +795,7 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
     
     
     def post(self, request, pk, format=None):
+        print(request.data)
         item = Item.objects.get(item_id=pk)
         checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = item.quantity
