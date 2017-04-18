@@ -10,7 +10,12 @@ Quantity of <b>{{item_name}}</b> available: {{num_left}}
     <form id="formID-editLoan" request-comment="" action="{% url 'custom_admin:edit_loan' pk %}" class="form-horizontal" method="post">
 {#        {% crispy form %}#}
 		{% csrf_token %}
-       	{{form.as_p}}
+		{% if is_asset %}
+			<div style="margin-left:5px"><b>{{form.comment.label}}:</b>{{form.comment}}<div>
+		{% else %}
+			<div style="margin-left:5px"><b>{{form.total_quantity.label}}:</b>{{form.total_quantity}}<div>
+			<div style="margin-left:5px"><b>{{form.comment.label}}:</b>{{form.comment}}<div>
+		{% endif %}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div>

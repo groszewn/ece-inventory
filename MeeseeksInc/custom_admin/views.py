@@ -372,7 +372,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 return redirect(request.META.get('HTTP_REFERER'))
         else:
             form = EditLoanForm(instance=loan) # blank request form with no data yet
-        return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})      
+        return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name, 'is_asset':loan.item_name.is_asset})      
     def test_func(self):
         return self.request.user.is_staff
     
