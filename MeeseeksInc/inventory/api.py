@@ -1973,7 +1973,7 @@ class APIAddAsset(APIView):
                            affected_user='', change_occurred= "Added " + assets_to_add + " assets to " + item.item_name + ".")
             return Response(serializer.data)
         else:
-            return APIAddAsset.get(self,request,pk)
+            return APIAddAsset.get(request,pk)
     
 class APIAsset(APIView):
     permission_classes = (IsAdmin,)
