@@ -16,23 +16,6 @@ Quantity of <b>{{item_name}}</b> available: {{num_available}}
 			{{ formset }}
 	    <table>
 		{{ formset.management_form }}
-{#		{% for form in formset.forms %}#}
-{#			<div class="fieldWrapper">#}
-{#			{{ formset.non_form_errors }}#}
-{#			{{ form }}#}
-{#			</div>#}
-{#		{% endfor %}#}
-		
-{#		{{ formset.management_form }}#}
-{#		{{ form_errors }}#}
-{#	    {% for form in formset.forms %}#}
-{#	        {{ form.non_field_errors }}#}
-{#	        {{ form.errors }}#}
-{#	        <table>#}
-{#	            {{ form.as_table }}#}
-{#	        </table>#}
-{#	    {% endfor %}#}
-
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
 </div>
