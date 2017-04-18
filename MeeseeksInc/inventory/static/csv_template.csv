@@ -1,4 +1,1 @@
-Item Name,Quantity,Model Number,Description,Tags,location,restock_info
-CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3,Hudson 115A,restock
-CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3,Teer 101,
-CSV Name4,1000,,,csv3/csv4/csv5,,
+Item Name,Quantity,Model Number,Description,Tags,Min Stock Info,Min Stock Enabled,restock infoCSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3,,TRUE,restockCSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3,50,FALSE,CSV Name4,1000,,,csv3/csv4/csv5,30,,
