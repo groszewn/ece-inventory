@@ -417,7 +417,7 @@ class AssetWithCustomFieldSerializer(serializers.Serializer):
                         if field.field_type == 'Int':
                             self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False,allow_null=True) 
                         if field.field_type == 'Float':
-                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_null=True)
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_null=True) 
         
 class MultipleAssetCustomFieldSerializer(serializers.ModelSerializer):
     time_requested = serializers.DateTimeField(

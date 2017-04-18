@@ -76,4 +76,5 @@ urlpatterns = [
     url(r'^api/to_asset/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIItemToAsset.as_view(),name='item_to_asset'),
     url(r'^api/to_item/(?P<pk>[\w\-\ ]+)/$',inventory.api.APIAssetToItem.as_view(),name='asset_to_item'),
     url(r'^api/v1/(?P<cls_name>[\w-]+)/$',inventory.api.MyAPI.as_view(),name='api'),
+    url(r'^api/below_min_stock/$',inventory.api.APIBelowStock.as_view(), name='below_min_stock'),
 ]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
