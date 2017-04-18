@@ -97,6 +97,7 @@ class ItemSerializer(serializers.ModelSerializer):
         item = Item.objects.get(item_name = obj)
         user = self.context['request'].user
         custom_values = []
+        
         if User.objects.get(username=user).is_staff:
             custom_values = Custom_Field_Value.objects.filter(item = item)
         else:

@@ -1948,6 +1948,7 @@ class APIItemToAsset(APIView):
                 print('asset creating')
                 asset = Asset(item=item)
                 asset.save()
+            
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
         Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
                        affected_user='', change_occurred="Changed " + item.item_name + " to track by asset.")

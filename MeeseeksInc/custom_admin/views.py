@@ -942,7 +942,10 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
 
     def edit_item_module(request, pk):
         item = Item.objects.get(item_id=pk)
-        custom_fields = Custom_Field.objects.filter(field_kind='Item')
+        if item.is_asset:
+            custom_fields = Custom_Field.objects.filter(field_kind='Item')
+        else:
+            custom_fields = Custom_Field.objects.all()
         custom_vals = Custom_Field_Value.objects.filter(item = item)
         original_quantity = item.quantity
         if request.method == "POST":
