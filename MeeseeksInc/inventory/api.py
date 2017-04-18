@@ -109,11 +109,11 @@ class APIItemList(ListCreateAPIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-#         print('post of api item list')
         context = {
             "request": self.request,
         }
         serializer = ItemSerializer(data=request.data, context=context)
+        
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -148,6 +148,15 @@ class APIItemList(ListCreateAPIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=item_id):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save() 
             
             context = {
             "request": self.request,
@@ -184,8 +193,12 @@ class APIItemDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        print('item detail put')
+
         item = self.get_object(pk)
+        
+        if not "is_asset" in request.data:
+            item.is_asset = False
+        
         starting_quantity = item.quantity
         context = {
             "request": self.request,
@@ -198,9 +211,12 @@ class APIItemDetail(APIView):
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
+            if item.is_asset:
+                serializer.save(quantity=starting_quantity)
+            else:
+                serializer.save()
             
+            data = serializer.data
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -209,7 +225,6 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
-            print(request.data)
             if custom_field_values is not None:
                 for field in Custom_Field.objects.filter(field_kind='Item'):
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
@@ -236,6 +251,20 @@ class APIItemDetail(APIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=pk):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save()
+            else:
+                if Asset.objects.filter(item=pk): 
+                    for asset in Asset.objects.filter(item=pk):
+                        asset.delete()
+            
             context = {
             "request": self.request,
             "pk": pk,
@@ -404,20 +433,22 @@ class APIMultipleRequests(APIView):
     """
     permission_classes = (IsAtLeastUser,)
     
-    def post(self, request, item_list, format=None):
+    def post(self, request, format=None):
         context = {
             "request": self.request,
         }
-        if item_list:
-            item_id_list = item_list.split(',')
-            if len(request.data)>len(item_id_list):
-                del request.data[len(item_id_list):]
-            for i, item_id in enumerate(item_id_list):
-                if i>=len(request.data):
-                    item_name_dict = {'item_name':item_id}
-                    request.data.append(dict(item_name_dict))
-                else:
-                    request.data[i]['item_name']=item_id
+#         for i, request in enumerate(request.data):
+#             request.data[i]['item_name']=item_id
+#         if item_list:
+#             item_id_list = item_list.split(',')
+#             if len(request.data)>len(item_id_list):
+#                 del request.data[len(item_id_list):]
+#             for i, item_id in enumerate(item_id_list):
+#                 if i>=len(request.data):
+#                     item_name_dict = {'item_name':item_id}
+#                     request.data.append(dict(item_name_dict))
+#                 else:
+#                     request.data[i]['item_name']=item_id
         print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
         request_list=[]
@@ -425,6 +456,7 @@ class APIMultipleRequests(APIView):
             serializer.save()
             dataDict=serializer.data
             for data in dataDict:
+                print(data)
                 id=data['request_id']
                 quantity=data['request_quantity']
                 item = Item.objects.get(item_id=data['item_name'])
@@ -1247,7 +1279,7 @@ class APILoanUpdate(APIView): #EDIT LOAN
             item = loan.item_name
             new_item_quant = item.quantity - quantity_changed
             if new_item_quant < 0:
-                return Response(status=status.HTTP_304_NOT_MODIFIED)
+                return Response("You cannot loan out more than the stock", status=status.HTTP_400_BAD_REQUEST)
             if new_requested_quant < 1:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
             item.quantity = new_item_quant
@@ -1260,7 +1292,6 @@ class APILoanUpdate(APIView): #EDIT LOAN
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-            
             try:
                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
             except (ObjectDoesNotExist, IndexError) as e:
@@ -1328,20 +1359,27 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanCheckInWithAssetSerializer
     
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+        return Response(serializer.data)
+    
     def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
         checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = loan.total_quantity
         if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
+            for asset_id in checked_in_assets:
+                try:
+                    asset = Asset.objects.get(asset_id=asset_id, loan=loan)
+                except Asset.DoesNotExist:
+                    return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
+                asset.loan = None
+                asset.save()
             loan.total_quantity = loan.total_quantity - len(checked_in_assets)
             item = loan.item_name
             item.quantity = item.quantity + len(checked_in_assets)
             item.save()
             loan.save()
-            for asset_id in checked_in_assets:
-                asset = Asset.objects.get(asset_id=asset_id)
-                asset.loan = None
-                asset.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
             try:
@@ -1363,7 +1401,8 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
                 loan.status = 'Checked In'
                 loan.save()
             return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response("Asked to check-in too many assets, or didn't enter any ids", status=status.HTTP_400_BAD_REQUEST)
     
 
 class APILoanConvert(APIView): #CONVERT LOAN
@@ -1421,6 +1460,10 @@ class APILoanConvert(APIView): #CONVERT LOAN
 class APILoanConvertWithAssets(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanConvertSerializer  
+    
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+        return Response(serializer.data)
     
     def post(self, request, pk, format=None): 
         loan = Loan.objects.get(loan_id=pk)
@@ -1878,7 +1921,16 @@ class APIItemToAsset(APIView):
         if not Asset.objects.filter(item=pk):
             item.is_asset = True
             item.save()
-            for i in range(item.quantity):
+            # if you have 15 macbook pros, and 5 is being loaned out, then find the 5 first.
+            try:
+                loaned_out = Loan.objects.get(item_name=item)
+            except Loan.DoesNotExist:
+                loaned_out = None
+            if loaned_out:
+                for j in range(loaned_out.total_quantity):
+                    asset = Asset(item=item, loan=loaned_out)
+                    asset.save()
+            for i in range(item.quantity): #the other ones not being loaned out can become assets
                 print('asset creating')
                 asset = Asset(item=item)
                 asset.save()

@@ -360,7 +360,11 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 user = request.user
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
-                url=http_host+'/api/loan/'+loan.loan_id+'/'
+                url=http_host+'/api/loan/update/'+loan.loan_id+'/'
+                if loan.item_name.is_asset:
+                    quantity = loan.total_quantity
+                else:
+                    quantity = post.total_quantity
                 payload = {'comment': post.comment,'total_quantity':post.total_quantity}
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
@@ -372,7 +376,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 return redirect(request.META.get('HTTP_REFERER'))
         else:
             form = EditLoanForm(instance=loan) # blank request form with no data yet
-        return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name})      
+        return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name, 'is_asset':loan.item_name.is_asset})      
     def test_func(self):
         return self.request.user.is_staff
     
