@@ -83,7 +83,8 @@ class GetItemSerializer(serializers.ModelSerializer):
         fields = ('item_id', 'item_name', 'quantity' ,'threshold_quantity', 'threshold_enabled','model_number', 
                   'description', 'requests_outstanding','values_custom_field','tags')
 
-class ItemSerializer(serializers.ModelSerializer):
+class ItemSerializer(serializers.ModelSerializer):   
+    get_fields = serializers.SerializerMethodField('get_all_fields')
     values_custom_field = serializers.SerializerMethodField('get_custom_field_values')
     model_number = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
@@ -91,7 +92,7 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field' ,'threshold_quantity', 
-    'threshold_enabled', 'is_asset')
+    'threshold_enabled', 'is_asset', 'get_fields')
     
     def get_custom_field_values(self, obj):
         item = Item.objects.get(item_name = obj)
@@ -104,6 +105,35 @@ class ItemSerializer(serializers.ModelSerializer):
             custom_values = Custom_Field_Value.objects.filter(item = item, field__is_private = False)
         serializer = CustomValueSerializerNoItem(custom_values, many=True)
         return serializer.data
+    
+    def get_all_fields(self, obj):
+        list = Custom_Field.objects.all()
+        item = Item.objects.get(item_name = obj)
+        if item.is_asset:
+            list = Custom_Field.objects.filter(field_kind='Item')
+        for field in list:
+            if field.field_type == 'Short':
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True)                    
+            if field.field_type == 'Long':
+                self.fields["%s" % field.field_name] = serializers.CharField(required=False,allow_blank=True) 
+            if field.field_type == 'Int':
+                self.fields["%s" % field.field_name] = serializers.IntegerField(required=False,allow_null=True) 
+            if field.field_type == 'Float':
+                self.fields["%s" % field.field_name] = serializers.FloatField(required=False,allow_null=True)
+            if Custom_Field_Value.objects.filter(item = item).exists():
+                for val in Custom_Field_Value.objects.filter(item = item):
+                    if val.field == field:
+                        if field.field_type == 'Short':
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True)                    
+                        if field.field_type == 'Long':
+                            self.fields["%s" % field.field_name] = serializers.CharField(initial = val.value,required=False,allow_blank=True) 
+                        if field.field_type == 'Int':
+                            self.fields["%s" % field.field_name] = serializers.IntegerField(initial = val.value,required=False,allow_null=True) 
+                        if field.field_type == 'Float':
+                            self.fields["%s" % field.field_name] = serializers.FloatField(initial = val.value,required=False,allow_null=True)
+    
+    def get_object(self, obj):
+        return Item.objects.get(item_name = obj)
     
     def validate_quantity(self, value):
         """
