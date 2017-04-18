@@ -1801,6 +1801,7 @@ class APICompleteBackfillWithAssets(APIView):
             disbursement.save()
             for asset in assets[:loan.backfill_quantity]:
                 asset.disbursement = disbursement
+                asset.loan = None
                 asset.save()
                 Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Disburse", 
                        affected_user=loan.user_name, change_occurred="Disbursed " + str(asset.asset_id) + " due to backfill")
@@ -1890,7 +1891,7 @@ class APILoanEmailConfigureDates(APIView):
     
     def post(self, request, format=None):
         #LoanSendDates.objects.all().delete()
-        serializer = LoanSendDatesSerializer(data=request.data, many=True)
+        serializer = LoanSendDatesSerializer(data=completerequest.data, many=True)
         if serializer.is_valid():
             serializer.save()
             for date in serializer.data:
