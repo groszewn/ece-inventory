@@ -43,7 +43,7 @@
 	{% block assetEdit %}
 		<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit This Asset</a>	
 	{% endblock assetEdit %}
-	<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset' asset.asset_id %}" class="btn btn-danger">Delete This Asset</a>
+	<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset_from_detail' asset.asset_id %}" class="btn btn-danger">Delete This Asset</a>
 {% endif %}
 
 {% if asset.loan %}

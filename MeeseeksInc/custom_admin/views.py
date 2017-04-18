@@ -28,7 +28,7 @@ import requests, json
 from rest_framework.authtoken.models import Token
 
 from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
-    BaseAssetCheckInFormset, AssetEditForm
+    BaseAssetCheckInFormset, AssetEditForm, AddAssetsForm
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm
@@ -190,11 +190,32 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             messages.success(request, ('Successfully deleted asset: ' + pk ))
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
-        print(request.path)
-        if "asset" in request.path: 
-            return redirect('/item/' + asset.item.item_id)  
+        return redirect(request.META.get('HTTP_REFERER'))     
+    
+    def delete_asset_from_detail(request, pk):
+        asset = Asset.objects.get(asset_id=pk)
+        asset_item_id = asset.item.item_id
+        AssetView.delete_asset(request,pk)
+        return redirect('/item/' + asset_item_id) 
+    
+    def add_assets(request, pk): 
+        if request.method == "POST":
+            form = AddAssetsForm(request.POST)
+            if form.is_valid():
+                item = Item.objects.get(item_id=pk)
+                if item.is_asset:
+                    user = request.user
+                    token, create = Token.objects.get_or_create(user=user)
+                    http_host = get_host(request)
+                    url=http_host+'/api/add/assets/'+item.item_id+'/'
+                    payload = {'num_assets':form['num_assets'].value()}
+                    header = {'Authorization': 'Token '+ str(token), 
+                              "Accept": "application/json", "Content-type":"application/json"}
+                    requests.post(url, headers = header, data=json.dumps(payload))
+                return redirect(request.META.get('HTTP_REFERER')) 
         else:
-            return redirect(request.META.get('HTTP_REFERER'))      
+            form = AddAssetsForm() 
+        return render(request, 'custom_admin/add_assets_inner.html', {'form': form, 'pk':pk})
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -896,7 +917,7 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
         custom_vals = Custom_Field_Value.objects.filter(item = item)
         original_quantity = item.quantity
         if request.method == "POST":
-            form = ItemEditForm(request.user, custom_fields, custom_vals, request.POST or None, instance=item)
+            form = ItemEditForm(request.user, custom_fields, custom_vals, item, request.POST or None, instance=item)
             if form.is_valid():
                 values_custom_field = []
                 if int(form['quantity'].value())!=original_quantity:    
@@ -917,7 +938,7 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
             messages.success(request, ('Edited ' + item.item_name + '. (' + request.user.username +')'))
             return redirect('/item/' + pk)
         else:
-            form = ItemEditForm(request.user, custom_fields, custom_vals, instance=item)
+            form = ItemEditForm(request.user, custom_fields, custom_vals, item, instance=item)
         return render(request, 'custom_admin/item_edit_module_inner.html', {'form': form, 'pk':pk}) 
 
 @login_required(login_url='/login/')

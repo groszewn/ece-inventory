@@ -85,7 +85,7 @@ class AddNotesBackfillForm(forms.ModelForm):
         fields = ('backfill_notes',)
 
 class AssetsRequestForm(forms.ModelForm):
-    asset_tag = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
+    asset_tag = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset tag identifier')
     class Meta:
         model = Asset
         exclude = ('asset_id','item','loan','disbursement')
@@ -165,6 +165,9 @@ class BaseAssetCheckInFormset(BaseFormSet):
                         code='duplicate_assets'
                     )
 
+class AddAssetsForm(forms.Form):
+    num_assets = forms.IntegerField(required=True,min_value=1,label="Number of assets to add")
+
 class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
@@ -200,9 +203,9 @@ class RequestEditForm(forms.ModelForm):
         fields = ('request_quantity', 'type','reason')
          
 class ItemEditForm(forms.ModelForm):
-    def __init__(self, user, custom_fields, custom_values, *args, **kwargs):
+    def __init__(self, user, custom_fields, custom_values, item, *args, **kwargs):
         super(ItemEditForm, self).__init__(*args, **kwargs)
-        if not user.is_superuser and user.is_staff:
+        if (not user.is_superuser and user.is_staff) or item.is_asset :
             self.fields['quantity'].widget.attrs['readonly'] = True
         for field in custom_fields:
             if field.field_type == 'Short':

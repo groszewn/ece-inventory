@@ -1,0 +1,13 @@
+ {% load crispy_forms_tags %}
+ {% load static %}
+
+<h3>How many assets do you wish to add?</h3>
+
+<br/>
+<div class="row">
+    <form id="formID-addAssets" action="{% url 'custom_admin:add_assets' pk %}" class="form-horizontal" method="post">
+		{% csrf_token %}
+       	{{form.as_p}}
+        <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
+    </form>
+</div>

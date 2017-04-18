@@ -371,6 +371,9 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('asset_id','asset_tag','item')
+        
+class AddAssetsSerializer(serializers.Serializer):
+    num_assets = serializers.IntegerField(required=True)
       
 class AssetWithCustomFieldSerializer(serializers.Serializer):
     def __init__(self, custom_values=None, asset_tag=None, *args, **kwargs):
