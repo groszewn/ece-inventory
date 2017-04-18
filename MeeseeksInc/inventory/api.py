@@ -1826,7 +1826,16 @@ class APIItemToAsset(APIView):
         if not Asset.objects.filter(item=pk):
             item.is_asset = True
             item.save()
-            for i in range(item.quantity):
+            # if you have 15 macbook pros, and 5 is being loaned out, then find the 5 first.
+            try:
+                loaned_out = Loan.objects.get(item_name=item)
+            except Loan.DoesNotExist:
+                loaned_out = None
+            if loaned_out:
+                for j in range(loaned_out.total_quantity):
+                    asset = Asset(item=item, loan=loaned_out)
+                    asset.save()
+            for i in range(item.quantity): #the other ones not being loaned out can become assets
                 print('asset creating')
                 asset = Asset(item=item)
                 asset.save()
