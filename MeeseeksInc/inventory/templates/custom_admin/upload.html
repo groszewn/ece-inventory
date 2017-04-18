@@ -135,7 +135,6 @@ $(document).ready(function(){
             reader.onload = function(event) {
                 var csvData = event.target.result;
                 data = $.csv.toArrays(csvData);
-                console.log(data)
                 if (data && data.length > 0) {
                   $.ajax({
 				       url: '/api/upload/asset/',
