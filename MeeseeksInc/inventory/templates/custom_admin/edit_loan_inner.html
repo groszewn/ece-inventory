@@ -11,10 +11,11 @@ Quantity of <b>{{item_name}}</b> available: {{num_left}}
 {#        {% crispy form %}#}
 		{% csrf_token %}
 		{% if is_asset %}
-			<div style="margin-left:5px"><b>{{form.comment.label}}:</b>{{form.comment}}<div>
+			<div style="display: none;"><b>{{form.total_quantity.label}}:</b>{{form.total_quantity}}</div>
+			<div style="margin-left:5px" ><b>{{form.comment.label}}:</b>{{form.comment}}</div>
 		{% else %}
-			<div style="margin-left:5px"><b>{{form.total_quantity.label}}:</b>{{form.total_quantity}}<div>
-			<div style="margin-left:5px"><b>{{form.comment.label}}:</b>{{form.comment}}<div>
+			<div style="margin-left:5px"><b>{{form.total_quantity.label}}:</b>{{form.total_quantity}}</div>
+			<div style="margin-left:5px"><b>{{form.comment.label}}:</b>{{form.comment}}</div>
 		{% endif %}
         <input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
     </form>
