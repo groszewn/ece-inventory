@@ -475,24 +475,25 @@ class APIApproveRequest(APIView):
             item.save()
             item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
-            if (item.threshold_enabled and item.threshold_quantity > item.quantity):
-                #send email
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Below Minimum Stock'
-                to = []
-                for user in SubscribedUsers.objects.all():
-                    to.append(user.email)
-                from_email='noreply@duke.edu'
-                ctx = {
-                    'user':'user',
-                    'item':item.item_name,
-                    'quantity':item.quantity, 
-                }
-                message=render_to_string('inventory/belowthreshold_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
+            if item.threshold_quantity:
+                if (item.threshold_enabled and item.threshold_quantity > item.quantity):
+                    #send email
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Below Minimum Stock'
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                        to.append(user.email)
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':'user',
+                        'item':item.item_name,
+                        'quantity':item.quantity, 
+                    }
+                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
             if indiv_request.type == "Dispersal": 
                 # add new disbursement item to table
                 disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
@@ -682,24 +683,25 @@ class APIDirectDisbursement(APIView):
                 item_to_disburse.save()
                 item_to_disburse = self.get_object(pk)
                 # check if stock less than minimum stock 
-                if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
-                    #send email
-                    try:
-                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                    except (ObjectDoesNotExist, IndexError) as e:
-                        prepend = ''
-                    subject = prepend + 'Below Minimum Stock'
-                    to = []
-                    for user in SubscribedUsers.objects.all():
-                            to.append(user.email)
-                    from_email='noreply@duke.edu'
-                    ctx = {
-                        'user':'user',
-                        'item':item_to_disburse.item_name,
-                        'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
-                    }
-                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
-                    EmailMessage(subject, message, bcc=to, from_email=from_email).send() 
+                if item_to_disburse.threshold_quantity:
+                    if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
+                        #send email
+                        try:
+                            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                        except (ObjectDoesNotExist, IndexError) as e:
+                            prepend = ''
+                        subject = prepend + 'Below Minimum Stock'
+                        to = []
+                        for user in SubscribedUsers.objects.all():
+                                to.append(user.email)
+                        from_email='noreply@duke.edu'
+                        ctx = {
+                            'user':'user',
+                            'item':item_to_disburse.item_name,
+                            'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                        }
+                        message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                        EmailMessage(subject, message, bcc=to, from_email=from_email).send() 
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
                 recipient = data['user_name']
