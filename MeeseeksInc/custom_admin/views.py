@@ -159,6 +159,8 @@ class LogView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 item.save()
                 asset.delete()
                 messages.success(request, ('Successfully logged ' + item.item_name + ' (removed 1)'))
+                if "asset" in request.META.get('HTTP_REFERER'):
+                    return redirect('/item/' + item.item_id)
                 return redirect(request.META.get('HTTP_REFERER'))
         else:
             form = LogAssetDestruction()
