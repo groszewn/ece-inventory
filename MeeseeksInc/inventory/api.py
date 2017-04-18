@@ -404,20 +404,22 @@ class APIMultipleRequests(APIView):
     """
     permission_classes = (IsAtLeastUser,)
     
-    def post(self, request, item_list, format=None):
+    def post(self, request, format=None):
         context = {
             "request": self.request,
         }
-        if item_list:
-            item_id_list = item_list.split(',')
-            if len(request.data)>len(item_id_list):
-                del request.data[len(item_id_list):]
-            for i, item_id in enumerate(item_id_list):
-                if i>=len(request.data):
-                    item_name_dict = {'item_name':item_id}
-                    request.data.append(dict(item_name_dict))
-                else:
-                    request.data[i]['item_name']=item_id
+#         for i, request in enumerate(request.data):
+#             request.data[i]['item_name']=item_id
+#         if item_list:
+#             item_id_list = item_list.split(',')
+#             if len(request.data)>len(item_id_list):
+#                 del request.data[len(item_id_list):]
+#             for i, item_id in enumerate(item_id_list):
+#                 if i>=len(request.data):
+#                     item_name_dict = {'item_name':item_id}
+#                     request.data.append(dict(item_name_dict))
+#                 else:
+#                     request.data[i]['item_name']=item_id
         print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
         request_list=[]
@@ -425,6 +427,7 @@ class APIMultipleRequests(APIView):
             serializer.save()
             dataDict=serializer.data
             for data in dataDict:
+                print(data)
                 id=data['request_id']
                 quantity=data['request_quantity']
                 item = Item.objects.get(item_id=data['item_name'])
@@ -1306,20 +1309,27 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanCheckInWithAssetSerializer
     
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+        return Response(serializer.data)
+    
     def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
         checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = loan.total_quantity
         if len(checked_in_assets) > 0 and len(checked_in_assets) <= loan.total_quantity:
+            for asset_id in checked_in_assets:
+                try:
+                    asset = Asset.objects.get(asset_id=asset_id, loan=loan)
+                except Asset.DoesNotExist:
+                    return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
+                asset.loan = None
+                asset.save()
             loan.total_quantity = loan.total_quantity - len(checked_in_assets)
             item = loan.item_name
             item.quantity = item.quantity + len(checked_in_assets)
             item.save()
             loan.save()
-            for asset_id in checked_in_assets:
-                asset = Asset.objects.get(asset_id=asset_id)
-                asset.loan = None
-                asset.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Check In", affected_user=loan.user_name, change_occurred="Checked in " + str(len(checked_in_assets)) + " instances.")
             try:
@@ -1341,7 +1351,8 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
                 loan.status = 'Checked In'
                 loan.save()
             return redirect(get_host(request)+'/api/loan/checkin/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response("Asked to check-in too many assets, or didn't enter any ids", status=status.HTTP_400_BAD_REQUEST)
     
 
 class APILoanConvert(APIView): #CONVERT LOAN
@@ -1399,6 +1410,10 @@ class APILoanConvert(APIView): #CONVERT LOAN
 class APILoanConvertWithAssets(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     serializer_class = LoanConvertSerializer  
+    
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+        return Response(serializer.data)
     
     def post(self, request, pk, format=None): 
         loan = Loan.objects.get(loan_id=pk)
