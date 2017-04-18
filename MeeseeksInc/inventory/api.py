@@ -2008,79 +2008,94 @@ class APIAsset(APIView):
     serializer_class = AssetWithCustomFieldSerializer 
     
     def get(self, request, pk, format=None):
-        if (Asset.objects.filter(asset_id=pk).exists()):
-            asset = Asset.objects.get(asset_id=pk)
-            custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-            serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag)
-            return Response(serializer.data)
-        else:
+        try:
+            if (Asset.objects.filter(asset_id=pk).exists()):
+                asset = Asset.objects.get(asset_id=pk)
+                custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+                serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag)
+                return Response(serializer.data)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        except:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         
     def delete(self,request,pk,format=None):
-        if (Asset.objects.filter(asset_id=pk).exists()):
-            asset = Asset.objects.get(asset_id=pk)
-            asset_id = asset.asset_id
-            asset_tag = asset.asset_tag
-            if asset.loan != None:
-                asset.loan.total_quantity = asset.loan.total_quantity - 1;
-                asset.loan.save()
-            item = asset.item
-            asset.delete()
-            item.quantity = item.quantity - 1
-            item.save()
-            Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset_id+ ").")
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
+        try:
+            if (Asset.objects.filter(asset_id=pk).exists()):
+                asset = Asset.objects.get(asset_id=pk)
+                if asset.disbursement is None:
+                    asset_id = asset.asset_id
+                    asset_tag = asset.asset_tag
+                    if asset.loan != None:
+                        asset.loan.total_quantity = asset.loan.total_quantity - 1;
+                        asset.loan.save()
+                    item = asset.item
+                    asset.delete()
+                    item.quantity = item.quantity - 1
+                    item.save()
+                    Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
+                               affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset_id+ ").")
+                    return Response(status=status.HTTP_204_NO_CONTENT)
+                else:
+                    return Response(status=status.HTTP_304_NOT_MODIFIED)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        except:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         
     def put(self, request, pk, format=None):
-        asset = Asset.objects.get(asset_id=pk)
-        custom_fields = Custom_Field.objects.filter(field_kind='Asset')
-        custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
-        for field in custom_fields:
-            if request.data[field.field_name] is '' and (field.field_type == 'Int' or field.field_type == 'Float'):
-                request.data[field.field_name] = None
-        serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag,data=request.data, partial=True)
-        if serializer.is_valid():
-            data = serializer.data
-            if 'asset_tag' in data:
-                new_tag = data['asset_tag']
-                if new_tag is not '' and not Asset.objects.filter(asset_tag=new_tag).exists():
-                    asset.asset_tag = new_tag
-                    asset.save()
-            fields = Custom_Field.objects.filter(field_kind='Asset')
-            for field in fields:
-                if field.field_name in data:
-                    value = data[field.field_name]  
-                    if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
-                        custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
-                    else:
-                        custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
-                    if field.field_type == 'Short' and len(value)<=400 or \
-                        field.field_type == 'Long' and len(value)<=1000:
-                        custom_val.value = value
-                    if field.field_type == 'Int':
-                        try:
-                            if value is not None:
-                                int(value)
-                            custom_val.value = value
-                        except ValueError:
-                            return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
-                    if field.field_type == 'Float':
-                        try:
-                            if value is not None:
-                                float(value)
-                            custom_val.value = value
-                        except ValueError:
-                            return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
-                    custom_val.save()
-            Log.objects.create(request_id='', item_id= asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Edit", 
-                       affected_user='', change_occurred="Edited asset with (new) tag " + asset.asset_tag + " from the " + asset.item.item_name + " item (asset id: " +asset.asset_id+ ").")          
-            return self.get(request, asset.asset_id)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-       
+        try:
+            asset = Asset.objects.get(asset_id=pk)
+            if asset.disbursement is None:
+                custom_fields = Custom_Field.objects.filter(field_kind='Asset')
+                custom_values = Asset_Custom_Field_Value.objects.filter(asset = asset)
+                for field in custom_fields:
+                    if request.data[field.field_name] is '' and (field.field_type == 'Int' or field.field_type == 'Float'):
+                        request.data[field.field_name] = None
+                serializer = AssetWithCustomFieldSerializer(custom_values,asset.asset_tag,data=request.data, partial=True)
+                if serializer.is_valid():
+                    data = serializer.data
+                    if 'asset_tag' in data:
+                        new_tag = data['asset_tag']
+                        if new_tag is not '' and not Asset.objects.filter(asset_tag=new_tag).exists():
+                            asset.asset_tag = new_tag
+                            asset.save()
+                    fields = Custom_Field.objects.filter(field_kind='Asset')
+                    for field in fields:
+                        if field.field_name in data:
+                            value = data[field.field_name]  
+                            if Asset_Custom_Field_Value.objects.filter(asset = asset, field = field).exists():
+                                custom_val = Asset_Custom_Field_Value.objects.get(asset = asset, field = field)
+                            else:
+                                custom_val = Asset_Custom_Field_Value(asset=asset, field=field)
+                            if field.field_type == 'Short' and len(value)<=400 or \
+                                field.field_type == 'Long' and len(value)<=1000:
+                                custom_val.value = value
+                            if field.field_type == 'Int':
+                                try:
+                                    if value is not None:
+                                        int(value)
+                                    custom_val.value = value
+                                except ValueError:
+                                    return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
+                            if field.field_type == 'Float':
+                                try:
+                                    if value is not None:
+                                        float(value)
+                                    custom_val.value = value
+                                except ValueError:
+                                    return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
+                            custom_val.save()
+                    Log.objects.create(request_id='', item_id= asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                               affected_user='', change_occurred="Edited asset with (new) tag " + asset.asset_tag + " from the " + asset.item.item_name + " item (asset id: " +asset.asset_id+ ").")          
+                    return self.get(request, asset.asset_id)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response(status=status.HTTP_304_NOT_MODIFIED)
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
 ########################################## Server-side processing ###########################################         
 class JSONResponse(HttpResponse):
     """
