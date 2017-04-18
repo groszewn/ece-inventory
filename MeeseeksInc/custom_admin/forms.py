@@ -169,7 +169,7 @@ class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
         self.fields['item_amount'] = forms.IntegerField(required=True, min_value=1)
-    item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    item_name = forms.ModelChoiceField(queryset=Item.objects.filter(is_asset=False))
     item_change_options = [
         ('Lost', 'Lost'),
         ('Broken', 'Broken'), 
