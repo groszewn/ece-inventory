@@ -1961,15 +1961,19 @@ class APIAddAsset(APIView):
     def post(self,request,pk,format=None):
         assets_to_add = request.data['num_assets']
         item = Item.objects.get(item_id=pk)
-        item.quantity = item.quantity + int(assets_to_add)
-        for i in range(int(assets_to_add)):
-                asset = Asset(item=item)
-                asset.save()
-        item.save()
-        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
-        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
-                       affected_user='', change_occurred= "Added " + assets_to_add + " assets to " + item.item_name + ".")
-        return Response(serializer.data)
+        serializer=AssetSerializer()
+        if item.is_asset:
+            item.quantity = item.quantity + int(assets_to_add)
+            for i in range(int(assets_to_add)):
+                    asset = Asset(item=item)
+                    asset.save()
+            item.save()
+            serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+            Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                           affected_user='', change_occurred= "Added " + assets_to_add + " assets to " + item.item_name + ".")
+            return Response(serializer.data)
+        else:
+            return APIAddAsset.get(self,request,pk)
     
 class APIAsset(APIView):
     permission_classes = (IsAdmin,)
