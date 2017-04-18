@@ -759,19 +759,21 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
     
     def edit_permission(request, pk):
         user = User.objects.get(username = pk)
+        user_editing = User.objects.get(username = pk)
         if request.method == "POST":
             form = UserPermissionEditForm(request.POST or None, instance=user, initial={'username': user.username, 'email':user.email})
             if form.is_valid():    
                 user = request.user
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
-                url=http_host+'/api/users/'+form['username'].value()+'/'
+                url=http_host+'/api/users/'+str(user_editing)+'/'
                 payload = {'username':form['username'].value(), 'is_superuser':form.cleaned_data.get('is_superuser'),
                        'is_staff':form.cleaned_data.get('is_staff'), 'is_active':form['is_active'].value(), 
                        'email':form['email'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
                 requests.put(url, headers = header, data = json.dumps(payload))
+                return render(request, 'custom_admin/user_list.html', {'form': form, 'user_list':User.objects.all()})
         else:
             form = UserPermissionEditForm(instance = user, initial = {'username': user.username, 'email':user.email})
         return render(request, 'custom_admin/user_edit.html', {'form': form})    
