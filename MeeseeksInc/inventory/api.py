@@ -1760,6 +1760,9 @@ class APIAsset(APIView):
             asset = Asset.objects.get(asset_id=pk)
             asset_id = asset.asset_id
             asset_tag = asset.asset_tag
+            if asset.loan != None:
+                asset.loan.total_quantity = asset.loan.total_quantity - 1;
+                asset.loan.save()
             item = asset.item
             asset.delete()
             item.quantity = item.quantity - 1

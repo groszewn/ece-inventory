@@ -190,7 +190,11 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             messages.success(request, ('Successfully deleted asset: ' + pk ))
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
-        return redirect('/item/' + asset.item.item_id)        
+        print(request.path)
+        if "asset" in request.path: 
+            return redirect('/item/' + asset.item.item_id)  
+        else:
+            return redirect(request.META.get('HTTP_REFERER'))      
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -871,7 +875,14 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
                     field_value = form[field.field_name].value()
                     custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
                     custom_val.save()  
-                
+                if item.is_asset:   
+                    user = request.user
+                    token, create = Token.objects.get_or_create(user=user)
+                    http_host = get_host(request)
+                    url=http_host+'/api/to_asset/'+item.item_id+'/'
+                    header = {'Authorization': 'Token '+ str(token), 
+                              "Accept": "application/json", "Content-type":"application/json"}
+                    requests.get(url, headers = header)
                 return redirect('/customadmin')
             else:
                 messages.error(request, ("An error occurred while trying to create " + form['item_name'].value() + "."))
