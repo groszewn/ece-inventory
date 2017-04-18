@@ -401,7 +401,7 @@ def make_asset_request_form(item):
         asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
         class Meta:
             model = Asset
-            exclude = ('item','loan','disbursement')
+            exclude = ('item','loan','disbursement', 'asset_tag')
     return AssetsRequestForm
     
 @login_required(login_url='/login/')
