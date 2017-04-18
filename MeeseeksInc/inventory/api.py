@@ -788,6 +788,61 @@ class APIDirectDisbursement(APIView):
                 return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
+    permission_classes = (IsAdminOrManager,)
+#     serializer_class = LoanCheckInWithAssetSerializer
+    
+    
+    def post(self, request, pk, format=None):
+        item = Item.objects.get(item_id=pk)
+        checked_in_assets = [x for x in request.data['asset_ids'] if x]
+        original_quantity = item.quantity
+        time_disbursed = timezone.localtime(timezone.now())
+        
+        
+        if len(checked_in_assets) > 0 and len(checked_in_assets) <= original_quantity:
+            if request.data['type']=='Dispersal':
+                disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=None, total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
+                disbursement.save()
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, nature_of_event="Disburse", 
+                                       affected_user=request.data['username'], change_occurred="Disbursed " + str(len(checked_in_assets)))
+            if request.data['type']=='Loan':
+                loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=None, time_loaned=time_disbursed)
+                loan.save()
+                Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user.username, nature_of_event='Loan', 
+                                       affected_user=request.data['username'], change_occurred="Loaned " + str(len(checked_in_assets)))
+
+            for asset_id in checked_in_assets:
+                try:
+                    asset = Asset.objects.get(asset_id=asset_id)
+                except Asset.DoesNotExist:
+                    return Response("This asset does not belong to this loan!", status=status.HTTP_400_BAD_REQUEST)
+                if request.data['type']=='Loan':
+                    asset.loan = loan
+                if request.data['type']=='Dispersal':
+                    asset.disbursement = None
+                asset.save()
+            try:
+                prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+            except (ObjectDoesNotExist, IndexError) as e:
+                prepend = ''
+            subject = prepend + 'Direct Dispersal'
+            to = [User.objects.get(username = recipient).email]
+            from_email='noreply@duke.edu'
+            ctx = {
+                'user':request.data['username'],
+                'item':item.item_name,
+                'quantity':len(checked_in_assets), # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                'disburser':request.user.username,
+                'type': 'disbursed',
+            }
+            message=render_to_string('inventory/disbursement_email.txt', ctx)
+            EmailMessage(subject, message, bcc=to, from_email=from_email).send()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)       
+        return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
+
+
 ########################################## Users ###########################################
 class UserFilter(FilterSet):
     class Meta:

@@ -50,7 +50,7 @@ class Disbursement(models.Model):
     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE)
     orig_request = models.ForeignKey(Request, null=True, on_delete=models.CASCADE) 
     total_quantity = models.IntegerField(null=False)
-    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
+    comment = models.CharField(max_length=200, null=True) # comment left by admin, can be null
     time_disbursed = models.DateTimeField(default=timezone.now)
     def __str__(self):
         return "Disbursement for " + self.item_name.item_name + " from " + self.admin_name + " to " + self.user_name
