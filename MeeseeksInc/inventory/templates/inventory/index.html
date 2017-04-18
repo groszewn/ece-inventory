@@ -1375,8 +1375,19 @@
     		    buttons: [
     		       // { extend: "create", editor: editor },
     		       //	{ extend: "set_threshold_quantity",   editor: editor },
-    		        { extend: "edit",   editor: editor },
-    		        { extend: "remove", editor: editor }
+    		        { extend: "edit",   editor: editor,
+    		        	formButtons: [
+		                    { label: 'Edit', fn: function () { this.submit(); window.location.reload(); } }
+		                ] 
+		            },
+    		        {
+		                extend: "remove",
+		                editor: editor,
+		                formButtons: [
+		                    { label: 'Delete', fn: function () { this.submit(); window.location.reload(); } }
+		                ]
+		            }
+    		        
     		    ]
     		    {% endif %}
     	});

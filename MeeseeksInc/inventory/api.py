@@ -1156,7 +1156,7 @@ class AssetUpload(APIView):
                 if not any(field.field_name == header for field in custom_fields):
                     if header=='':
                         return self.errorHandling(request, 'field (empty string) does not exist. make sure you don\'t have an extra comma', [])
-                    return self.errorHandling(request, 'field ' + header + ' does not exist. check the header', [])
+                    return self.errorHandling(request, 'field ' + header + ' does not exist. check the header', [], [])
                 customFieldMap[header.lower()] = i
             else:
                 headerMap[header.lower()] = i    
@@ -1177,13 +1177,12 @@ class AssetUpload(APIView):
             item = Item.objects.get(item_name = item_name)
             if not item.is_asset:
                 return self.errorHandling(request, 'This item does not track assets.', None)
-        
         for i, csvRow in enumerate(csvData[1:]):
             row = csvRow.split(',')
             if headerMap["asset tag"] >= len(row) or row[headerMap["asset tag"]]=='':
                 return self.errorHandling(request, 'value of "Asset Tag" does not exist in row ' + str(i+1), item, createdAssets)
             
-            existingAsset = Asset.objects.filter(item=item, asset_id=row[headerMap["asset tag"]]).count()
+            existingAsset = Asset.objects.filter(item=item, asset_tag=row[headerMap["asset tag"]]).count()
             if existingAsset>0:
                 return self.errorHandling(request, "Asset " + row[headerMap["asset tag"]] + " already exists", item, createdAssets)
             asset = Asset(asset_tag=row[headerMap["asset tag"]],item=item)
@@ -1923,13 +1922,14 @@ class APIItemToAsset(APIView):
             item.save()
             # if you have 15 macbook pros, and 5 is being loaned out, then find the 5 first.
             try:
-                loaned_out = Loan.objects.get(item_name=item)
+                loaned_out = Loan.objects.filter(item_name=item, status="Checked Out")
             except Loan.DoesNotExist:
                 loaned_out = None
             if loaned_out:
-                for j in range(loaned_out.total_quantity):
-                    asset = Asset(item=item, loan=loaned_out)
-                    asset.save()
+                for loaned in loaned_out:
+                    for j in range(loaned.total_quantity):
+                        asset = Asset(item=item, loan=loaned)
+                        asset.save()
             for i in range(item.quantity): #the other ones not being loaned out can become assets
                 print('asset creating')
                 asset = Asset(item=item)
