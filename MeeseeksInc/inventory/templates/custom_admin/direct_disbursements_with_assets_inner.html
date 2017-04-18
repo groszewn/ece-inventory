@@ -1,0 +1,59 @@
+
+{#<script>#}
+{#form_count = Number($("[name=extra_field_count]").val());#}
+{#// get extra form count so we know what index to use for the next item.#}
+{#$("#add-another").click(function() {#}
+{#    form_count ++;#}
+
+{#    element = $('<input type="text"/>');#}
+{#    element.attr('name', 'extra_field_' + form_count);#}
+{#    $("#forms").append(element);#}
+{#    // build element and append it to our forms container#}
+
+{#    $("[name=extra_field_count]").val(form_count);#}
+{#    // increment form count so our view knows to populate #}
+{#    // that many fields for validation#}
+{#})#}
+{#</script>#}
+{#<form>#}
+{#<div id="forms">#}
+{#    {{ form.as_p }}#}
+{#</div>#}
+{#<button id="add-another">add another</button>#}
+{#<input type="submit" />#}
+{#</form>#}
+
+<script type="text/html" id="item-template">
+<div id="item-__prefix__">
+    {{ formset.empty_form }}
+</div>
+</script>
+
+<form action="{% url 'custom_admin:post_new_disburse_asset' pk %}" method="post">
+{% csrf_token %}
+{{ formset.management_form }}
+<div id="items-form-container">
+    {% for form in formset %}
+        <div id="item-{{ forloop.counter0 }}">
+            {{ form.id }}
+            {{ form.as_p }}
+        </div>
+    {% endfor %}
+</div>
+<a href="#" id="add-item-button" class="btn btn-info add-item">Add Item</a>
+<input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
+</form>
+
+<script>
+$(document).ready(function() {
+    $('.add-item').click(function(ev) {
+        ev.preventDefault();
+        var count = $('#items-form-container').children().length;
+        var tmplMarkup = $('#item-template').html();
+        var compiledTmpl = tmplMarkup.replace(/__prefix__/g, count);
+        $('div#items-form-container').append(compiledTmpl);
+        // update form count
+        $('#id_item_items-TOTAL_FORMS').attr('value', count+1);
+    });
+});
+</script>

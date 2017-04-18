@@ -150,13 +150,13 @@ class APIItemList(ListCreateAPIView):
                         custom_val.save()  
             
             if item.is_asset:   
-               if not Asset.objects.filter(item=item_id):
-                   item.is_asset = True
-                   item.save()
-                   for i in range(item.quantity):
-                       print('asset creating')
-                       asset = Asset(item=item)
-                       asset.save() 
+                if not Asset.objects.filter(item=item_id):
+                    item.is_asset = True
+                    item.save()
+                    for i in range(item.quantity):
+                        print('asset creating')
+                        asset = Asset(item=item)
+                        asset.save() 
             
             context = {
             "request": self.request,
@@ -253,13 +253,13 @@ class APIItemDetail(APIView):
                         custom_val.save()  
             
             if item.is_asset:   
-               if not Asset.objects.filter(item=pk):
-                   item.is_asset = True
-                   item.save()
-                   for i in range(item.quantity):
-                       print('asset creating')
-                       asset = Asset(item=item)
-                       asset.save()
+                if not Asset.objects.filter(item=pk):
+                    item.is_asset = True
+                    item.save()
+                    for i in range(item.quantity):
+                        print('asset creating')
+                        asset = Asset(item=item)
+                        asset.save()
             else:
                 if Asset.objects.filter(item=pk): 
                     for asset in Asset.objects.filter(item=pk):
@@ -437,19 +437,6 @@ class APIMultipleRequests(APIView):
         context = {
             "request": self.request,
         }
-#         for i, request in enumerate(request.data):
-#             request.data[i]['item_name']=item_id
-#         if item_list:
-#             item_id_list = item_list.split(',')
-#             if len(request.data)>len(item_id_list):
-#                 del request.data[len(item_id_list):]
-#             for i, item_id in enumerate(item_id_list):
-#                 if i>=len(request.data):
-#                     item_name_dict = {'item_name':item_id}
-#                     request.data.append(dict(item_name_dict))
-#                 else:
-#                     request.data[i]['item_name']=item_id
-        print(request.data)
         serializer = MultipleRequestPostSerializer(data=request.data, many=True, context=context)
         request_list=[]
         if serializer.is_valid():
@@ -617,6 +604,10 @@ class APIApproveRequestWithAssets(APIView):
         except Request.DoesNotExist:
             raise Http404
         
+    def get(self, request, pk, format=None):
+        serializer = AssetSerializer(Asset.objects.filter(item=self.get_object(pk).item_name),many=True)
+        return Response(serializer.data)
+    
     def put(self, request, pk, format=None):
         indiv_request = self.get_object(pk)
         if not indiv_request.status == "Pending":
@@ -691,19 +682,27 @@ class APIApproveRequestWithAssets(APIView):
             return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 ########################################## Disbursement ###########################################
-class APIDisbursementList(APIView):
+class DisbursementFilter(FilterSet):
+    class Meta:
+        model = Disbursement
+        fields = ['disburse_id', 'admin_name', 'user_name', 'item_name', 'orig_request', 'total_quantity','comment','time_disbursed']
+
+class APIDisbursementList(ListAPIView):
     """
     List all Disbursements (for yourself if user, all if admin)
     """
     permission_classes = (IsAdminOrUser,)
     serializer_class = DisbursementSerializer
+    filter_class = DisbursementFilter
+    queryset = Disbursement.objects.all()
+    model = Disbursement
     
     def get(self, request, format=None):
         requests = [];
         if User.objects.get(username=request.user.username).is_staff:
-            requests = Disbursement.objects.all()
+            requests = self.filter_queryset(Disbursement.objects.all())
         else:
-            requests = Disbursement.objects.filter(user_name=request.user.username)
+            requests = self.filter_queryset(Disbursement.objects.filter(user_name=request.user.username))
         serializer = DisbursementSerializer(requests, many=True)
         return Response(serializer.data)
     
@@ -789,15 +788,24 @@ class APIDirectDisbursement(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 ########################################## Users ###########################################
-class APIUserList(APIView):
+class UserFilter(FilterSet):
+    class Meta:
+        model = User
+        fields = ['username','email','is_staff','is_superuser','is_active']
+
+class APIUserList(ListCreateAPIView):
     """
     List all users (admin)
     """
     permission_classes = (IsAdminOrUser,)
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    filter_class = UserFilter
+    model = User
     
     def get(self, request, format=None):
         if User.objects.get(username=request.user.username).is_superuser:
-            serializer = UserSerializer(User.objects.all(), many=True)
+            serializer = UserSerializer(self.filter_queryset(User.objects.all()), many=True)
             return Response(serializer.data)
         return Response("Need valid authentication", status=status.HTTP_400_BAD_REQUEST) 
     
@@ -841,15 +849,23 @@ class APIUserDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 ########################################### Tags ##################################################
-class APITagList(APIView):
+class TagFilter(FilterSet):
+    class Meta:
+        model = Tag
+        fields = ['tag']
+        
+class APITagList(ListAPIView):
     """
     List all Tags
     """
     permission_classes = (IsAdminOrUser,)
     serializer_class = TagSerializer
+    queryset = Tag.objects.all()
+    filter_class = TagFilter
+    model = Tag
     
     def get(self, request, format=None):
-        serializer = TagSerializer(Tag.objects.all(), many=True)
+        serializer = TagSerializer(self.filter_queryset(Tag.objects.all()), many=True)
         return Response(serializer.data)
 
 class APITagDetail(APIView):
@@ -924,20 +940,28 @@ class APILogList(ListAPIView):
         return self.paginator.get_paginated_response(data)
 
 ########################################## Custom Field ###########################################    
-class APICustomField(APIView):
+class CustomFieldFilter(FilterSet):
+    class Meta:
+        model = Custom_Field
+        fields = ['field_name','is_private','field_type','field_kind']
+        
+class APICustomField(ListAPIView):
     """
     List custom fields (w/ private fields for admin/manager) and create custom fields (admin)
     """
     permission_classes = (IsAdmin,)
     serializer_class = FullCustomFieldSerializer
+    queryset = Custom_Field.objects.all()
+    filter_class = CustomFieldFilter
+    model = Custom_Field
     
     def get(self, request, format=None):
         if self.request.user.is_staff:
-            fields = Custom_Field.objects.all()
+            fields = self.filter_queryset(Custom_Field.objects.all())
             serializer = FullCustomFieldSerializer(fields, many=True)
             return Response(serializer.data)
         else:
-            fields = Custom_Field.objects.filter(is_private = False)
+            fields = self.filter_queryset(Custom_Field.objects.filter(is_private = False))
             serializer = FullCustomFieldSerializer(fields, many=True)
             return Response(serializer.data)   
         
@@ -1017,11 +1041,6 @@ class ItemUpload(APIView):
         messages.error(request._request, message)
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
     
-    
-    ## CHECK asset status. if N then just item, if F then first in asset 
-    ## if no F but has assets, check if item already exists. if not then throw error
-    ## if F check is OK and Y is there, then this is an asset - only item name & asset tag & per-asset custom fields can be filled
-    ## if something else is filled in this situation, throw error
     def post(self, request, *args, **kwargs):
         print(request.POST)
         csvData = request.POST.getlist('data[]')
@@ -1137,12 +1156,7 @@ class AssetUpload(APIView):
                 createdAsset.delete()
         messages.error(request._request, message)
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-    ## CHECK asset status. if N then just item, if F then first in asset 
-    ## if no F but has assets, check if item already exists. if not then throw error
-    ## if F check is OK and Y is there, then this is an asset - only item name & asset tag & per-asset custom fields can be filled
-    ## if something else is filled in this situation, throw error
+
     def post(self, request, *args, **kwargs):
         csvData = request.POST.getlist('data[]')
         item_name = request.POST.get('item_name')
@@ -1356,7 +1370,7 @@ class APILoanCheckIn(APIView): #CHECK IN LOAN
 
 class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
     permission_classes = (IsAdminOrManager,)
-    serializer_class = LoanCheckInWithAssetSerializer
+#     serializer_class = LoanCheckInWithAssetSerializer
     
     def get(self, request, pk, format=None):
         serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
@@ -1455,10 +1469,9 @@ class APILoanConvert(APIView): #CONVERT LOAN
         else:
             print(serializer.errors)
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+
 class APILoanConvertWithAssets(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
-    serializer_class = LoanConvertSerializer  
     
     def get(self, request, pk, format=None):
         serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)

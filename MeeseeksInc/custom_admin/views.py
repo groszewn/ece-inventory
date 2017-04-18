@@ -375,7 +375,16 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         return render(request, 'custom_admin/edit_loan_inner.html', {'form': form, 'pk':pk, 'num_left':loan.item_name.quantity, 'item_name':loan.item_name.item_name, 'is_asset':loan.item_name.is_asset})      
     def test_func(self):
         return self.request.user.is_staff
-    
+
+def make_disburse_asset_form(item):
+    queryset = Asset.objects.filter(item=item)
+    class DisburseAssetForm(forms.Form):
+        asset_id = forms.ModelChoiceField(queryset=queryset, label='Asset')
+        class Meta:
+            model = Asset
+            exclude = ('item','loan','disbursement')
+    return DisburseAssetForm
+
 class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
     login_url='/login/'
     permission_required = 'is_staff'
@@ -433,7 +442,31 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
         else:
             form = DisburseSpecificForm() # blank request form with no data yet
         return render(request, 'custom_admin/specific_disburse_inner.html', {'form': form, 'pk':pk, 'amount_left':item.quantity, 'item_name':item.item_name})
-
+    
+    def post_new_disburse_asset(request, pk):
+        DisburseAssetForm = make_disburse_asset_form(Item.objects.get(item_id=pk))
+#             form = DisburseAssetForm(request.POST, extra=request.POST.get('extra_field_count'))
+        DisburseAssetFormSet = formset_factory(DisburseAssetForm, extra=1, formset=BaseAssetCheckInFormset)
+        if request.method == 'POST':
+            formset = DisburseAssetFormSet(request.POST)
+            if formset.is_valid():
+                token, create = Token.objects.get_or_create(user=request.user)
+                http_host = get_host(request)
+                url=http_host+'/api/loan/convert_with_assets/'+pk+'/'
+                asset_ids = []
+                for form in formset:
+                    asset_ids.append(form['asset_id'].value())
+                print(asset_ids)
+                payload = {'asset_ids': asset_ids}
+                header = {'Authorization': 'Token '+ str(token), 
+                          "Accept": "application/json", "Content-type":"application/json"}
+#                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
+                return redirect(request.META.get('HTTP_REFERER'))  
+        else:
+            formset = DisburseAssetFormSet()
+#             form = make_disburse_asset_form(Item.objects.get(item_id=pk))
+        return render(request, "custom_admin/direct_disbursements_with_assets_inner.html", { 'formset': formset, 'pk':pk})
+    
     def test_func(self):
         return self.request.user.is_staff
 
