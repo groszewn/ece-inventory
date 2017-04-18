@@ -39,6 +39,45 @@
 						</tr>
 		        </tbody>
 		    </table>
+		    
+{% if user.is_staff %}	 
+{% if loan.orig_request.item_name.is_asset %}
+{% if loan.status == "Checked Out" %}
+{% block checkIn-with-assets %}
+	<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	
+{% endblock checkIn-with-assets %}
+{% block convert-with-assets %}
+	<a id = "convert-assets" loan-id="{{ loan.loan_id }}" class="convert-assets btn btn-info">Convert Loan</a>	
+{% endblock convert-with-assets %}
+{% endif %}
+{% else %}
+{% if loan.status == "Checked Out" %}
+	{% block checkIn %}
+		<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
+	{% endblock checkIn %}
+	{% block convert %}
+	<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
+	{% endblock convert %}
+{% endif %}
+{% endif %} 
+{% endif %} 
+
+{% if user.get_username == loan.user_name %}
+	{% if loan.backfill_status != 'Completed'%}
+		{% if loan.backfill_status != 'In Transit'%}
+			{% block backfillRequest %}
+				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-info">Backfill Loan</a>
+			{% endblock backfillRequest %}
+		{% endif %}
+	{% endif %}
+{% endif %}
+
+{% if user.is_staff %}
+{% block  editLoan %}
+	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
+{% endblock editLoan %}
+{% endif %}
+		    
 {% if assets %}
 <h3> Assets Loaned </h3>
     <table id="loan-assets-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
@@ -87,44 +126,6 @@
     </table>
 
 {% endif %}
-{% if user.is_staff %}	 
-{% if loan.orig_request.item_name.is_asset %}
-{% if loan.status == "Checked Out" %}
-{% block checkIn-with-assets %}
-	<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	
-{% endblock checkIn-with-assets %}
-{% block convert-with-assets %}
-	<a id = "convert-assets" loan-id="{{ loan.loan_id }}" class="convert-assets btn btn-info">Convert Loan</a>	
-{% endblock convert-with-assets %}
-{% endif %}
-{% else %}
-{% if loan.status == "Checked Out" %}
-	{% block checkIn %}
-		<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	
-	{% endblock checkIn %}
-	{% block convert %}
-	<a id = "convert" loan-id="{{ loan.loan_id }}" class="convert btn btn-info">Convert Loan</a>
-	{% endblock convert %}
-{% endif %}
-{% endif %} 
-{% endif %} 
-
-{% if user.get_username == loan.user_name %}
-	{% if loan.backfill_status != 'Completed'%}
-		{% if loan.backfill_status != 'In Transit'%}
-			{% block backfillRequest %}
-				<a id = "backfillRequest" loan-id="{{ loan.loan_id }}" class="backfillRequest btn btn-info">Backfill Loan</a>
-			{% endblock backfillRequest %}
-		{% endif %}
-	{% endif %}
-{% endif %}
-
-{% if user.is_staff %}
-{% block  editLoan %}
-	<a id = "editLoan" loan-id="{{ loan.loan_id }}" class="editLoan btn btn-primary">Edit Loan</a>	
-{% endblock editLoan %}
-{% endif %}
-
 
 <h3> Original Request Information </h3>
 				<table id="inventory-request" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
