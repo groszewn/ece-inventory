@@ -799,17 +799,19 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
         checked_in_assets = [x for x in request.data['asset_ids'] if x]
         original_quantity = item.quantity
         time_disbursed = timezone.localtime(timezone.now())
-        
-        
         if len(checked_in_assets) > 0 and len(checked_in_assets) <= original_quantity:
             if request.data['type']=='Dispersal':
                 disbursement = Disbursement(admin_name=request.user.username, user_name=request.data['username'], orig_request=None, item_name=item, comment=None, total_quantity=len(checked_in_assets), time_disbursed=time_disbursed)
                 disbursement.save()
+                item.quantity -= len(checked_in_assets)
+                item.save()
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name = item.item_name, initiating_user=request.user.username, nature_of_event="Disburse", 
                                        affected_user=request.data['username'], change_occurred="Disbursed " + str(len(checked_in_assets)))
             if request.data['type']=='Loan':
                 loan = Loan(admin_name=request.user.username, user_name=request.data['username'], item_name=item, orig_request=None, total_quantity=len(checked_in_assets), comment=None, time_loaned=time_disbursed)
                 loan.save()
+                item.quantity -= len(checked_in_assets)
+                item.save()
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user.username, nature_of_event='Loan', 
                                        affected_user=request.data['username'], change_occurred="Loaned " + str(len(checked_in_assets)))
 
@@ -828,7 +830,7 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
             except (ObjectDoesNotExist, IndexError) as e:
                 prepend = ''
             subject = prepend + 'Direct Dispersal'
-            to = [User.objects.get(username = recipient).email]
+            to = [User.objects.get(username = request.data['username']).email]
             from_email='noreply@duke.edu'
             ctx = {
                 'user':request.data['username'],
@@ -839,7 +841,7 @@ class APIDirectDisbursementWithAssets(APIView): #CHECK IN LOAN
             }
             message=render_to_string('inventory/disbursement_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)       
+            return Response(status=status.HTTP_201_CREATED)       
         return Response("Not enough stock available", status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -62,7 +62,7 @@ class Loan(models.Model):
     item_name = models.ForeignKey(Item, null=True, on_delete=models.CASCADE) 
     orig_request = models.ForeignKey(Request, null=True, on_delete=models.CASCADE) 
     total_quantity = models.IntegerField(null=False)
-    comment = models.CharField(max_length=200, null=False) # comment left by admin, can be null
+    comment = models.CharField(max_length=200, null=True) # comment left by admin, can be null
     time_loaned = models.DateTimeField(default=timezone.now)
     CHOICES = (
         ('Checked Out', 'Checked Out'),

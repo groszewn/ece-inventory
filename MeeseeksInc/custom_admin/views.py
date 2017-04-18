@@ -459,15 +459,15 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
             if formset.is_valid() and typeForm.is_valid():
                 token, create = Token.objects.get_or_create(user=request.user)
                 http_host = get_host(request)
-#                 url=http_host+'/api/loan/convert_with_assets/'+pk+'/'
+                url=http_host+'/api/disbursements/direct/with/assets/'+pk+'/'
                 #TODO: CHANGE THIS URL ^^
                 asset_ids = []
                 for form in formset:
                     asset_ids.append(form['asset_id'].value())
-                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value(), 'username':typeForm['user_name'].value()}
+                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value(), 'username':User.objects.get(id = typeForm['user_name'].value()).username}
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
-#                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
+                requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
                 return redirect(request.META.get('HTTP_REFERER'))  
         else:
             formset = DisburseAssetFormSet()
