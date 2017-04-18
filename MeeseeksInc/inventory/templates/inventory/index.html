@@ -33,8 +33,10 @@
         {% endfor %}
     </select>
     <input type="submit" name = "filter_tag" class="btn btn-primary">
+    {% if user.is_staff %}
     <button type="button" id = "filter_minstock" class="btn btn-primary">Filter Items Below Minimum Stock</button>
     <button type="button" id = "clear_filter_minstock" class="btn btn-primary">Clear Minstock Filtering</button>
+    {% endif %}
 </form>
 
 <br>
@@ -489,7 +491,6 @@
 </ul>
 <div class="tab-content">
     <div class="tab-pane" id="backfills-all">
-    	HEY
         <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>

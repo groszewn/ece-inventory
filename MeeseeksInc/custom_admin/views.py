@@ -699,6 +699,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
     login_url = "/login/"
     template_name = 'custom_admin/user_list.html'
     context_object_name = 'user_list'
+    queryset = User.objects.all()
     def get_context_data(self, **kwargs):
         context = super(UserListView, self).get_context_data(**kwargs)
         context['user_list'] = User.objects.all()
