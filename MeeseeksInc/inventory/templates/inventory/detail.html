@@ -112,6 +112,7 @@ function clickEvent(){
     	window.location='{% url 'custom_admin:delete_item' item.item_id %}';
     }
 }
+
 </script>
 	
 {% block edit_specific_item %}
@@ -123,17 +124,27 @@ function clickEvent(){
 {% endblock tag_item %}
 	
 {% if user.is_superuser %}
+
+<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+
+</div>
+<br>
+<div>
 {% if item.is_asset %}
 <button type="button" onclick="changeToItem();" class="btn btn-primary">Change Item To Non-Asset</button>
+{% block addAssets %}
+<a id = "addAssets" item-id = "{{ item.item_id }}" class="addAssets btn btn-primary">Add Assets</a>
+{% endblock addAssets %}
 {% else %}
 <button type="button" onclick="changeToAsset();" class="btn btn-primary">Change Item to Asset</button>
 {% endif %}
-<button value="Delete Item" onclick="clickEvent();" type="button" class="btn btn-danger btn-md">Delete Item</button>
+</div>
+
 {% endif %}
 
 
 {% endif %}	
-</div>
+
 
 <br>
 
@@ -878,10 +889,10 @@ $(function(){
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">Asset Log</h4>
-            </div>
-            <div id="form-modal-body-assetLog" class="modal-body">
-                <p>One fine body&hellip;</p>
+				<h4 class="modal-title">Asset Log</h4>
+			</div>
+			<div id="form-modal-body-assetLog" class="modal-body">
+				<p>One fine body&hellip;</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -899,6 +910,34 @@ $(function(){
     });
 </script>
 {% endblock js-assetLog %}
+
+{############################# ADD ASSETS MODAL LOGIC ##############################}
+<div id="form-modal-addAssets" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Add Assets</h4>
+            </div>
+            <div id="form-modal-body-addAssets" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-addAssets %}
+<script>
+    $('.addAssets').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-addAssets').load(('../../customadmin/add/assets/'+item_id), function () {
+            $('#form-modal-addAssets').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-addAssets %}
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
     

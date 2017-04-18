@@ -34,7 +34,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
+    LoanCheckInWithAssetSerializer, AddAssetsSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
@@ -1887,6 +1887,28 @@ class APIAssetToItem(APIView):
         serializer = ItemSerializer(item, context=context)
         Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
                        affected_user='', change_occurred="Changed " + item.item_name + " to no longer track by asset.")
+        return Response(serializer.data)
+ 
+class APIAddAsset(APIView): 
+    permission_classes = (IsAdmin,)
+    serializer_class = AddAssetsSerializer
+    
+    def get(self, request, pk, format=None):
+        item = Item.objects.get(item_id=pk)
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)
+    
+    def post(self,request,pk,format=None):
+        assets_to_add = request.data['num_assets']
+        item = Item.objects.get(item_id=pk)
+        item.quantity = item.quantity + int(assets_to_add)
+        for i in range(int(assets_to_add)):
+                asset = Asset(item=item)
+                asset.save()
+        item.save()
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred= "Added " + assets_to_add + " assets to " + item.item_name + ".")
         return Response(serializer.data)
     
 class APIAsset(APIView):
