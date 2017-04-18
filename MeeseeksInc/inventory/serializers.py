@@ -240,6 +240,17 @@ class DisbursementSerializer(serializers.ModelSerializer):
         model = Disbursement
         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'orig_request','time_disbursed')
         
+class DisbursementStartSerializer(serializers.Serializer):
+    user_name = serializers.CharField(required=True)
+    total_quantity = serializers.IntegerField(required=True)
+    item_name = ItemSerializer(read_only=True)
+    comment = serializers.CharField(required=False, allow_blank=True)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = serializers.ChoiceField(choices=TYPES)
+        
 class DisbursementPostSerializer(serializers.ModelSerializer):
     time_disbursed = serializers.DateTimeField(
         default=timezone.localtime(timezone.now()),
@@ -297,19 +308,14 @@ class LoanUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ('admin_name', 'user_name', 'item_name', 'total_quantity', 'comment', 'time_loaned')
-
-class AssetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Asset
-        fields = ('asset_id','asset_tag','item')
-      
-       
+        
 class LoanCheckInSerializer(serializers.Serializer):
     check_in = serializers.IntegerField(required=True)
     
 class LoanCheckInWithAssetSerializer(serializers.Serializer):
-    assets = AssetSerializer(many=True)
-
+    class Meta:
+        model = Asset
+        fields = ('asset_id')
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
@@ -371,6 +377,11 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanSendDates
         fields = ('date',)
+        
+class AssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ('asset_id','asset_tag','item')
         
 class AddAssetsSerializer(serializers.Serializer):
     num_assets = serializers.IntegerField(required=True)

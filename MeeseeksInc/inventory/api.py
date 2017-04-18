@@ -30,7 +30,7 @@ from inventory.permissions import IsAdminOrUser, IsAtLeastUser, \
     IsAdminOrManager, AdminAllManagerNoDelete, IsAdmin
 from inventory.serializers import ItemSerializer, RequestSerializer, \
     RequestUpdateSerializer, RequestAcceptDenySerializer, RequestPostSerializer, \
-    DisbursementSerializer, DisbursementPostSerializer, UserSerializer, \
+    DisbursementSerializer, DisbursementPostSerializer, DisbursementStartSerializer, UserSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
@@ -712,7 +712,7 @@ class APIDirectDisbursement(APIView):
     Create a direct disbursement (Admin/manager)
     """
     permission_classes = (IsAdminOrUser,)
-    serializer_class = DisbursementPostSerializer
+    serializer_class = DisbursementStartSerializer
     
     def get_object(self, pk): #get the item to directly disburse to
         try:
@@ -725,11 +725,12 @@ class APIDirectDisbursement(APIView):
             "request": self.request,
         }
         item_to_disburse = self.get_object(pk)
-        serializer = None
-        if request.data.get('type') == "Dispersal":
-            serializer = DisbursementPostSerializer(data=request.data, context=context)
-        if request.data.get('type') == "Loan":
-            serializer = LoanPostSerializer(data=request.data, context=context)
+        serializer = DisbursementStartSerializer(data=request.data, context=context)
+        if serializer.is_valid():
+            if request.data.get('type') == "Dispersal":
+                serializer = DisbursementPostSerializer(data=serializer.data, context=context)
+            if request.data.get('type') == "Loan":
+                serializer = LoanPostSerializer(data=serializer.data, context=context)
         if serializer.is_valid():
             if item_to_disburse.quantity >= int(request.data.get('total_quantity')):   
                 # decrement quantity in item
