@@ -3,40 +3,65 @@
 {% load rest_framework %}
 {% load static %}
 {% load index %}
-{% load static %}
 {% block content %}
 
 <h2>Upload File</h2>
 {% if user.is_superuser %}
-	<input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
-	<input type="file" name="File Upload" id="assetFileUpload" accept=".csv" />
+	<h3>Item Upload:</h3><input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template.csv' %}">Download item template</a><div>
+	<h3>Asset Upload:</h3><input type="file" name="File Upload" id="assetFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template_asset.csv' %}">Download asset template</a><div>
 {% endif %}
 
-<div><a href="{% static 'csv_template.csv' %}">Download a template</a><div>
 <h2>Rules:</h2>
 <ul>
 	<li>The document MUST be in a .csv format</li>
 	<li>The first row shall be for column headers only.</li>
 	<li>Do not leave any spaces between the word and the comma, indicating the next item</li>
-	<li>The implicit column headers are named "Item Name", "Quantity", "Model Number", "Description", and "Tags"</li>
-	<li>For "Tags", to add multiple tags, use "/" to separate between tags</li>
-	<li>The loader will return an error if "Item Name" or "Quantity" cannot be found in the header, or the values are empty.</li>
 	<li>To add custom fields, just add more column headers and the same rules apply</li>
 	<li>Custom field values must obey its type (float types must have a float, not a text, for example).</li>
 	<li><b>If there are any errors, nothing will be uploaded.</b></li>
 </ul>
-<h2>Example csv file without custom fields</h2>
+<h3>For Item Upload</h3>
+<ul>
+	<li>The implicit column headers are named "Item Name", "Quantity", "Model Number", "Description", and "Tags"</li>
+	<li>For "Tags", to add multiple tags, use "/" to separate between tags</li>
+	<li>The loader will return an error if "Item Name" or "Quantity" cannot be found in the header, or the values are empty.</li>
+</ul>
+
+<h3>For Asset Upload</h3>
+<ul>
+	<li>Name your file your_item_name.csv to create items for the corresponding item.  If the item does not exist, it will be created.</li>
+	<li>The implicit column header is named "Asset Tag"</li>
+	<li>The loader will return an error if "Asset Tag" cannot be found in the header, or the values are empty.</li>
+</ul>
+
+
+<h2>Example item csv file without custom fields</h2>
 Item Name,Quantity,Model Number,Description,Tags<br>
 CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
 CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
 CSV Name4,1000,CSV Model #,,csv3/csv4/csv5<br>
 <p><b>**Notice that the above example doesn't have a description in row 3.**</b></p>
 
-<h2>Example csv file with custom fields</h2>
+<h2>Example item csv file with custom fields</h2>
 Item Name,Quantity,Model Number,Description,Tags,new field!,newFloatField,integerField<br>
 CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,1,10000<br>
 CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,,2<br>
 CSV Name4,1000,CSV Model #,CSV Description,csv3/csv4/csv5,hi,1.1,<br>
+
+
+<h2>Example asset csv file without custom fields (newitem.csv)</h2>
+Asset Tag<br>
+fgg931-0123<br>
+fdaz88-1234<br>
+fda9d0-1100<br>
+
+<h2>Example asset csv file with custom fields (newitem.csv)</h2>
+Asset Tag, Serial Number, Integer Asset Field<br>
+fgg931-0123, 24432521, 1<br>
+fdaz88-1234, 31432551, 7<br>
+fda9d0-1100, 32523578, 2<br>
 
 <script>
 $(document).ready(function(){

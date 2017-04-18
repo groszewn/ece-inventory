@@ -65,11 +65,11 @@ class EditLoanForm(forms.ModelForm):
 
 class AddCommentRequestForm(forms.ModelForm):
     comment = forms.CharField(label='Comments by admin (optional)', max_length=200, required=False)
-#     TYPES = (
-#         ( 'Dispersal','Dispersal'),
-#         ('Loan','Loan'),
-#     )
-#     type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
+    TYPES = (
+        ( 'Dispersal','Dispersal'),
+        ('Loan','Loan'),
+    )
+    type = forms.ChoiceField(label='Select the Request Type', choices=TYPES)
 #     
     class Meta:
         model = Request
@@ -169,7 +169,7 @@ class LogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LogForm, self).__init__(*args, **kwargs)
         self.fields['item_amount'] = forms.IntegerField(required=True, min_value=1)
-    item_name = forms.ModelChoiceField(queryset=Item.objects.all())
+    item_name = forms.ModelChoiceField(queryset=Item.objects.filter(is_asset=False))
     item_change_options = [
         ('Lost', 'Lost'),
         ('Broken', 'Broken'), 
@@ -298,9 +298,10 @@ class CreateItemForm(forms.ModelForm):
     quantity = forms.IntegerField(min_value=0)
     threshold_quantity = forms.IntegerField(required = False, min_value = 0)
     threshold_enabled = forms.BooleanField(required = False)
+    is_asset = forms.BooleanField(label="Asset item enabled",required = False)
     class Meta:
         model = Item
-        fields = ('item_name', 'quantity', 'model_number', 'description','new_tags','threshold_quantity','threshold_enabled')
+        fields = ('item_name', 'quantity', 'model_number','description','threshold_quantity','threshold_enabled','is_asset','new_tags')
 
 class CustomFieldForm(forms.ModelForm):  
     CHOICES = (

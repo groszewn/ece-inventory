@@ -3,7 +3,7 @@
 {% load static %}
 {% load index %}
 {% block content %}
-
+<br>
 <div id="tabbed" class="container">	
 <ul class="nav nav-tabs">
 	  <li><a href="#all-items" data-toggle="tab" data-target="#all-items">Items</a></li>
@@ -33,10 +33,13 @@
         {% endfor %}
     </select>
     <input type="submit" name = "filter_tag" class="btn btn-primary">
+    {% if user.is_staff %}
     <button type="button" id = "filter_minstock" class="btn btn-primary">Filter Items Below Minimum Stock</button>
     <button type="button" id = "clear_filter_minstock" class="btn btn-primary">Clear Minstock Filtering</button>
+    {% endif %}
 </form>
 
+<br>
 <table id="inventory-search" class="display responsive nowrap table table-hover table-striped table-bordered" cellspacing="0" width="100%">
 <thead>
     <tr>
@@ -63,7 +66,6 @@
 <div class="tab-pane active" id="all-requests">
 
 {########################## ALL REQUESTS #####################}
-{% if request_list %}
 	<h2>Requests</h2>
 	<ul class="nav nav-tabs">
 	  <li><a href="#all" data-toggle="tab">All Requests</a></li>
@@ -255,7 +257,6 @@
 	    </table>
         </div>
 	</div>
-	{% endif %}
 
 
 </div> {# end requests div #}
@@ -265,7 +266,6 @@
 <div class="tab-pane" id="all-loans">
 
 {########################## LOANS #####################}	
-{% if loan_list %}
 		<h2>Loans</h2>
 			<ul class="nav nav-tabs">
 	  			<li><a href="#allLoan" data-toggle="tab">All Loans</a></li>
@@ -437,7 +437,6 @@
 		    </table>
 		    </div>
 	</div>
-	{% endif %}
 	
 </div> {# end loans div #}
 
@@ -445,7 +444,6 @@
 <div class="tab-pane" id="all-disbursements">
 
 {########################## DISBURSEMENTS #####################}
-{% if disbursed_list %}
 <h2>Disbursements</h2>
 <table id="inventory-disbursed" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
@@ -476,7 +474,6 @@
         {% endfor %}
     </tbody>
 </table>
-{% endif %}
 
 
 </div> {# end disbursements div #}
@@ -484,7 +481,6 @@
 <div class="tab-pane" id="all-backfills">
 
 {########################## ALL BACKFILLS #####################}
-{% if backfill_list %}
 <h2>Backfills</h2>
 <ul class="nav nav-tabs">
     <li><a href="#backfills-all" data-toggle="tab">All Backfills</a></li>
@@ -495,7 +491,6 @@
 </ul>
 <div class="tab-content">
     <div class="tab-pane" id="backfills-all">
-    	HEY
         <table id="inventory-backfill-all" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>
@@ -644,7 +639,6 @@
         </table>
     </div>
 </div>
-{% endif %}
 
 </div> {# end backfill div #}
 
@@ -1376,6 +1370,7 @@
     		        selector: 'td:first-child',
     		        blurable: true
     		    },
+    		    order: [[ 1, 'asc' ]],
     		    {% if user.is_superuser %}
     		    buttons: [
     		       // { extend: "create", editor: editor },
@@ -1385,6 +1380,25 @@
     		    ]
     		    {% endif %}
     	});
+    	table.on("click", "th.select-checkbox", function() {
+		    if ($("th.select-checkbox").hasClass("selected")) {
+		        table.rows().deselect();
+		        $("th.select-checkbox").removeClass("selected");
+		    } else {
+		        table.rows().select();
+		        $("th.select-checkbox").addClass("selected");
+		    }
+		}).on("select deselect", function() {
+		    ("Some selection or deselection going on")
+		    if (table.rows({
+		            selected: true
+		        }).count() !== table.rows().count()) {
+		        $("th.select-checkbox").removeClass("selected");
+		    } else {
+		        $("th.select-checkbox").addClass("selected");
+		    }
+		});
+    	
     };
     $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
@@ -1394,10 +1408,10 @@
  		if ( !minstock_filter_enabled ) {
  			return true;
  		}
- 		else if ( !threshold_enabled && minstock_filter_enabled) {
+ 		else if ( !threshold_enabled) {
  			return false;
  		}
- 		else if ( threshold_enabled && minstock_filter_enabled ) {
+ 		else if ( threshold_enabled ) {
  			//console.log(data[1] + " " + "threshold enabled: " + threshold_enabled + " minstock enabled: " + minstock_filter_enabled);
  			//console.log(data[1] + " " + "quantity: " + quantity + " threshold quantity: " + threshold_quantity);
  			if ( quantity < threshold_quantity ) {
@@ -1411,7 +1425,7 @@
     	//table.cell( this ).edit( 'bubble' );
     	//console.log('this:', table.cell(this));
     	//console.log('index:', table.cell(this).index().column);
-    	console.log("clicked")
+    	var table = $('#inventory-search').DataTable();
     	if (table.cell(this).index().column == 1) {
     		window.location = "/item" + "/" + table.row(this).data().item_id;
     	}

@@ -65,7 +65,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['approved_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Approved")
             context['pending_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Pending")
             context['denied_request_list'] = Request.objects.filter(user_id=self.request.user.username, status="Denied")
-            context['backfill_list'] = Loan.objects.all().exclude(backfill_status="None")
+            context['backfill_list'] = Loan.objects.filter(user_name=self.request.user.username).exclude(backfill_status="None")
             context['backfill_requested'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Requested')
             context['backfill_approved'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='In Transit')
             context['backfill_denied'] = Loan.objects.filter(user_name=self.request.user.username, backfill_status='Denied')
@@ -74,6 +74,7 @@ class IndexView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             context['loan_list'] = Loan.objects.filter(user_name=self.request.user.username) 
             context['loans_checked_in'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked In')
             context['loans_checked_out'] = Loan.objects.filter(user_name=self.request.user.username, status='Checked Out')
+            context['loans_backfilled'] = Loan.objects.filter(user_name=self.request.user.username, status="Backfilled")
             context['my_template'] = 'inventory/base.html'
         context['item_list'] = Item.objects.all()
         context['current_user'] = self.request.user.username

@@ -475,24 +475,25 @@ class APIApproveRequest(APIView):
             item.save()
             item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
-            if (item.threshold_enabled and item.threshold_quantity > item.quantity):
-                #send email
-                try:
-                    prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                except (ObjectDoesNotExist, IndexError) as e:
-                    prepend = ''
-                subject = prepend + 'Below Minimum Stock'
-                to = []
-                for user in SubscribedUsers.objects.all():
-                    to.append(user.email)
-                from_email='noreply@duke.edu'
-                ctx = {
-                    'user':'user',
-                    'item':item.item_name,
-                    'quantity':item.quantity, 
-                }
-                message=render_to_string('inventory/belowthreshold_email.txt', ctx)
-                EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
+            if item.threshold_quantity:
+                if (item.threshold_enabled and item.threshold_quantity > item.quantity):
+                    #send email
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Below Minimum Stock'
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                        to.append(user.email)
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':'user',
+                        'item':item.item_name,
+                        'quantity':item.quantity, 
+                    }
+                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
             if indiv_request.type == "Dispersal": 
                 # add new disbursement item to table
                 disbursement = Disbursement(admin_name=request.user.username, orig_request=indiv_request, user_name=indiv_request.user_id, item_name=item, 
@@ -682,24 +683,25 @@ class APIDirectDisbursement(APIView):
                 item_to_disburse.save()
                 item_to_disburse = self.get_object(pk)
                 # check if stock less than minimum stock 
-                if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
-                    #send email
-                    try:
-                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
-                    except (ObjectDoesNotExist, IndexError) as e:
-                        prepend = ''
-                    subject = prepend + 'Below Minimum Stock'
-                    to = []
-                    for user in SubscribedUsers.objects.all():
-                            to.append(user.email)
-                    from_email='noreply@duke.edu'
-                    ctx = {
-                        'user':'user',
-                        'item':item_to_disburse.item_name,
-                        'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
-                    }
-                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
-                    EmailMessage(subject, message, bcc=to, from_email=from_email).send() 
+                if item_to_disburse.threshold_quantity:
+                    if (item_to_disburse.threshold_enabled and item_to_disburse.threshold_quantity > item_to_disburse.quantity):
+                        #send email
+                        try:
+                            prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                        except (ObjectDoesNotExist, IndexError) as e:
+                            prepend = ''
+                        subject = prepend + 'Below Minimum Stock'
+                        to = []
+                        for user in SubscribedUsers.objects.all():
+                                to.append(user.email)
+                        from_email='noreply@duke.edu'
+                        ctx = {
+                            'user':'user',
+                            'item':item_to_disburse.item_name,
+                            'quantity':item_to_disburse.quantity, # shouldn't this be quantity given? so int(request.data.get('total_quantity'))
+                        }
+                        message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                        EmailMessage(subject, message, bcc=to, from_email=from_email).send() 
                 serializer.save(item_name=Item.objects.get(item_id=pk))
                 data = serializer.data
                 recipient = data['user_name']
@@ -1442,13 +1444,35 @@ class APILoanConvertWithAssets(APIView): #CONVERT LOAN
             return redirect(get_host(request)+'/api/loan/convert/'+pk+'/') # redirect to original url in order to have laon data returned with check in serializer to fill in
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-class APILoanBackfillPost(ListCreateAPIView):
+class BackfillFilter(FilterSet):
+    class Meta:
+        model = Loan
+        fields = ['loan_id','admin_name', 'user_name','item_name','orig_request','total_quantity','comment','time_loaned','status', 'backfill_status', 'backfill_quantity', 'backfill_notes']
+
+class APIBackfillList(ListAPIView): #FILTER LOANS
+    permission_classes = (IsAdminOrUser,)
+    serializer_class = FullLoanSerializer
+    filter_class = BackfillFilter
+    model = Loan
+    queryset = Loan.objects.all().exclude(backfill_status="None")
+    
+    def get(self, request, format=None):
+        loans = [];
+        if User.objects.get(username=request.user.username).is_staff:
+            loans = self.filter_queryset(Loan.objects.all())
+        else:
+            loans = self.filter_queryset(Loan.objects.filter(user_id=request.user.username))
+        serializer = FullLoanSerializer(loans, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+ 
+class APILoanBackfillPost(APIView):
     '''
     Create a backfill request
     '''
     permission_classes = (IsAtLeastUser,)
     model = Loan
-    queryset = Loan.objects.all().exclude(backfill_status="None")
+    #queryset = Loan.objects.all().exclude(backfill_status="None")
     serializer_class = LoanBackfillPostSerializer
     
     def post(self, request, pk,  format=None):
@@ -1606,6 +1630,7 @@ class APICompleteBackfill(APIView):
         
     def put(self, request, pk, format=None):
         loan = self.get_object(pk)
+        item = Item.objects.get(item_id = loan.item_name.item_id)
         if not loan.backfill_status=='In Transit':
             return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
@@ -1613,8 +1638,11 @@ class APICompleteBackfill(APIView):
             loan.total_quantity = loan.total_quantity - loan.backfill_quantity
             if loan.total_quantity == 0:
                 loan.status = "Backfilled"
+            loan.save()
             disbursement = Disbursement(admin_name=request.user.username, user_name=loan.user_name, orig_request=loan.orig_request, item_name=loan.item_name, comment="Backfilled Disburse", total_quantity=loan.backfill_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
+            item.quantity = item.quantity + loan.backfill_quantity
+            item.save()
             serializer.save(backfill_status="Completed", backfill_time_requested=timezone.localtime(timezone.now()))
             Log.objects.create(request_id='', item_id=loan.item_name.item_id, item_name = loan.item_name.item_name, initiating_user=request.user, nature_of_event="Backfilled", 
                        affected_user=loan.user_name, change_occurred="Backfill completed")
@@ -1732,7 +1760,9 @@ class APICompleteBackfillWithAssets(APIView):
             message=render_to_string('inventory/backfill_completed_email.txt', ctx)
             EmailMessage(subject, message, bcc=to, from_email=from_email).send()
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)       
+    
+     
 
 ########################################## Subscription ###########################################    
 
@@ -1885,12 +1915,16 @@ class APIAsset(APIView):
         if (Asset.objects.filter(asset_id=pk).exists()):
             asset = Asset.objects.get(asset_id=pk)
             asset_id = asset.asset_id
+            asset_tag = asset.asset_tag
+            if asset.loan != None:
+                asset.loan.total_quantity = asset.loan.total_quantity - 1;
+                asset.loan.save()
             item = asset.item
             asset.delete()
             item.quantity = item.quantity - 1
             item.save()
             Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Delete", 
-                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset.asset_id+ ").")
+                       affected_user='', change_occurred="Deleted asset with tag " + asset_tag + " from the " + item.item_name + " item (asset id: " +asset_id+ ").")
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)

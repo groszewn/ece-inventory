@@ -190,7 +190,11 @@ class AssetView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
             messages.success(request, ('Successfully deleted asset: ' + pk ))
         else:
             messages.error(request, ('Failed to delete asset: ' + pk ))
-        return redirect('/item/' + asset.item.item_id)        
+        print(request.path)
+        if "asset" in request.path: 
+            return redirect('/item/' + asset.item.item_id)  
+        else:
+            return redirect(request.META.get('HTTP_REFERER'))      
 
 def make_loan_checkin_asset_form(loan):
     queryset = Asset.objects.filter(loan=loan)
@@ -410,6 +414,8 @@ def request_accept_with_assets(request, pk):
         formset = AssetsRequestFormset(request.POST)
         commentForm = AddCommentRequestForm(request.POST, instance=indiv_request)
         if all([commentForm.is_valid(), formset.is_valid()]):
+            indiv_request.type = commentForm['type'].value()
+            indiv_request.save()
             comment = commentForm['comment'].value()
             token, create = Token.objects.get_or_create(user=request.user)
             http_host = get_host(request)
@@ -699,6 +705,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):  
     login_url = "/login/"
     template_name = 'custom_admin/user_list.html'
     context_object_name = 'user_list'
+    queryset = User.objects.all()
     def get_context_data(self, **kwargs):
         context = super(UserListView, self).get_context_data(**kwargs)
         context['user_list'] = User.objects.all()
@@ -839,6 +846,7 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
                   "Accept": "application/json", "Content-type":"application/json"}
         requests.delete(url, headers = header)#, data = json.dumps(payload))
         return redirect(reverse('custom_admin:index'))
+    
     def create_new_item(request):
         tags = Tag.objects.all()
         custom_fields = Custom_Field.objects.filter(field_kind='Item')
@@ -870,7 +878,14 @@ class ItemView(LoginRequiredMixin, UserPassesTestMixin):
                     field_value = form[field.field_name].value()
                     custom_val = Custom_Field_Value(item=item, field=field, value=field_value)
                     custom_val.save()  
-                
+                if item.is_asset:   
+                    user = request.user
+                    token, create = Token.objects.get_or_create(user=user)
+                    http_host = get_host(request)
+                    url=http_host+'/api/to_asset/'+item.item_id+'/'
+                    header = {'Authorization': 'Token '+ str(token), 
+                              "Accept": "application/json", "Content-type":"application/json"}
+                    requests.get(url, headers = header)
                 return redirect('/customadmin')
             else:
                 messages.error(request, ("An error occurred while trying to create " + form['item_name'].value() + "."))
