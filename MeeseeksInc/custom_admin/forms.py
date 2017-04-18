@@ -85,10 +85,10 @@ class AddNotesBackfillForm(forms.ModelForm):
         fields = ('backfill_notes',)
 
 class AssetsRequestForm(forms.ModelForm):
-    asset_id = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
+    asset_tag = forms.ModelChoiceField(queryset=Asset.objects.all(), label='Asset')
     class Meta:
         model = Asset
-        exclude = ('item','loan','disbursement')
+        exclude = ('asset_id','item','loan','disbursement')
    
 class BaseAssetsRequestFormSet(BaseFormSet):
     def clean(self):
