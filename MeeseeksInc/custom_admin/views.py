@@ -360,7 +360,7 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 user = request.user
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
-                url=http_host+'/api/loan/'+loan.loan_id+'/'
+                url=http_host+'/api/loan/update/'+loan.loan_id+'/'
                 payload = {'comment': post.comment,'total_quantity':post.total_quantity}
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
