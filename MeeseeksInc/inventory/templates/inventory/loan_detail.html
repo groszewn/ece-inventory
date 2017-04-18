@@ -41,7 +41,7 @@
 		    </table>
 		    
 {% if user.is_staff %}	 
-{% if loan.orig_request.item_name.is_asset %}
+{% if loan.item_name.is_asset %}
 {% if loan.status == "Checked Out" %}
 {% block checkIn-with-assets %}
 	<a id = "checkIn-assets" loan-id="{{ loan.loan_id }}" class="checkIn-assets btn btn-success">Check In</a>	

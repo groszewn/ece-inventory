@@ -331,7 +331,7 @@ class LoanCheckInSerializer(serializers.Serializer):
     
 class LoanCheckInWithAssetSerializer(serializers.Serializer):
     asset_ids = serializers.ListField(
-        child=serializers.CharField())
+        child=serializers.CharField(required=False, allow_blank=True, allow_null=True))
     
 class LoanConvertSerializer(serializers.Serializer):
     number_to_convert = serializers.IntegerField(required=True)
