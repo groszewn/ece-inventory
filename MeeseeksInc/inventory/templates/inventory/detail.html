@@ -158,9 +158,15 @@ function clickEvent(){
 {% endblock request_specific_item %}
 
 {% if user.is_staff %}
-	{% block disbursement_direct %}
-	<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Directly Disburse Item</a>									
-	{% endblock disbursement_direct %}
+	{% if item.is_asset %}
+		{% block disbursement_direct_asset %}
+		<a id = "disbursement-asset" item-id = "{{ item.item_id }}" class="disbursement-asset btn btn-info">Directly Disburse Item</a>									
+		{% endblock disbursement_direct_asset %}
+	{% else %}
+		{% block disbursement_direct %}
+		<a id = "disbursement" item-id = "{{ item.item_id }}" class="disbursement btn btn-info">Directly Disburse Item</a>									
+		{% endblock disbursement_direct %}
+	{% endif %}
 {% endif %}
 
 </td>
@@ -658,6 +664,34 @@ $(function(){
     });
 </script>
 {% endblock js-disbursement %}
+
+{############################# DIRECT DISBURSEMENT MODAL LOGIC ##############################}
+<div id="form-modal-disbursement-asset" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Directly Disburse {{ item.item_name }}</h4>
+            </div>
+            <div id="form-modal-body-disbursement-asset" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-disbursement-asset %}
+<script>
+    $('.disbursement-asset').click(function() {
+    	item_id = $(this).attr("item-id");
+        $('#form-modal-body-disbursement-asset').load(('../../customadmin/disburse/asset/'+ item_id), function () {
+            $('#form-modal-disbursement-asset').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-disbursement-asset %}
 
 {############################# EDIT TAG LOGIC ##############################}
 <div id="form-modal-edit" class="modal fade">

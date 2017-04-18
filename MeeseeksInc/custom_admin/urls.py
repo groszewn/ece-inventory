@@ -28,6 +28,7 @@ urlpatterns = [
     url(r'^request/asset_accept/(?P<pk>[\w\-\ ]+)/$', views.request_accept_with_assets, name='request_accept_with_assets'),
     url(r'^disburse/item$', views.DisbursementView.post_new_disburse, name='post_new_disburse'),
     url(r'^disburse/item/(?P<pk>[\w\-\ ]+)/$', views.DisbursementView.post_new_disburse_specific, name='post_specific_disburse'),
+    url(r'^disburse/asset/(?P<pk>[\w\-\ ]+)/$', views.DisbursementView.post_new_disburse_asset, name='post_new_disburse_asset'),
     url(r'^deny/request/all$', views.RequestsView.deny_all_request, name='deny_all_requests'),
     url(r'^approve/request/all$', views.RequestsView.approve_all_requests, name='approve_all_requests'),
     url(r'^deny/request/(?P<pk>[\w\-\ ]+)/$', views.RequestsView.deny_request, name='deny_request'),
