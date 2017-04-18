@@ -46,11 +46,11 @@
 	<th></th>
 	<th>Item Name</th>
 	<th>Quantity</th>
-	<th>Item Model Number</th>
-	<th>Item Description</th>
+	<th>Model Number</th>
+	<th>Description</th>
 	{% if user.is_staff %}
-	<th>Item Minimum Stock Info</th>
-	<th>Item Minimum Stock Enabled</th>
+	<th>Min. Stock Info</th>
+	<th>Min. Stock Enabled</th>
 	{% endif %}
 	{% for field in custom_fields%}
 		<th>{{field.field_name}}</th>
