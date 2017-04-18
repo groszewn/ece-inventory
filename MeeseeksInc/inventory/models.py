@@ -92,7 +92,7 @@ class Asset(models.Model):
     loan = models.ForeignKey(Loan, null=True)
     disbursement = models.ForeignKey(Disbursement, null=True)
     def __str__(self):
-        return self.item.item_name + ' ' + self.asset_id
+        return self.asset_tag
     
 class ShoppingCartInstance(models.Model):
     cart_id = models.CharField(primary_key=True, max_length=200, unique=True, default=uuid.uuid4)

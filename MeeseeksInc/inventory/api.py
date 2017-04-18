@@ -1073,7 +1073,9 @@ class AssetUpload(APIView):
     """
     Uploading assets via API
     """
-    def errorHandling(self, request, message, createdAssets):
+    def errorHandling(self, request, message, item, createdAssets):
+        if item:
+            item.delete()
         if createdAssets:
             for createdAsset in createdAssets:
                 createdAsset.delete()
@@ -1091,7 +1093,7 @@ class AssetUpload(APIView):
         headerMap = {}
         customFieldMap = {}
         headers = csvData[0].split(',')
-        custom_fields = Asset_Custom_Field.objects.all()
+        custom_fields = Custom_Field.objects.filter(field_kind="Asset")
         for i, header in enumerate(headers):
             if not (header.lower() == "asset tag"):
                 # ERROR CHECK, make sure the custom field names are correct 
@@ -1108,25 +1110,27 @@ class AssetUpload(APIView):
             return self.errorHandling(request, '"Asset Tag" does not exist in header', [])
         
         item = []
+        newItem = False
+        createdAssets = []
         # CHECK IF ITEM EXISTS, IF NOT CREATE THE ITEM WITH THE # OF ASSETS
         if not Item.objects.filter(item_name = item_name).count()>0:
             item = Item(item_name=item_name, quantity=len(csvData[1:]), is_asset=True)
             item.save()
+            newItem = True
         else:
             item = Item.objects.get(item_name = item_name)
             if not item.is_asset:
                 return self.errorHandling(request, 'This item does not track assets.', None)
-            
-        createdAssets = []
+        
         for i, csvRow in enumerate(csvData[1:]):
             row = csvRow.split(',')
             if headerMap["asset tag"] >= len(row) or row[headerMap["asset tag"]]=='':
-                return self.errorHandling(request, 'value of "Asset Tag" does not exist in row ' + str(i+1), createdAssets)
+                return self.errorHandling(request, 'value of "Asset Tag" does not exist in row ' + str(i+1), item, createdAssets)
             
             existingAsset = Asset.objects.filter(item=item, asset_id=row[headerMap["asset tag"]]).count()
             if existingAsset>0:
-                return self.errorHandling(request, "Asset " + row[headerMap["asset tag"]] + " already exists", createdAssets)
-            asset = Asset(asset_id=row[headerMap["asset tag"]],item=item)
+                return self.errorHandling(request, "Asset " + row[headerMap["asset tag"]] + " already exists", item, createdAssets)
+            asset = Asset(asset_tag=row[headerMap["asset tag"]],item=item)
             asset.save()
             createdAssets.append(asset)
 
@@ -1134,19 +1138,19 @@ class AssetUpload(APIView):
             for custom_field, j in customFieldMap.items():
                 actual_field = next((x for x in custom_fields if x.field_name.lower() == custom_field), None)
                 if j >= len(row):
-                    return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), createdAssets)
+                    return self.errorHandling(request, 'value of ' + actual_field.field_name + ' does not exist in row ' + str(i+1), item, createdAssets)
                 if actual_field.field_type == "Short":
                     if len(row[j])<=400:
                         value = Asset_Custom_Field_Value(asset=asset, field=actual_field, value=row[j])
                         value.save()
                     else:
-                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not short text. Length is too long", createdAssets) 
+                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not short text. Length is too long", item, createdAssets) 
                 elif actual_field.field_type == "Long":
                     if len(row[j])<=1000:
                         value = Asset_Custom_Field_Value(asset=asset, field=actual_field, value=row[j])
                         value.save()
                     else:
-                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not long text. Length is too long", createdAssets)  
+                        return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not long text. Length is too long", item, createdAssets)  
                 elif actual_field.field_type == "Int":
                     try:
                         int(row[j])
@@ -1156,7 +1160,7 @@ class AssetUpload(APIView):
                         if row[j] == "":
                             continue
                         else:
-                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not an integer", createdAssets) 
+                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not an integer", item, createdAssets) 
                 elif actual_field.field_type == "Float":
                     try:
                         float(row[j])
@@ -1166,12 +1170,14 @@ class AssetUpload(APIView):
                         if row[j] == "":
                             continue
                         else:
-                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not a float", createdAssets)
-        item.quantity = item.quantity + len(csvData[1:]) # add to item quantity
-        item.save()
+                            return self.errorHandling(request, actual_field.field_name + " at row " + str(i+1) + " is not a float", item, createdAssets)
+        
+        if not newItem:
+            item.quantity = item.quantity + len(csvData[1:]) # add to item quantity
+            item.save()
         for asset in createdAssets:
-            Log.objects.create(request_id=None, item_id=asset.item.item_id, item_name = asset.item.item_id, initiating_user=request.user, nature_of_event="Create", 
-                       affected_user='', change_occurred="Created asset with asset tag " + str(asset.asset_id) + " for " + str(asset.item.item_name))
+            Log.objects.create(request_id=None, item_id=asset.item.item_id, item_name = asset.item.item_name, initiating_user=request.user, nature_of_event="Create", 
+                       affected_user='', change_occurred="Created asset with asset tag " + str(asset.asset_tag) + " for " + str(asset.item.item_name))
         serializer = AssetSerializer(createdAssets, many=True)
         messages.success(request._request, 
                                  'CSV file successfully uploaded')
