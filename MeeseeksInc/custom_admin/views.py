@@ -361,15 +361,11 @@ class LoanView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
                 token, create = Token.objects.get_or_create(user=user)
                 http_host = get_host(request)
                 url=http_host+'/api/loan/update/'+loan.loan_id+'/'
-                if loan.item_name.is_asset:
-                    quantity = loan.total_quantity
-                else:
-                    quantity = post.total_quantity
                 payload = {'comment': post.comment,'total_quantity':post.total_quantity}
                 header = {'Authorization': 'Token '+ str(token), 
                       "Accept": "application/json", "Content-type":"application/json"}
                 response = requests.put(url, headers = header, data=json.dumps(payload))
-                if response.status_code == 304:
+                if response.status_code == 400:
                     messages.error(request, ('You cannot loan more items than the quantity available.'))
                     return redirect(request.META.get('HTTP_REFERER'))
                 messages.success(request, ('Successfully edited loan for ' + loan.item_name.item_name + '.'))
