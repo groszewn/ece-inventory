@@ -349,7 +349,7 @@ class AssetDetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailVie
             context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset')
         else:
             context['my_template'] = 'inventory/base.html'
-            context['asset_custom_fields'] = Asset_Custom_Field.objects.filter(field_kind='Asset',is_private=False)
+            context['asset_custom_fields'] = Custom_Field.objects.filter(field_kind='Asset',is_private=False)
         context['asset_custom_vals'] = Asset_Custom_Field_Value.objects.filter(asset=self.get_object())
         return context
     
