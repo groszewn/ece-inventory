@@ -1790,6 +1790,7 @@ class APICompleteBackfillWithAssets(APIView):
     def put(self, request, pk, format=None):
         loan = self.get_object(pk)
         assets = Asset.objects.filter(loan=loan.loan_id)
+        item = Item.objects.get(item_id=loan.item_name.item_id)
         if not loan.backfill_status=='In Transit':
             return Response("Must be in transit to complete.", status=status.HTTP_400_BAD_REQUEST)
         serializer = BackfillAcceptDenySerializer(loan, data=request.data, partial=True)
@@ -1799,6 +1800,8 @@ class APICompleteBackfillWithAssets(APIView):
                 loan.status = "Backfilled"
             disbursement = Disbursement(admin_name=request.user.username, user_name=loan.user_name, orig_request=loan.orig_request, item_name=loan.item_name, comment="Backfilled Disburse", total_quantity=loan.backfill_quantity, time_disbursed=timezone.localtime(timezone.now()))
             disbursement.save()
+            item.quantity = item.quantity + loan.backfill_quantity
+            item.save()
             for asset in assets[:loan.backfill_quantity]:
                 asset.disbursement = disbursement
                 asset.loan = None
