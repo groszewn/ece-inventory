@@ -1400,9 +1400,15 @@ class APILoanCheckIn(APIView): #CHECK IN LOAN
     serializer_class = LoanCheckInSerializer
     
     def get(self, request, pk, format=None):
-        loan = Loan.objects.get(loan_id = pk)
-        serializer = FullLoanSerializer(loan)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+            if loan.item_name.is_asset:
+                return Response("Use checkin_with_assets instead!", status=status.HTTP_400_BAD_REQUEST)
+            else:
+                serializer = FullLoanSerializer(loan)
+                return Response(serializer.data, status=status.HTTP_200_OK)  
+        except Loan.DoesNotExist:
+            raise Http404
     
     def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
@@ -1445,8 +1451,12 @@ class APILoanCheckInWithAssets(APIView): #CHECK IN LOAN
 #     serializer_class = LoanCheckInWithAssetSerializer
     
     def get(self, request, pk, format=None):
-        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
-        return Response(serializer.data)
+        try:
+            serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+            return Response(serializer.data)
+        except Loan.DoesNotExist:
+            raise Http404
+        
     
     def post(self, request, pk, format=None):
         loan = Loan.objects.get(loan_id=pk)
@@ -1495,9 +1505,16 @@ class APILoanConvert(APIView): #CONVERT LOAN
     serializer_class = LoanConvertSerializer  
     
     def get(self, request, pk, format=None):
-        loan = Loan.objects.get(loan_id = pk)
-        serializer = FullLoanSerializer(loan)
-        return Response(serializer.data, status=status.HTTP_200_OK)  
+        try:
+            loan = Loan.objects.get(loan_id = pk)
+            if loan.item_name.is_asset:
+                return Response("Use convert_with_assets instead!", status=status.HTTP_400_BAD_REQUEST)
+            else:
+                serializer = FullLoanSerializer(loan)
+                return Response(serializer.data, status=status.HTTP_200_OK)  
+        except Loan.DoesNotExist:
+            raise Http404
+        
   
     def post(self, request, pk, format=None): 
         loan = Loan.objects.get(loan_id=pk)
@@ -1546,8 +1563,11 @@ class APILoanConvertWithAssets(APIView): #CONVERT LOAN
     permission_classes = (IsAdminOrManager,)
     
     def get(self, request, pk, format=None):
-        serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
-        return Response(serializer.data)
+        try:
+            serializer = AssetSerializer(Asset.objects.filter(loan=Loan.objects.get(loan_id=pk)),many=True)
+            return Response(serializer.data)
+        except Loan.DoesNotExist:
+            raise Http404
     
     def post(self, request, pk, format=None): 
         loan = Loan.objects.get(loan_id=pk)
