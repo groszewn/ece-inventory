@@ -211,9 +211,12 @@ class APIItemDetail(APIView):
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
+            if item.is_asset:
+                serializer.save(quantity=starting_quantity)
+            else:
+                serializer.save()
             
+            data = serializer.data
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
