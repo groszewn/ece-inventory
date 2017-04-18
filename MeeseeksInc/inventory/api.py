@@ -281,19 +281,24 @@ class APIItemDetail(APIView):
                         field.field_type == 'Long' and len(value)<=1000:
                         custom_val.value = value
                     if field.field_type == 'Int':
+                        print(value)
                         try:
-                            if value is not None:
+                            if value is '':
+                                value = None
+                            elif value is not None:
                                 int(value)
                             custom_val.value = value
                         except ValueError:
-                            return Response("a certain field value needs to be an integer since it is an integer type field", status=status.HTTP_400_BAD_REQUEST)
+                            continue
                     if field.field_type == 'Float':
                         try:
-                            if value is not None:
+                            if value is '':
+                                value = None
+                            elif value is not None:
                                 float(value)
                             custom_val.value = value
                         except ValueError:
-                            return Response("a certain field value needs to be a float since it is a float type field", status=status.HTTP_400_BAD_REQUEST)
+                            continue
                     custom_val.save()
 
             if item.is_asset:   
