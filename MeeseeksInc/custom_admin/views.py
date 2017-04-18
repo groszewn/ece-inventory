@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from json.encoder import JSONEncoder
 import pickle
+
 from appdirs import unicode
 from dal import autocomplete
 from django import forms
@@ -11,11 +12,12 @@ from django.contrib.auth.models import User
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage
 from django.db.models import F
 from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404, redirect,\
+from django.shortcuts import render, get_object_or_404, redirect, \
     render_to_response
 from django.template.defaulttags import comment
 from django.template.loader import render_to_string
@@ -27,12 +29,14 @@ from django.views.generic.edit import FormView
 import requests, json
 from rest_framework.authtoken.models import Token
 
-from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet,\
-    BaseAssetCheckInFormset, AssetEditForm, AddAssetsForm
+from custom_admin.forms import AssetsRequestForm, BaseAssetsRequestFormSet, \
+    BaseAssetCheckInFormset, AssetEditForm, AddAssetsForm, \
+    TypeForAssetDisbursalForm
 from custom_admin.tasks import loan_reminder_email as task_email
 from inventory.models import Asset, Request, Item, Disbursement, Tag, Log, Custom_Field, Custom_Field_Value, Loan, SubscribedUsers, EmailPrependValue, LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
+
 from .forms import ConvertLoanForm, UserPermissionEditForm, DisburseSpecificForm, CheckInLoanForm, EditLoanForm, EditTagForm, DisburseForm, ItemEditForm, CreateItemForm, RegistrationForm, AddCommentRequestForm, LogForm, AddTagForm, CustomFieldForm, DeleteFieldForm, SubscribeForm, ChangeEmailPrependForm, ChangeLoanReminderBodyForm, BackfillRequestForm, AddCommentBackfillForm, AddNotesBackfillForm, LogAssetDestruction
-from django.core.exceptions import ObjectDoesNotExist
+
 
 def staff_check(user):
     return user.is_staff
@@ -449,23 +453,25 @@ class DisbursementView(LoginRequiredMixin, UserPassesTestMixin):
         DisburseAssetFormSet = formset_factory(DisburseAssetForm, extra=1, formset=BaseAssetCheckInFormset)
         if request.method == 'POST':
             formset = DisburseAssetFormSet(request.POST)
-            if formset.is_valid():
+            typeForm = TypeForAssetDisbursalForm(request.POST)
+            if formset.is_valid() and typeForm.is_valid():
                 token, create = Token.objects.get_or_create(user=request.user)
                 http_host = get_host(request)
-                url=http_host+'/api/loan/convert_with_assets/'+pk+'/'
+#                 url=http_host+'/api/loan/convert_with_assets/'+pk+'/'
+                #TODO: CHANGE THIS URL ^^
                 asset_ids = []
                 for form in formset:
                     asset_ids.append(form['asset_id'].value())
-                print(asset_ids)
-                payload = {'asset_ids': asset_ids}
+                payload = {'asset_ids': asset_ids, 'type':typeForm['type'].value()}
                 header = {'Authorization': 'Token '+ str(token), 
                           "Accept": "application/json", "Content-type":"application/json"}
 #                 requests.post(url, headers = header, data = json.dumps(payload, default=obj_dict))
                 return redirect(request.META.get('HTTP_REFERER'))  
         else:
             formset = DisburseAssetFormSet()
+            typeForm = TypeForAssetDisbursalForm()
 #             form = make_disburse_asset_form(Item.objects.get(item_id=pk))
-        return render(request, "custom_admin/direct_disbursements_with_assets_inner.html", { 'formset': formset, 'pk':pk})
+        return render(request, "custom_admin/direct_disbursements_with_assets_inner.html", { 'typeForm': typeForm, 'formset': formset, 'pk':pk})
     
     def test_func(self):
         return self.request.user.is_staff

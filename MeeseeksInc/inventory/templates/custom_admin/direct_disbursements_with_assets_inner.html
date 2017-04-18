@@ -40,6 +40,7 @@
         </div>
     {% endfor %}
 </div>
+{{ typeForm.as_p }}
 <a href="#" id="add-item-button" class="btn btn-info add-item">Add Item</a>
 <input id="formSubmit" type="submit" class="btn btn-submit btn-success col-md-offset-2">
 </form>
@@ -53,7 +54,7 @@ $(document).ready(function() {
         var compiledTmpl = tmplMarkup.replace(/__prefix__/g, count);
         $('div#items-form-container').append(compiledTmpl);
         // update form count
-        $('#id_item_items-TOTAL_FORMS').attr('value', count+1);
+        $('#id_form-TOTAL_FORMS').attr('value', count+1);
     });
 });
 </script>
