@@ -230,6 +230,7 @@ class APIItemDetail(APIView):
                 serializer.save()
             
             data = serializer.data
+            
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -265,6 +266,41 @@ class APIItemDetail(APIView):
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
             
+
+            fields = Custom_Field.objects.all()
+            if item.is_asset:
+                fields = Custom_Field.objects.filter(field_kind='Item')
+            for field in fields:
+                if field.field_name in request.data:
+                    value = request.data[field.field_name]  
+                    if Custom_Field_Value.objects.filter(item = item, field = field).exists():
+                        custom_val = Custom_Field_Value.objects.get(item = item, field = field)
+                    else:
+                        custom_val = Custom_Field_Value(item=item, field=field)
+                    if field.field_type == 'Short' and len(value)<=400 or \
+                        field.field_type == 'Long' and len(value)<=1000:
+                        custom_val.value = value
+                    if field.field_type == 'Int':
+                        print(value)
+                        try:
+                            if value is '':
+                                value = None
+                            elif value is not None:
+                                int(value)
+                            custom_val.value = value
+                        except ValueError:
+                            continue
+                    if field.field_type == 'Float':
+                        try:
+                            if value is '':
+                                value = None
+                            elif value is not None:
+                                float(value)
+                            custom_val.value = value
+                        except ValueError:
+                            continue
+                    custom_val.save()
+
             if item.is_asset:   
                 if not Asset.objects.filter(item=pk):
                     item.is_asset = True
@@ -2090,6 +2126,10 @@ class APIItemToAsset(APIView):
                 print('asset creating')
                 asset = Asset(item=item)
                 asset.save()
+            for field in Custom_Field.objects.all():
+                if field.field_kind == 'Asset':
+                    if Custom_Field_Value.objects.filter(field=field,item=item).exists():
+                        Custom_Field_Value.objects.get(field=field,item=item).delete()
         serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
         Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
                        affected_user='', change_occurred="Changed " + item.item_name + " to track by asset.")
