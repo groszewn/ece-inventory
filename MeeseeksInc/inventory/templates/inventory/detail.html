@@ -241,7 +241,7 @@ function clickEvent(){
 								</td>
 							{% endfor %}
 							
-							{% if user.is_staff %}
+							{% if user.is_staff and not asset.disbursement %}
 							<td>
 								{% block assetEdit %}
 										<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit</a>	
@@ -376,7 +376,7 @@ function clickEvent(){
 							<td>{{ loan.admin_name }}</td>
 							<td>{{ loan.total_quantity }}</td>
 							<td>{{ loan.comment }}</td>
-							{% if user.is_staff and loan.status not 'Disbursed Out'%}
+							{% if user.is_staff %}
 							<td>
 								{% block checkIn %}
 								<a id = "checkIn" loan-id="{{ loan.loan_id }}" class="checkIn btn btn-success">Check In</a>	

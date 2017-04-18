@@ -39,7 +39,7 @@
 </tbody>
 </table>
 
-{% if user.is_staff and loan.status not 'Disbursed Out'%}
+{% if user.is_staff and not asset.disbursement %}
 	{% block assetEdit %}
 		<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit This Asset</a>	
 	{% endblock assetEdit %}
