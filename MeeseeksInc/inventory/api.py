@@ -34,7 +34,7 @@ from inventory.serializers import ItemSerializer, RequestSerializer, \
     GetItemSerializer, TagSerializer, CustomFieldSerializer, CustomValueSerializer, \
     LogSerializer, MultipleRequestPostSerializer, LoanUpdateSerializer, FullLoanSerializer, LoanConvertSerializer, \
     SubscribeSerializer, LoanPostSerializer, LoanReminderBodySerializer, LoanSendDatesSerializer, LoanCheckInSerializer, \
-    LoanCheckInWithAssetSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
+    LoanCheckInWithAssetSerializer, AddAssetsSerializer, AssetSerializer, LoanBackfillPostSerializer, BackfillAcceptDenySerializer, AssetCustomFieldSerializer, AssetWithCustomFieldSerializer, FullCustomFieldSerializer
 
 from .models import Request, Item, Disbursement, Custom_Field, Custom_Field_Value, Tag, Log, Loan, SubscribedUsers, EmailPrependValue, \
     LoanReminderEmailBody, LoanSendDates, Asset_Custom_Field_Value
@@ -109,11 +109,11 @@ class APIItemList(ListCreateAPIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-#         print('post of api item list')
         context = {
             "request": self.request,
         }
         serializer = ItemSerializer(data=request.data, context=context)
+        
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
@@ -148,6 +148,15 @@ class APIItemList(ListCreateAPIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=item_id):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save() 
             
             context = {
             "request": self.request,
@@ -184,8 +193,12 @@ class APIItemDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        print('item detail put')
+
         item = self.get_object(pk)
+        
+        if not "is_asset" in request.data:
+            item.is_asset = False
+        
         starting_quantity = item.quantity
         context = {
             "request": self.request,
@@ -198,9 +211,12 @@ class APIItemDetail(APIView):
         
         serializer = ItemSerializer(item, data=request.data, context=context, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
+            if item.is_asset:
+                serializer.save(quantity=starting_quantity)
+            else:
+                serializer.save()
             
+            data = serializer.data
             quantity=data['quantity']
             if quantity!=starting_quantity:    
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Override', 
@@ -209,7 +225,6 @@ class APIItemDetail(APIView):
                 Log.objects.create(request_id=None, item_id=item.item_id, item_name=item.item_name, initiating_user=request.user, nature_of_event='Edit', 
                                          affected_user='', change_occurred="Edited " + str(item.item_name))
             custom_field_values = request.data.get('values_custom_field')
-            print(request.data)
             if custom_field_values is not None:
                 for field in Custom_Field.objects.filter(field_kind='Item'):
                     value = next((x for x in custom_field_values if x['field_name'] == field.field_name), None) 
@@ -236,6 +251,20 @@ class APIItemDetail(APIView):
                             except ValueError:
                                 return Response("value needs to be a float", status=status.HTTP_400_BAD_REQUEST)
                         custom_val.save()  
+            
+            if item.is_asset:   
+               if not Asset.objects.filter(item=pk):
+                   item.is_asset = True
+                   item.save()
+                   for i in range(item.quantity):
+                       print('asset creating')
+                       asset = Asset(item=item)
+                       asset.save()
+            else:
+                if Asset.objects.filter(item=pk): 
+                    for asset in Asset.objects.filter(item=pk):
+                        asset.delete()
+            
             context = {
             "request": self.request,
             "pk": pk,
@@ -476,10 +505,11 @@ class APIApproveRequest(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            # need to get the item agian after saving
             item = Item.objects.get(item_name = indiv_request.item_name.item_name)
                 # check if stock less than minimum stock 
             if item.threshold_quantity:
-                if (item.threshold_enabled and item.threshold_quantity > item.quantity):
+                if (item.threshold_enabled and (item.threshold_quantity > item.quantity)):
                     #send email
                     try:
                         prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
@@ -599,6 +629,27 @@ class APIApproveRequestWithAssets(APIView):
             # decrement quantity in item
             item.quantity = F('quantity')-indiv_request.request_quantity
             item.save()
+            #NEED TO GET THE ITEM AGAIN BECAUSE IT WAS EDITED
+            item = Item.objects.get(item_name = indiv_request.item_name.item_name)
+            if item.threshold_quantity:
+                if (item.threshold_enabled and (item.threshold_quantity > item.quantity)):
+                    #send email
+                    try:
+                        prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
+                    except (ObjectDoesNotExist, IndexError) as e:
+                        prepend = ''
+                    subject = prepend + 'Below Minimum Stock'
+                    to = []
+                    for user in SubscribedUsers.objects.all():
+                        to.append(user.email)
+                    from_email='noreply@duke.edu'
+                    ctx = {
+                        'user':'user',
+                        'item':item.item_name,
+                        'quantity':item.quantity, 
+                    }
+                    message=render_to_string('inventory/belowthreshold_email.txt', ctx)
+                    EmailMessage(subject, message, bcc=to, from_email=from_email).send()  
             if indiv_request.type == 'Dispersal':
                 disbursement = Disbursement(orig_request=indiv_request, admin_name=request.user.username, user_name=indiv_request.user_id, item_name=indiv_request.item_name, comment=comment,
                                             total_quantity=indiv_request.request_quantity, time_disbursed=timezone.localtime(timezone.now()))
@@ -1228,7 +1279,7 @@ class APILoanUpdate(APIView): #EDIT LOAN
             item = loan.item_name
             new_item_quant = item.quantity - quantity_changed
             if new_item_quant < 0:
-                return Response(status=status.HTTP_304_NOT_MODIFIED)
+                return Response("You cannot loan out more than the stock", status=status.HTTP_400_BAD_REQUEST)
             if new_requested_quant < 1:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
             item.quantity = new_item_quant
@@ -1241,7 +1292,6 @@ class APILoanUpdate(APIView): #EDIT LOAN
             serializer.save()
             Log.objects.create(request_id=loan.loan_id, item_id= item.item_id, item_name = item.item_name, initiating_user=request.user.username, 
                                    nature_of_event="Edit", affected_user=loan.user_name, change_occurred="Edited loan for " + item.item_name + ".")
-            
             try:
                 prepend = EmailPrependValue.objects.all()[0].prepend_text+ ' '
             except (ObjectDoesNotExist, IndexError) as e:
@@ -1911,6 +1961,28 @@ class APIAssetToItem(APIView):
         serializer = ItemSerializer(item, context=context)
         Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
                        affected_user='', change_occurred="Changed " + item.item_name + " to no longer track by asset.")
+        return Response(serializer.data)
+ 
+class APIAddAsset(APIView): 
+    permission_classes = (IsAdmin,)
+    serializer_class = AddAssetsSerializer
+    
+    def get(self, request, pk, format=None):
+        item = Item.objects.get(item_id=pk)
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        return Response(serializer.data)
+    
+    def post(self,request,pk,format=None):
+        assets_to_add = request.data['num_assets']
+        item = Item.objects.get(item_id=pk)
+        item.quantity = item.quantity + int(assets_to_add)
+        for i in range(int(assets_to_add)):
+                asset = Asset(item=item)
+                asset.save()
+        item.save()
+        serializer = AssetSerializer(Asset.objects.filter(item=item.item_id), many=True)
+        Log.objects.create(request_id='', item_id= item.item_id, item_name = item.item_name, initiating_user=request.user, nature_of_event="Edit", 
+                       affected_user='', change_occurred= "Added " + assets_to_add + " assets to " + item.item_name + ".")
         return Response(serializer.data)
     
 class APIAsset(APIView):

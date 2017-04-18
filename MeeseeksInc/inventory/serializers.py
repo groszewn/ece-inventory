@@ -91,7 +91,7 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ('item_id', 'item_name', 'quantity', 'model_number', 'description', 'tags', 'values_custom_field' ,'threshold_quantity', 
-    'threshold_enabled' )
+    'threshold_enabled', 'is_asset')
     
     def get_custom_field_values(self, obj):
         item = Item.objects.get(item_name = obj)
@@ -372,7 +372,9 @@ class LoanSendDatesSerializer(serializers.ModelSerializer):
         model = LoanSendDates
         fields = ('date',)
         
-
+class AddAssetsSerializer(serializers.Serializer):
+    num_assets = serializers.IntegerField(required=True)
+      
 class AssetWithCustomFieldSerializer(serializers.Serializer):
     def __init__(self, custom_values=None, asset_tag=None, *args, **kwargs):
         super(AssetWithCustomFieldSerializer, self).__init__(*args, **kwargs)

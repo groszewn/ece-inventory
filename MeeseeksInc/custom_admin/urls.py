@@ -39,6 +39,8 @@ urlpatterns = [
     
     url(r'^asset/edit/(?P<pk>[\w\-\ ]+)/$', views.AssetView.edit_asset, name='edit_asset'),
     url(r'^asset/delete/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset, name='delete_asset'),
+    url(r'^asset/delete/detail/(?P<pk>[\w\-\ ]+)/$', views.AssetView.delete_asset_from_detail, name='delete_asset_from_detail'),
+    url(r'^add/assets/(?P<pk>[\w\-\ ]+)/$', views.AssetView.add_assets, name='add_assets'),
     
     url(r'^edit/tags/(?P<pk>[\w\-\ ]+)/$', views.TagView.add_tags_module, name='tags_module'),
     url(r'^delete/tag/(?P<pk>[\w\-\ ]+)/(?P<item>[\w\-\ ]+)/$', views.TagView.delete_tag, name='delete_tag'),
@@ -50,6 +52,7 @@ urlpatterns = [
     
     url(r'^log$', views.LogView.as_view(), name='log'),
     url(r'^log_item$', views.LogView.log_item, name='log_item'),
+    url(r'^destroy/asset/(?P<pk>[\w\-\ ]+)/$', views.LogView.log_asset, name='destroy_asset'),
     
     url(r'^edit/user_permission/(?P<pk>[\w\-\ ]+)/$', views.UserListView.edit_permission, name='edit_permission'),
     url(r'^users/$', views.UserListView.as_view(), name='user_page'),

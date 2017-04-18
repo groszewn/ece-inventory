@@ -48,6 +48,7 @@ urlpatterns = [
     url(r'^api/custom/field/$', inventory.api.APICustomField.as_view()),
     url(r'^api/custom/field/modify/(?P<pk>[\w\-\ ]+)/$', inventory.api.APICustomFieldModify.as_view()),
     url(r'^api/asset/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIAsset.as_view()),
+    url(r'^api/add/assets/(?P<pk>[\w\-\ ]+)/$', inventory.api.APIAddAsset.as_view()),
     url(r'^api/tags/$', inventory.api.APITagList.as_view(), name='api_tag_list'),
     url(r'^api/logs/$', inventory.api.APILogList.as_view(), name='api_log_list'),
     url(r'^api/loan/checkin/(?P<pk>[\w\-\ ]+)/$', inventory.api.APILoanCheckIn.as_view(), name='api_loan_checkin'),
