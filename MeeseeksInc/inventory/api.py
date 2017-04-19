@@ -1160,21 +1160,21 @@ class ItemUpload(APIView):
                 return self.errorHandling(request, 'value of "Description" does not exist in row ' + str(i+1), createdItems)
             if "min stock info" in headerMap and headerMap["min stock info"] >= len(row):
                 return self.errorHandling(request, 'value of "Min Stock Info" does not exist in row ' + str(i+1), createdItems)
-            if not row[headerMap["min stock info"]]=='' and not row[headerMap["min stock info"]].isdigit():
+            if "min stock info" in headerMap and not row[headerMap["min stock info"]]=='' and not row[headerMap["min stock info"]].isdigit():
                 return self.errorHandling(request, 'value of "Min Stock Info" is not an integer in row' + str(i+1), createdItems)          
-            elif row[headerMap["min stock info"]].isdigit() and int(row[headerMap["min stock info"]])<0:
+            elif "min stock info" in headerMap and row[headerMap["min stock info"]].isdigit() and int(row[headerMap["min stock info"]])<0:
                 return self.errorHandling(request, 'value of "Min Stock Info" is less than 0 in row ' + str(i+1), createdItems)
-            if row[headerMap["min stock info"]]=='':
+            if "min stock info" in headerMap and row[headerMap["min stock info"]]=='':
                 row[headerMap["min stock info"]] = 0
             if "min stock enabled" in headerMap and headerMap["min stock enabled"] >= len(row):
                 return self.errorHandling(request, 'value of "Min Stock Enabled" does not exist in row ' + str(i+1), createdItems)
-            if not (row[headerMap["min stock enabled"]] == '' or row[headerMap["min stock enabled"]].lower() == 'true' or row[headerMap["min stock enabled"]].lower() == 'false'):
+            if "min stock enabled" in headerMap and not (row[headerMap["min stock enabled"]] == '' or row[headerMap["min stock enabled"]].lower() == 'true' or row[headerMap["min stock enabled"]].lower() == 'false'):
                 return self.errorHandling(request, 'value of "Min Stock Enabled" is not a boolean in row ' + str(i+1), createdItems)
-            if row[headerMap["min stock enabled"]]=='':
+            if "min stock enabled" in headerMap and row[headerMap["min stock enabled"]]=='':
                 row[headerMap["min stock enabled"]] = False
-            elif row[headerMap["min stock enabled"]].lower() == 'true':
+            elif "min stock enabled" in headerMap and row[headerMap["min stock enabled"]].lower() == 'true':
                 row[headerMap["min stock enabled"]] = True
-            elif row[headerMap["min stock enabled"]].lower() == 'false':
+            elif "min stock enabled" in headerMap and row[headerMap["min stock enabled"]].lower() == 'false':
                 row[headerMap["min stock enabled"]] = False  
             existingItem = Item.objects.filter(item_name=row[headerMap["item name"]]).count()
             if existingItem>0:
